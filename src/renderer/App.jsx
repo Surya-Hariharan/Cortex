@@ -110,7 +110,7 @@ export default function App() {
                     paddingRight: 0,
                 }}
             >
-                {/* ── Left group: Logo + Tab nav ─────────────────────────────── */}
+                {/* ── Left group: Logo + Tab nav + Upload PDF ─────────────────── */}
                 <div className="flex items-stretch h-full" style={{ WebkitAppRegion: 'no-drag' }}>
 
                     {/* Logo */}
@@ -173,7 +173,6 @@ export default function App() {
                                             e.currentTarget.style.color = '#334155';
                                             e.currentTarget.style.background = 'rgba(99,102,241,0.05)';
                                         }
-                                        /* micro-scale on icon */
                                         const icon = e.currentTarget.querySelector('svg');
                                         if (icon) icon.style.transform = 'scale(1.08)';
                                     }}
@@ -192,16 +191,38 @@ export default function App() {
                             );
                         })}
                     </nav>
+
+                    {/* Upload PDF — action adjacent to navigation */}
+                    <div className="flex items-center" style={{ padding: '0 8px 0 4px', borderLeft: '1px solid rgba(0,0,0,0.06)' }}>
+                        <button
+                            onClick={async () => {
+                                if (window.electronAPI) {
+                                    const result = await window.electronAPI.uploadPdf();
+                                    if (result?.success) {
+                                        showToast(`Indexed "${result.title}" · ${result.chunks} chunks`);
+                                        const newStats = await window.electronAPI.getStats();
+                                        setStats(newStats);
+                                    } else if (result?.error) {
+                                        showToast(result.error, 'error');
+                                    }
+                                }
+                            }}
+                            className="btn-ghost flex items-center gap-1.5 text-[11.5px]"
+                            style={{ padding: '5px 12px' }}
+                        >
+                            <UploadIcon />
+                            Upload PDF
+                        </button>
+                    </div>
                 </div>
 
-                {/* ── Right group: status + upload ───────────────────────────── */}
-                {/* paddingRight: 148px — reserves space for Windows Min/Max/Close  */}
-                {/* The 3 native controls each ≈46px wide = ~138px + 10px buffer   */}
+                {/* ── Right group: ONNX status + doc count only ────────────────── */}
+                {/* paddingRight: 148px = 3 native Win32 controls × ≈46px + buffer    */}
                 <div
                     className="flex items-center gap-2"
                     style={{
                         WebkitAppRegion: 'no-drag',
-                        paddingLeft: '12px',
+                        paddingLeft: '16px',
                         paddingRight: '148px',
                     }}
                 >
@@ -209,7 +230,7 @@ export default function App() {
                     <span
                         className="flex items-center gap-1.5 text-[10.5px] font-semibold rounded-full border"
                         style={{
-                            padding: '3px 10px',
+                            padding: '4px 12px',
                             ...(perfProvider === 'dml'
                                 ? { background: '#ecfdf5', color: '#065f46', borderColor: '#6ee7b7' }
                                 : { background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' }),
@@ -232,28 +253,6 @@ export default function App() {
                             </div>
                         </>
                     )}
-
-                    {/* Upload PDF */}
-                    <div className="w-px h-3.5 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.08)' }} />
-                    <button
-                        onClick={async () => {
-                            if (window.electronAPI) {
-                                const result = await window.electronAPI.uploadPdf();
-                                if (result?.success) {
-                                    showToast(`Indexed "${result.title}" · ${result.chunks} chunks`);
-                                    const newStats = await window.electronAPI.getStats();
-                                    setStats(newStats);
-                                } else if (result?.error) {
-                                    showToast(result.error, 'error');
-                                }
-                            }
-                        }}
-                        className="btn-ghost flex items-center gap-1.5 text-[11.5px]"
-                        style={{ padding: '5px 10px' }}
-                    >
-                        <UploadIcon />
-                        Upload PDF
-                    </button>
                 </div>
             </header>
 

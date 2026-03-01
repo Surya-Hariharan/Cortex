@@ -68,59 +68,96 @@ export default function NotesTab({ onToast }) {
 
             {/* ── Header — single flex bar ─────────────────────────────────── */}
             <div
-                className="flex items-center justify-between gap-4 px-5 flex-shrink-0"
+                className="flex items-center justify-between gap-3 px-4 flex-shrink-0"
                 style={{
                     background: 'var(--surface-card)',
                     borderBottom: '1px solid var(--border-subtle)',
                     boxShadow: 'var(--shadow-sm)',
-                    minHeight: '52px',
+                    minHeight: '62px',
                     flexWrap: 'nowrap',
                     overflow: 'hidden',
                 }}
             >
                 {/* Left: title + count + filter tabs — all inline */}
-                <div className="flex items-center gap-4 min-w-0 overflow-x-auto" style={{ flexShrink: 1 }}>
+                <div className="flex items-center gap-3 min-w-0" style={{ flexShrink: 1, overflow: 'visible' }}>
                     {/* Title + count */}
                     <div className="flex-shrink-0">
-                        <h2 className="text-[15px] font-bold tracking-tight leading-none" style={{ color: 'var(--text-hero)', letterSpacing: '-0.02em' }}>
+                        <h2 className="text-[17px] font-bold tracking-tight leading-none" style={{ color: 'var(--text-hero)', letterSpacing: '-0.025em' }}>
                             Notes &amp; Deadlines
                         </h2>
-                        <p className="text-[10.5px] mt-0.5 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+                        <p className="text-[11.5px] mt-[3px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
                             {notes.length} items · {completed} completed
                             {urgent > 0 && <span style={{ color: '#991b1b' }}> · {urgent} urgent</span>}
                         </p>
                     </div>
 
                     {/* Thin divider */}
-                    <div className="w-px h-6 flex-shrink-0" style={{ background: 'var(--border-subtle)' }} />
+                    <div className="w-px h-7 flex-shrink-0" style={{ background: 'var(--border-subtle)' }} />
 
-                    {/* Filter tabs — inline, no wrapping */}
-                    <div className="flex items-center gap-0.5 flex-shrink-0" style={{ flexWrap: 'nowrap' }}>
+                    {/* Filter tabs — toolbar style, full hit-target */}
+                    <div className="flex items-center flex-shrink-0" style={{ gap: '6px', flexWrap: 'nowrap' }}>
                         {FILTERS.map((f) => {
                             const active = filter === f.id;
                             return (
                                 <button
                                     key={f.id}
                                     onClick={() => setFilter(f.id)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-medium rounded-lg transition-all duration-150 whitespace-nowrap flex-shrink-0"
-                                    style={
-                                        active
-                                            ? { background: 'var(--accent-light)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }
-                                            : { background: 'transparent', color: 'var(--text-secondary)', border: '1px solid transparent' }
-                                    }
-                                    onMouseEnter={(e) => { if (!active) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--surface-recessed)'; } }}
-                                    onMouseLeave={(e) => { if (!active) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; } }}
+                                    className="flex items-center whitespace-nowrap flex-shrink-0"
+                                    style={{
+                                        gap: '6px',
+                                        padding: '0 16px',
+                                        height: '40px',
+                                        fontSize: '13px',
+                                        fontWeight: active ? 700 : 500,
+                                        borderRadius: '10px',
+                                        border: active
+                                            ? '1px solid var(--accent-border)'
+                                            : '1px solid var(--border-subtle)',
+                                        background: active
+                                            ? 'var(--accent-light)'
+                                            : 'var(--surface-recessed)',
+                                        color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                                        boxShadow: active
+                                            ? 'inset 0 1px 2px rgba(99,102,241,0.08)'
+                                            : 'none',
+                                        transform: active ? 'scale(1.02)' : 'scale(1)',
+                                        transition: 'all 150ms ease',
+                                        outline: 'none',
+                                        cursor: 'pointer',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!active) {
+                                            e.currentTarget.style.color = 'var(--text-primary)';
+                                            e.currentTarget.style.background = 'white';
+                                            e.currentTarget.style.borderColor = 'var(--border-medium)';
+                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                            e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!active) {
+                                            e.currentTarget.style.color = 'var(--text-secondary)';
+                                            e.currentTarget.style.background = 'var(--surface-recessed)';
+                                            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                        }
+                                    }}
                                 >
-                                    {f.icon}
+                                    <span style={{ fontSize: '14px', lineHeight: 1 }}>{f.icon}</span>
                                     <span>{f.label}</span>
                                     {f.count > 0 && (
                                         <span
-                                            className="text-[9px] font-bold px-1 py-[1px] rounded-full min-w-[14px] text-center"
-                                            style={
-                                                active
-                                                    ? { background: 'var(--accent)', color: '#fff' }
-                                                    : { background: 'var(--surface-recessed)', color: 'var(--text-muted)' }
-                                            }
+                                            style={{
+                                                fontSize: '10px',
+                                                fontWeight: 700,
+                                                padding: '1px 6px',
+                                                borderRadius: '99px',
+                                                minWidth: '18px',
+                                                textAlign: 'center',
+                                                background: active ? 'var(--accent)' : 'rgba(0,0,0,0.08)',
+                                                color: active ? '#fff' : 'var(--text-muted)',
+                                            }}
                                         >{f.count}</span>
                                     )}
                                 </button>

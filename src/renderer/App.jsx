@@ -4,6 +4,8 @@ import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
 import NotesTab from './components/NotesTab';
 import Toast from './components/Toast';
+import ChatSidebar from './components/ChatSidebar';
+import ChatPane from './components/ChatPane';
 
 const TABS = [
     { id: 'search', label: 'Search', icon: SearchIcon },
@@ -55,6 +57,7 @@ function UploadIcon() {
 
 export default function App() {
     const [activeTab, setActiveTab] = useState('search');
+    const [activeChatId, setActiveChatId] = useState(null);
     const [stats, setStats] = useState({ documents: 0, embeddings: 0, subjects: [] });
     const [toast, setToast] = useState(null);
     const [perfProvider, setPerfProvider] = useState('cpu');
@@ -256,10 +259,24 @@ export default function App() {
                 </div>
             </header>
 
-            {/* ── Main Content with page fade ─────────────────────────────────── */}
-            <main key={activeTab} className="flex-1 overflow-hidden page-fade">
-                {renderTab()}
-            </main>
+            {/* ── Body: sidebar + content ──────────────────────────────────────── */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                <ChatSidebar
+                    activeChatId={activeChatId}
+                    onSelectChat={setActiveChatId}
+                    onNewChat={(chat) => setActiveChatId(chat?.id ?? null)}
+                />
+                <main
+                    key={activeChatId ?? activeTab}
+                    className="flex-1 overflow-hidden page-fade"
+                    style={{ display: 'flex', minWidth: 0 }}
+                >
+                    {activeChatId
+                        ? <ChatPane chatId={activeChatId} onTitleUpdate={() => { }} />
+                        : renderTab()
+                    }
+                </main>
+            </div>
 
             {/* ── Toast ─────────────────────────────────────────────────────── */}
             {toast && (

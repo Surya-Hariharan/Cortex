@@ -229,6 +229,91 @@ function registerIpcHandlers() {
             return { error: error.message };
         }
     });
+
+    // ── Chat — Projects ────────────────────────────────────────────────────
+
+    ipcMain.handle('create-project', async (event, name) => {
+        try {
+            const db = getDatabase();
+            if (!db) return { error: 'Database not ready' };
+            const id = db.createProject(name);
+            return { success: true, id };
+        } catch (e) { return { error: e.message }; }
+    });
+
+    ipcMain.handle('get-projects', async () => {
+        try {
+            const db = getDatabase();
+            return { projects: db ? db.getProjects() : [] };
+        } catch (e) { return { projects: [] }; }
+    });
+
+    ipcMain.handle('delete-project', async (event, id) => {
+        try {
+            const db = getDatabase();
+            if (db) db.deleteProject(id);
+            return { success: true };
+        } catch (e) { return { error: e.message }; }
+    });
+
+    ipcMain.handle('rename-project', async (event, id, name) => {
+        try {
+            const db = getDatabase();
+            if (db) db.renameProject(id, name);
+            return { success: true };
+        } catch (e) { return { error: e.message }; }
+    });
+
+    // ── Chat — Chats ───────────────────────────────────────────────────────
+
+    ipcMain.handle('create-chat', async (event, projectId) => {
+        try {
+            const db = getDatabase();
+            if (!db) return { error: 'Database not ready' };
+            const chat = db.createChat(projectId ?? null);
+            return { success: true, chat };
+        } catch (e) { return { error: e.message }; }
+    });
+
+    ipcMain.handle('get-chats', async (event, projectId) => {
+        try {
+            const db = getDatabase();
+            return { chats: db ? db.getChats(projectId) : [] };
+        } catch (e) { return { chats: [] }; }
+    });
+
+    ipcMain.handle('delete-chat', async (event, id) => {
+        try {
+            const db = getDatabase();
+            if (db) db.deleteChat(id);
+            return { success: true };
+        } catch (e) { return { error: e.message }; }
+    });
+
+    ipcMain.handle('search-chats', async (event, query) => {
+        try {
+            const db = getDatabase();
+            return { chats: db ? db.searchChats(query) : [] };
+        } catch (e) { return { chats: [] }; }
+    });
+
+    // ── Chat — Messages ────────────────────────────────────────────────────
+
+    ipcMain.handle('get-chat-messages', async (event, chatId) => {
+        try {
+            const db = getDatabase();
+            return { messages: db ? db.getChatMessages(chatId) : [] };
+        } catch (e) { return { messages: [] }; }
+    });
+
+    ipcMain.handle('add-chat-message', async (event, chatId, role, content) => {
+        try {
+            const db = getDatabase();
+            if (!db) return { error: 'Database not ready' };
+            const id = db.addChatMessage(chatId, role, content);
+            return { success: true, id };
+        } catch (e) { return { error: e.message }; }
+    });
 }
 
 // ── App Lifecycle ─────────────────────────────────────────────────────────────

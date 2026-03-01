@@ -100,12 +100,11 @@ export default function App() {
             <header
                 className="flex items-center justify-between flex-shrink-0"
                 style={{
-                    height: '56px',
-                    minHeight: '56px',
-                    /* Very subtle warm-white gradient gives the header gentle depth  */
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)',
-                    borderBottom: '1px solid rgba(0,0,0,0.06)',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04)',
+                    height: '64px',
+                    minHeight: '64px',
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%)',
+                    borderBottom: '1px solid rgba(0,0,0,0.07)',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 3px 12px rgba(0,0,0,0.06)',
                     WebkitAppRegion: 'drag',
                     paddingLeft: 0,
                     paddingRight: 0,
@@ -116,32 +115,32 @@ export default function App() {
 
                     {/* Logo */}
                     <div
-                        className="flex items-center gap-2.5"
+                        className="flex items-center gap-3"
                         style={{
-                            padding: '0 20px 0 24px',
+                            padding: '0 22px 0 28px',
                             borderRight: '1px solid rgba(0,0,0,0.06)',
                             flexShrink: 0,
                         }}
                     >
                         <div
-                            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
                             style={{
                                 background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-                                boxShadow: '0 2px 8px rgba(99,102,241,0.32)',
+                                boxShadow: '0 3px 10px rgba(99,102,241,0.35)',
                             }}
                         >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="3" />
                                 <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
                             </svg>
                         </div>
                         <div>
                             <div
-                                className="text-[13.5px] font-bold tracking-tight leading-none"
-                                style={{ color: '#1e293b', letterSpacing: '-0.02em' }}
+                                className="text-[14px] font-bold tracking-tight leading-none"
+                                style={{ color: '#1e293b', letterSpacing: '-0.025em' }}
                             >Cortex</div>
                             <div
-                                className="text-[9px] font-semibold uppercase tracking-[0.1em] mt-[3px]"
+                                className="text-[9px] font-semibold uppercase tracking-[0.12em] mt-[3px]"
                                 style={{ color: '#94a3b8' }}
                             >Offline AI</div>
                         </div>
@@ -158,13 +157,12 @@ export default function App() {
                                     onClick={() => setActiveTab(tab.id)}
                                     className="relative flex items-center gap-1.5 transition-all duration-150 select-none flex-shrink-0"
                                     style={{
-                                        padding: '0 14px',
+                                        padding: '0 16px',
                                         fontSize: '12.5px',
                                         fontWeight: isActive ? 600 : 500,
                                         color: isActive ? '#6366f1' : '#64748b',
-                                        /* 2px bottom underline for active — flush with header bottom border */
                                         borderBottom: isActive ? '2px solid #6366f1' : '2px solid transparent',
-                                        borderTop: '2px solid transparent',   /* balance the layout */
+                                        borderTop: '2px solid transparent',
                                         background: 'transparent',
                                         outline: 'none',
                                         cursor: 'pointer',
@@ -173,14 +171,19 @@ export default function App() {
                                     onMouseEnter={(e) => {
                                         if (!isActive) {
                                             e.currentTarget.style.color = '#334155';
-                                            e.currentTarget.style.background = 'rgba(99,102,241,0.04)';
+                                            e.currentTarget.style.background = 'rgba(99,102,241,0.05)';
                                         }
+                                        /* micro-scale on icon */
+                                        const icon = e.currentTarget.querySelector('svg');
+                                        if (icon) icon.style.transform = 'scale(1.08)';
                                     }}
                                     onMouseLeave={(e) => {
                                         if (!isActive) {
                                             e.currentTarget.style.color = '#64748b';
                                             e.currentTarget.style.background = 'transparent';
                                         }
+                                        const icon = e.currentTarget.querySelector('svg');
+                                        if (icon) icon.style.transform = 'scale(1)';
                                     }}
                                 >
                                     <Icon />

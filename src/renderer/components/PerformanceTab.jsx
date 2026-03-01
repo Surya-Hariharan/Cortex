@@ -5,28 +5,29 @@ const CPU_MS = 41;
 
 /* ── Full-width SVG sparkline ──────────────────────────────────────────────── */
 function SparkLine({ history }) {
-    const H = 220;   // tall – visual anchor
     const max = Math.max(...history, 1);
 
     if (history.length < 2) {
         return (
-            <div className="w-full shimmer-bg rounded-lg" style={{ height: `${H}px`, border: '1px solid var(--border-subtle)' }}>
-                <div className="h-full flex flex-col items-center justify-center gap-2">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                    </svg>
-                    <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Run a search to populate history</p>
-                </div>
+            <div
+                className="w-full shimmer-bg rounded-lg flex flex-col items-center justify-center gap-2"
+                style={{ flex: 1, minHeight: '120px', border: '1px solid var(--border-subtle)' }}
+            >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+                <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Run a search to populate history</p>
             </div>
         );
     }
 
+    // SVG coordinate space — 100 units tall; CSS makes it stretch
+    const H = 100;
     const pts = history.map((v, i) => {
         const x = (i / (history.length - 1)) * 100;
         const y = H - (v / max) * (H - 12) - 6;
         return `${x}%,${y}`;
     }).join(' ');
-
     const last = history[history.length - 1];
     const lastY = H - (last / max) * (H - 12) - 6;
 
@@ -34,8 +35,8 @@ function SparkLine({ history }) {
         <svg
             viewBox={`0 0 100 ${H}`}
             preserveAspectRatio="none"
-            className="w-full overflow-visible"
-            style={{ height: `${H}px` }}
+            /* flex:1 lets this SVG stretch to fill the flex container */
+            style={{ flex: 1, minHeight: '120px', width: '100%', display: 'block', overflow: 'visible' }}
         >
             <defs>
                 <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
@@ -50,7 +51,7 @@ function SparkLine({ history }) {
                 strokeLinejoin="round" strokeLinecap="round"
                 vectorEffect="non-scaling-stroke"
             />
-            <circle cx="100%" cy={lastY} r="3" fill="#6366f1" stroke="white" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+            <circle cx="100%" cy={lastY} r="2.5" fill="#6366f1" stroke="white" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
         </svg>
     );
 }
@@ -155,7 +156,8 @@ export default function PerformanceTab() {
     const maxMs = CLOUD_MS + 80;
 
     return (
-        <div className="h-full overflow-y-auto" style={{ background: 'var(--surface-app)', padding: '24px 32px 32px' }}>
+        /* h-full + flex-col lets the grid grow to fill the entire available workspace */
+        <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)', padding: '16px 32px 20px', gap: '16px' }}>
 
             {/* ══ Full-width header ════════════════════════════════════════════ */}
             <div
@@ -199,15 +201,21 @@ export default function PerformanceTab() {
                 </div>
             </div>
 
-            {/* ══ 3-column grid ════════════════════════════════════════════════ */}
-            {/*   Left: 4 cols  |  Center: 5 cols  |  Right: 3 cols             */}
+            {/* ══ 3-column grid – flex-1 so it fills all space below header card ═══ */}
+            {/*   Left: 4fr  |  Center: 5fr  |  Right: 3fr                              */}
             <div
-                className="grid gap-6"
-                style={{ gridTemplateColumns: '4fr 5fr 3fr', alignItems: 'start' }}
+                className="grid"
+                style={{
+                    gridTemplateColumns: '4fr 5fr 3fr',
+                    gap: '20px',
+                    flex: 1,             /* ← fills remaining vertical space */
+                    alignItems: 'stretch',
+                    minHeight: 0,        /* allow flex child to shrink below content size */
+                }}
             >
 
-                {/* ── LEFT COLUMN: Performance control panel ─────────────────── */}
-                <div className="flex flex-col gap-5">
+                {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
+                <div className="flex flex-col gap-4">
 
                     {/* 1a. Latency comparison – most dominant card in left col */}
                     <div className="card" style={{ padding: '18px 20px' }}>
@@ -287,8 +295,9 @@ export default function PerformanceTab() {
                 </div>
 
                 {/* ── CENTER COLUMN: Primary visualization anchor ─────────────── */}
-                <div className="flex flex-col gap-5">
-                    <div className="card" style={{ padding: '18px 20px' }}>
+                <div className="flex flex-col gap-4">
+                    {/* History card grows to fill – flex-1 is the key */}
+                    <div className="card flex flex-col" style={{ padding: '18px 20px', flex: 1, minHeight: 0 }}>
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
@@ -303,8 +312,10 @@ export default function PerformanceTab() {
                             </span>
                         </div>
 
-                        {/* Tall sparkline */}
-                        <SparkLine history={hist} />
+                        {/* SparkLine grows to fill remaining card space */}
+                        <div className="flex flex-col flex-1 min-h-0">
+                            <SparkLine history={hist} />
+                        </div>
 
                         {/* Stats row below graph */}
                         {hist.length > 0 && (
@@ -326,9 +337,9 @@ export default function PerformanceTab() {
                         )}
                     </div>
 
-                    {/* Model size chip below chart */}
+                    {/* Model size chip – fixed height below chart */}
                     <div
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl flex-shrink-0"
                         style={{ background: 'var(--surface-recessed)', border: '1px solid var(--border-subtle)' }}
                     >
                         <span className="text-base">📦</span>
@@ -344,7 +355,7 @@ export default function PerformanceTab() {
                 </div>
 
                 {/* ── RIGHT COLUMN: System context & metadata ─────────────────── */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                     <div className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>
                         System Context
                     </div>

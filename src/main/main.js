@@ -25,7 +25,7 @@ function createWindow() {
         titleBarOverlay: {
             color: '#FFFFFF',               // exact navbar background
             symbolColor: '#475569',         // --text-secondary: neutral dark gray icons
-            height: 56,                     // matches navbar height
+            height: 64,                     // matches navbar height
         },
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),

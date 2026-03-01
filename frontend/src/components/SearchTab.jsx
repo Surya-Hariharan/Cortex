@@ -4,10 +4,11 @@ import ChatSidebar from './ChatSidebar';
 import ChatPane from './ChatPane';
 
 const SEARCH_STAGES = [
-    'Tokenizing query…',
-    'Running ONNX inference…',
-    'Searching 384-dim vector space…',
-    'Ranking by cosine similarity…',
+    'Embedding query...',
+    'Searching vector space...',
+    'Retrieving top matches...',
+    'Constructing LLM prompt...',
+    'Synthesizing answer...',
 ];
 
 const SUGGESTION_GROUPS = [
@@ -27,6 +28,7 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
     const [searchMeta, setSearchMeta] = useState(null);
     const [searchStage, setSearchStage] = useState(-1);
     const [synthesized, setSynthesized] = useState(null);
+    const [genStats, setGenStats] = useState(null);
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef(null);
     const typewriterRef = useRef(null);
@@ -41,6 +43,7 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
         setIsSearching(true);
         setResults(null);
         setSynthesized(null);
+        setGenStats(null);
         setSearchStage(0);
         clearInterval(typewriterRef.current);
         clearInterval(stageRef.current);
@@ -56,8 +59,17 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
         try {
             let response;
             if (window.electronAPI) {
+                if (window.electronAPI.onSearchToken) {
+                    window.electronAPI.onSearchToken((tokenText) => {
+                        setSynthesized(tokenText);
+                        setSearchStage(4); // Synthesizing
+                    });
+                }
                 const [res] = await Promise.all([window.electronAPI.search(trimmed), minPause]);
                 response = res;
+                if (window.electronAPI.removeSearchTokenListener) {
+                    window.electronAPI.removeSearchTokenListener();
+                }
             } else {
                 await minPause;
                 response = {
@@ -86,16 +98,8 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
                 setResults(r.results);
                 setSearchMeta({ time: r.searchTimeMs, total: r.totalDocuments });
                 if (r.synthesizedAnswer) {
-                    setSynthesized('');
-                    let i = 0;
-                    typewriterRef.current = setInterval(() => {
-                        i += 3;
-                        setSynthesized(r.synthesizedAnswer.slice(0, i));
-                        if (i >= r.synthesizedAnswer.length) {
-                            setSynthesized(r.synthesizedAnswer);
-                            clearInterval(typewriterRef.current);
-                        }
-                    }, 18);
+                    setSynthesized(r.synthesizedAnswer);
+                    setGenStats(r.generationStats);
                 }
             }
         } catch (err) {
@@ -266,11 +270,19 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
                                             </span>
                                         </div>
                                         <p
-                                            className="text-[13.5px] leading-relaxed typewriter-cursor"
+                                            className="text-[13.5px] leading-relaxed typewriter-cursor whitespace-pre-wrap"
                                             style={{ color: 'var(--text-secondary)' }}
                                         >
-                                            {synthesized}
+                                            {synthesized || 'Synthesizing...'}
                                         </p>
+                                        {genStats && (
+                                            <div className="mt-3 pt-2 text-[10px] flex flex-wrap gap-4 border-t" style={{ borderColor: 'rgba(99,102,241,0.15)', color: 'var(--text-muted)' }}>
+                                                <span><span className="font-semibold">Load:</span> {genStats.loadTime}ms</span>
+                                                <span><span className="font-semibold">TTFT:</span> {genStats.ttft}ms</span>
+                                                <span><span className="font-semibold">Speed:</span> {genStats.tokensPerSec} t/s</span>
+                                                <span><span className="font-semibold">Total:</span> {(genStats.totalTime / 1000).toFixed(1)}s</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}

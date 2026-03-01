@@ -136,7 +136,10 @@ export default function PerformanceTab() {
     const fetchPerf = async () => {
         try {
             const d = window.electronAPI ? await window.electronAPI.getPerfStats() : null;
-            if (d) { setPerf(d); setCount(d.embedHistory.length); }
+            if (d) {
+                setPerf(d);
+                setCount(d.embedder?.embedHistory?.length || d.embedHistory?.length || 0);
+            }
         } catch { }
     };
 
@@ -147,10 +150,10 @@ export default function PerformanceTab() {
     }, []);
     useEffect(() => { setAnimKey((k) => k + 1); }, [perf?.avgEmbedTimeMs]);
 
-    const avg = perf?.avgEmbedTimeMs || 0;
-    const last = perf?.lastEmbedTimeMs || 0;
-    const hist = perf?.embedHistory || [];
-    const prov = perf?.provider || 'cpu';
+    const avg = perf?.embedder?.avgEmbedTimeMs ?? perf?.avgEmbedTimeMs ?? 0;
+    const last = perf?.embedder?.lastEmbedTimeMs ?? perf?.lastEmbedTimeMs ?? 0;
+    const hist = perf?.embedder?.embedHistory ?? perf?.embedHistory ?? [];
+    const prov = perf?.embedder?.provider ?? perf?.provider ?? 'cpu';
     const speedup = avg > 0 ? (CPU_MS / avg).toFixed(1) : '—';
     const activeMs = avg > 0 ? avg : CPU_MS;
     const maxMs = CLOUD_MS + 80;
@@ -421,6 +424,46 @@ export default function PerformanceTab() {
                             </span>
                         </div>
                     </div>
+
+                    {/* Generative RAG LLM Stats */}
+                    {perf?.llm && (
+                        <>
+                            <div className="text-[10px] mt-1 font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>
+                                Generative RAG Engine
+                            </div>
+
+                            <div className="card px-4 py-3.5 space-y-2.5" style={{ borderLeft: '3px solid var(--accent)' }}>
+                                <div className="flex flex-col gap-0.5 mb-1.5">
+                                    <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Model</span>
+                                    <span className="text-[11.5px] font-bold" style={{ color: 'var(--text-primary)' }}>Phi-3.5-mini ONNX</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Status</span>
+                                    <span className="text-[10.5px] uppercase tracking-wider font-bold" style={{ color: perf.llm.ready ? '#10b981' : 'var(--text-muted)' }}>
+                                        {perf.llm.ready ? 'Loaded' : 'Pending First Run'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Time to First Token</span>
+                                    <span className="metric-mono font-bold text-[12px]" style={{ color: 'var(--accent)' }}>{perf.llm.lastStats?.ttft || 0}ms</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Generation Speed</span>
+                                    <span className="metric-mono font-bold text-[12px]" style={{ color: 'var(--accent)' }}>{perf.llm.lastStats?.tokensPerSec || 0} t/s</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Total Inference Time</span>
+                                    <span className="metric-mono font-bold text-[12px]" style={{ color: 'var(--accent)' }}>{perf.llm.lastStats?.totalTime || 0}ms</span>
+                                </div>
+                                {perf.llm.lastStats?.loadTime > 0 && (
+                                    <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                                        <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Initial Load Time</span>
+                                        <span className="metric-mono text-[12px]" style={{ color: 'var(--text-secondary)' }}>{perf.llm.lastStats.loadTime}ms</span>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
 
             </div>{/* end 3-column grid */}

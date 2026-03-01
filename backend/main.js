@@ -4,14 +4,13 @@ const fs = require('fs');
 
 // Services
 const { initializeDatabase, getDatabase } = require('./services/database');
-const { EmbeddingsEngine } = require('./services/embeddings');
+const { aiManager } = require('./services/ai/runtime/aiManager');
 const { searchVectors } = require('./services/vectorSearch');
 const { extractPdfText } = require('./services/pdfHandler');
 const { ragSearch } = require('./services/ragPipeline');
 const { PeerDiscovery } = require('./services/peerDiscovery');
 
 let mainWindow;
-let embeddingsEngine;
 let peerDiscovery;
 
 function createWindow() {
@@ -63,11 +62,9 @@ async function initializeServices() {
         initializeDatabase(dbPath);
         console.log('[Cortex] Database initialized');
 
-        // Initialize embeddings engine
-        const modelDir = path.join(__dirname, '../../models/bge-small-en-v1.5');
-        embeddingsEngine = new EmbeddingsEngine(modelDir);
-        await embeddingsEngine.initialize();
-        console.log('[Cortex] Embeddings engine initialized');
+        // Initialize AI components
+        await aiManager.initialize();
+        console.log('[Cortex] AI engines initialized');
 
         // Start LAN peer discovery
         peerDiscovery = new PeerDiscovery();
@@ -96,10 +93,16 @@ function registerIpcHandlers() {
     // Search
     ipcMain.handle('search', async (event, query) => {
         try {
-            if (!embeddingsEngine || !embeddingsEngine.isReady()) {
+            if (!aiManager.embedder.isReady()) {
                 return { error: 'Embeddings engine not initialized. Run "npm run setup-demo" first.' };
             }
-            const results = await ragSearch(query, embeddingsEngine, getDatabase());
+
+            // Stream tokens back directly to the originating webContents
+            const onToken = (text) => {
+                event.sender.send('search-token', text);
+            };
+
+            const results = await ragSearch(query, getDatabase(), onToken);
             return { results };
         } catch (error) {
             console.error('[Cortex] Search error:', error);
@@ -127,8 +130,8 @@ function registerIpcHandlers() {
             for (const chunk of chunks) {
                 const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
 
-                if (embeddingsEngine && embeddingsEngine.isReady()) {
-                    const vector = await embeddingsEngine.embed(chunk.content);
+                if (aiManager.embedder.isReady()) {
+                    const vector = await aiManager.runEmbedding(chunk.content);
                     db.insertEmbedding(docId, vector);
                 }
             }
@@ -154,10 +157,17 @@ function registerIpcHandlers() {
 
     // Performance stats (provider, embed timing)
     ipcMain.handle('get-perf-stats', async () => {
-        if (!embeddingsEngine || !embeddingsEngine.isReady()) {
-            return { provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], cpuBaselineMs: 41, speedupX: null, ready: false };
+        let embedderStats = { ready: false, provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], cpuBaselineMs: 41, speedupX: null };
+        if (aiManager.embedder.isReady()) {
+            embedderStats = { ...aiManager.embedder.getPerfStats(), ready: true };
         }
-        return { ...embeddingsEngine.getPerfStats(), ready: true };
+
+        let llmStats = { ready: false };
+        if (aiManager.llm && aiManager.llm.ready) {
+            llmStats = aiManager.llm.getPerfStats();
+        }
+
+        return { embedder: embedderStats, llm: llmStats };
     });
 
     // Share to network — broadcast to real discovered peers

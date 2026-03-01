@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
     // Search & Documents
     search: (query) => ipcRenderer.invoke('search', query),
+    onSearchToken: (callback) => ipcRenderer.on('search-token', (event, tokenText) => callback(tokenText)),
+    removeSearchTokenListener: () => ipcRenderer.removeAllListeners('search-token'),
     uploadPdf: () => ipcRenderer.invoke('upload-pdf'),
     getStats: () => ipcRenderer.invoke('get-stats'),
     // Network

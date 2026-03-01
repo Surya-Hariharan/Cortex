@@ -374,10 +374,10 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
                                     </div>
                                 </div>
                             )}
-                        </div>{/* /inner max-width */}
-                    </div>{/* /centering scroll */}
-                )}{/* /ternary */}
-            </div>{/* /content area */}
-        </div>{/* /search layout */ }
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }

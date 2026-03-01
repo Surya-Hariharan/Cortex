@@ -1,173 +1,181 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const CLOUD_API_MS = 847;
-const CPU_BASELINE_MS = 41;
+const CLOUD_MS = 847;
+const CPU_MS = 41;
 
-function SparkLine({ history, color = '#6366f1' }) {
+/* ── Sparkline ─────────────────────────────────────────────────────────────── */
+function SparkLine({ history }) {
+    const W = 180, H = 44;
     const max = Math.max(...history, 1);
-    const w = 160, h = 36;
-    const pts = history.map((v, i) => {
-        const x = (i / Math.max(history.length - 1, 1)) * w;
-        const y = h - (v / max) * (h - 4) - 2;
-        return `${x},${y}`;
-    }).join(' ');
 
     if (history.length < 2) {
         return (
-            <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                <div className="w-2 h-2 rounded-full border animate-pulse" style={{ borderColor: 'var(--border-medium)' }} />
-                Waiting for first search…
-            </div>
+            <div
+                className="w-[180px] h-[44px] rounded-lg shimmer-bg"
+                style={{ border: '1px solid var(--border-subtle)' }}
+                title="Run a search to see history"
+            />
         );
     }
 
+    const pts = history.map((v, i) => {
+        const x = (i / (history.length - 1)) * W;
+        const y = H - (v / max) * (H - 6) - 3;
+        return `${x},${y}`;
+    }).join(' ');
+
+    const last = history[history.length - 1];
+    const lastX = W;
+    const lastY = H - (last / max) * (H - 6) - 3;
+
     return (
-        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
             <defs>
                 <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity="0.18" />
-                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                 </linearGradient>
             </defs>
-            <polygon points={`0,${h} ${pts} ${w},${h}`} fill="url(#spark-fill)" />
-            <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-            {history.length >= 1 && (() => {
-                const last = history[history.length - 1];
-                const lx = w;
-                const ly = h - (last / max) * (h - 4) - 2;
-                return <circle cx={lx} cy={ly} r="3" fill={color} />;
-            })()}
+            <polygon points={`0,${H} ${pts} ${W},${H}`} fill="url(#spark-fill)" />
+            <polyline points={pts} fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={lastX} cy={lastY} r="3.5" fill="#6366f1" stroke="#fff" strokeWidth="1.5" />
         </svg>
     );
 }
 
-function CompareBar({ label, valueMs, maxMs, color, badge, gradient }) {
-    const [width, setWidth] = useState(0);
-    const pct = Math.round((valueMs / maxMs) * 100);
-    useEffect(() => { const t = setTimeout(() => setWidth(pct), 80); return () => clearTimeout(t); }, [pct]);
+/* ── Latency bar ────────────────────────────────────────────────────────────── */
+function LatencyBar({ label, valueMs, maxMs, gradient, badge }) {
+    const [w, setW] = useState(0);
+    const pct = Math.min(Math.round((valueMs / maxMs) * 100), 100);
+    useEffect(() => { const t = setTimeout(() => setW(pct), 100); return () => clearTimeout(t); }, [pct]);
 
     return (
         <div className="space-y-1.5">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                    <span className="text-[12.5px] font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
                     {badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded border uppercase tracking-wider"
-                            style={{ background: badge.bg, color: badge.text, borderColor: badge.border }}>
-                            {badge.text2 || badge.text}
+                        <span
+                            className="px-1.5 py-[1px] text-[9.5px] font-bold rounded-md border uppercase tracking-wide"
+                            style={{ background: badge.bg, color: badge.color, borderColor: badge.border }}
+                        >
+                            {badge.label}
                         </span>
                     )}
                 </div>
-                <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{valueMs}ms</span>
+                <span className="text-[12.5px] font-semibold metric-mono" style={{ color: 'var(--text-primary)' }}>
+                    {valueMs}ms
+                </span>
             </div>
             <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-recessed)' }}>
                 <div
                     className="h-full rounded-full perf-bar"
-                    style={{ width: `${width}%`, background: gradient || color, transition: 'width 0.9s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                    style={{ width: `${w}%`, background: gradient }}
                 />
             </div>
         </div>
     );
 }
 
-function PrimaryMetricCard({ label, value, sub }) {
+/* ── Primary metric ─────────────────────────────────────────────────────────── */
+function PrimaryMetric({ value, sub }) {
     return (
         <div
-            className="p-4 rounded-xl"
+            className="p-5 rounded-xl flex flex-col items-center justify-center"
             style={{
-                background: 'var(--accent-light)',
-                border: '1px solid rgba(99,102,241,0.20)',
-                boxShadow: '0 2px 8px rgba(99,102,241,0.08)',
+                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                border: '1px solid rgba(99,102,241,0.22)',
+                boxShadow: '0 4px 16px rgba(99,102,241,0.10), 0 1px 3px rgba(99,102,241,0.08)',
             }}
         >
-            <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--accent)' }}>{label}</div>
-            <div className="text-2xl font-bold font-mono" style={{ color: 'var(--accent)' }}>{value}</div>
-            {sub && <div className="text-[10px] mt-0.5" style={{ color: '#6366f1aa' }}>{sub}</div>}
+            <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--accent)' }}>
+                Avg Embed Time
+            </div>
+            <div className="text-[38px] font-bold metric-mono leading-none" style={{ color: 'var(--accent)', letterSpacing: '-0.04em' }}>
+                {value}
+            </div>
+            <div className="text-[11px] mt-1.5" style={{ color: '#818cf8' }}>{sub}</div>
         </div>
     );
 }
 
-function MetricCard({ icon, label, value, sub }) {
+/* ── Secondary metric card ──────────────────────────────────────────────────── */
+function StatCard({ icon, label, value, sub }) {
     return (
-        <div className="card-recessed p-3 flex flex-col gap-0.5">
+        <div className="card-recessed p-3.5 flex flex-col gap-1">
             <div className="text-base">{icon}</div>
-            <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</div>
-            <div className="text-lg font-bold font-mono" style={{ color: 'var(--text-primary)' }}>{value}</div>
-            {sub && <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>}
+            <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{label}</div>
+            <div className="text-[20px] font-bold metric-mono leading-none mt-0.5" style={{ color: 'var(--text-primary)' }}>{value}</div>
+            {sub && <div className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>}
         </div>
     );
 }
 
+/* ── Main ───────────────────────────────────────────────────────────────────── */
 export default function PerformanceTab() {
     const [perf, setPerf] = useState(null);
-    const [searchCount, setSearchCount] = useState(0);
+    const [count, setCount] = useState(0);
     const [animKey, setAnimKey] = useState(0);
     const pollRef = useRef(null);
 
     const fetchPerf = async () => {
         try {
-            const data = window.electronAPI ? await window.electronAPI.getPerfStats() : null;
-            if (data) { setPerf(data); setSearchCount(data.embedHistory.length); }
-        } catch (_) { }
+            const d = window.electronAPI ? await window.electronAPI.getPerfStats() : null;
+            if (d) { setPerf(d); setCount(d.embedHistory.length); }
+        } catch { }
     };
 
-    useEffect(() => {
-        fetchPerf();
-        pollRef.current = setInterval(fetchPerf, 2000);
-        return () => clearInterval(pollRef.current);
-    }, []);
-
+    useEffect(() => { fetchPerf(); pollRef.current = setInterval(fetchPerf, 2000); return () => clearInterval(pollRef.current); }, []);
     useEffect(() => { setAnimKey((k) => k + 1); }, [perf?.avgEmbedTimeMs]);
 
-    const avgMs = perf?.avgEmbedTimeMs || 0;
-    const lastMs = perf?.lastEmbedTimeMs || 0;
-    const history = perf?.embedHistory || [];
-    const provider = perf?.provider || 'cpu';
-    const isOptimized = avgMs > 0 && avgMs < CPU_BASELINE_MS;
-    const speedup = avgMs > 0 ? (CPU_BASELINE_MS / avgMs).toFixed(1) : '—';
-    const powerSaving = avgMs > 0 ? Math.round((1 - avgMs / CPU_BASELINE_MS) * 78) : 0;
-    const synapseMs = avgMs > 0 ? avgMs : CPU_BASELINE_MS;
-    const maxMs = CLOUD_API_MS + 50;
+    const avg = perf?.avgEmbedTimeMs || 0;
+    const last = perf?.lastEmbedTimeMs || 0;
+    const hist = perf?.embedHistory || [];
+    const prov = perf?.provider || 'cpu';
+    const speedup = avg > 0 ? (CPU_MS / avg).toFixed(1) : '—';
+    const saving = avg > 0 ? Math.round((1 - avg / CPU_MS) * 78) : 0;
+    const synapseMs = avg > 0 ? avg : CPU_MS;
+    const maxMs = CLOUD_MS + 80;
 
     return (
-        <div className="h-full overflow-y-auto px-6 py-5 animate-fade-in" style={{ background: 'var(--surface-app)' }}>
+        <div className="h-full overflow-y-auto px-6 py-5" style={{ background: 'var(--surface-app)' }}>
             <div className="max-w-2xl mx-auto space-y-4">
 
-                {/* ── Branding Header ──────────────────────────────────────────── */}
+                {/* ── Header card ──────────────────────────────────────────────── */}
                 <div
                     className="card p-4 flex items-center justify-between"
-                    style={{ borderLeft: '4px solid var(--accent)' }}
+                    style={{ borderLeft: '3px solid var(--accent)' }}
                 >
                     <div className="flex items-center gap-3">
                         <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)' }}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', boxShadow: '0 2px 8px rgba(99,102,241,0.35)' }}
                         >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                             </svg>
                         </div>
                         <div>
-                            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>On-Device AI Performance</h2>
+                            <h2 className="text-[13.5px] font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>On-Device AI Performance</h2>
                             <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                ONNX Runtime · BGE-small-en-v1.5 · 384-dim embeddings
+                                ONNX Runtime · BGE-small-en-v1.5 · 384-dim
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <span
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border"
+                            className="flex items-center gap-1.5 px-2.5 py-[4px] text-[10.5px] font-semibold rounded-full border"
                             style={
-                                provider === 'dml'
-                                    ? { background: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }
-                                    : { background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'rgba(99,102,241,0.25)' }
+                                prov === 'dml'
+                                    ? { background: '#ecfdf5', color: '#065f46', borderColor: '#6ee7b7' }
+                                    : { background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-border)' }
                             }
                         >
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: provider === 'dml' ? '#10b981' : 'var(--accent)' }} />
-                            {provider === 'dml' ? 'DirectML Active' : 'ONNX Optimized'}
+                            <div className="w-[5px] h-[5px] rounded-full" style={{ background: prov === 'dml' ? '#10b981' : 'var(--accent)' }} />
+                            {prov === 'dml' ? 'DirectML' : 'ONNX Optimized'}
                         </span>
                         <span
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border"
+                            className="flex items-center gap-1.5 px-2.5 py-[4px] text-[10.5px] font-semibold rounded-full border"
                             style={{ background: 'var(--surface-recessed)', color: 'var(--text-secondary)', borderColor: 'var(--border-medium)' }}
                         >
                             🔒 Offline
@@ -175,101 +183,99 @@ export default function PerformanceTab() {
                     </div>
                 </div>
 
-                {/* ── Key Metrics ──────────────────────────────────────────────── */}
-                <div className="grid grid-cols-4 gap-3">
-                    <PrimaryMetricCard
-                        label="Avg Embed Time"
-                        value={avgMs > 0 ? `${avgMs}ms` : '—'}
-                        sub="per query"
+                {/* ── Key metrics ──────────────────────────────────────────────── */}
+                <div className="grid grid-cols-4 gap-3 items-start">
+                    {/* Primary – full left cell */}
+                    <PrimaryMetric
+                        value={avg > 0 ? `${avg}ms` : '—'}
+                        sub={avg > 0 ? 'per query · live' : 'run a search'}
                     />
-                    <MetricCard
-                        icon="🚀"
-                        label="Speedup"
-                        value={avgMs > 0 ? `${speedup}×` : '—'}
-                        sub="vs unoptimized"
-                    />
-                    <MetricCard
-                        icon="🔁"
-                        label="Searches Run"
-                        value={searchCount || '0'}
-                        sub="this session"
-                    />
-                    <MetricCard
-                        icon="📦"
-                        label="Model Size"
-                        value="22 MB"
-                        sub="BGE-small ONNX"
-                    />
+
+                    {/* 3 secondary cards */}
+                    <StatCard icon="🚀" label="Speedup" value={avg > 0 ? `${speedup}×` : '—'} sub="vs CPU baseline" />
+                    <StatCard icon="🔁" label="Searches run" value={count || '0'} sub="this session" />
+                    <StatCard icon="📦" label="Model size" value="22 MB" sub="BGE-small ONNX" />
                 </div>
 
-                {/* ── Comparison bars ──────────────────────────────────────────── */}
+                {/* ── Latency comparison ───────────────────────────────────────── */}
                 <div className="card p-4 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                        <h3 className="text-[11.5px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
                             Inference Latency Comparison
                         </h3>
-                        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>lower is better ↓</span>
+                        <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>lower is better ↓</span>
                     </div>
 
                     <div key={`bars-${animKey}`} className="space-y-3.5">
-                        <CompareBar
+                        <LatencyBar
                             label="Cloud API (OpenAI)"
-                            valueMs={CLOUD_API_MS}
+                            valueMs={CLOUD_MS}
                             maxMs={maxMs}
-                            gradient="linear-gradient(90deg, #fca5a5, #ef4444)"
-                            badge={{ bg: '#fef2f2', text: 'Requires internet', text2: 'Internet required', border: '#fecaca', textColor: '#b91c1c' }}
+                            gradient="linear-gradient(90deg, #fca5a5 0%, #ef4444 100%)"
+                            badge={{ label: 'Requires internet', bg: '#fef2f2', color: '#991b1b', border: '#fecaca' }}
                         />
-                        <CompareBar
+                        <LatencyBar
                             label="Standard CPU Inference"
-                            valueMs={CPU_BASELINE_MS}
+                            valueMs={CPU_MS}
                             maxMs={maxMs}
-                            gradient="linear-gradient(90deg, #fde68a, #f59e0b)"
-                            badge={{ bg: '#fffbeb', text: 'Unoptimized', border: '#fde68a', textColor: '#b45309' }}
+                            gradient="linear-gradient(90deg, #fde68a 0%, #f59e0b 100%)"
+                            badge={{ label: 'Unoptimized', bg: '#fffbeb', color: '#92400e', border: '#fde68a' }}
                         />
-                        <CompareBar
+                        <LatencyBar
                             label="Cortex (ONNX Runtime)"
                             valueMs={synapseMs}
                             maxMs={maxMs}
-                            gradient="linear-gradient(90deg, #818cf8, #6366f1)"
-                            badge={avgMs > 0
-                                ? { bg: 'var(--accent-light)', text: 'Live', border: 'rgba(99,102,241,0.25)', textColor: 'var(--accent)' }
-                                : { bg: 'var(--surface-recessed)', text: 'Estimated', border: 'var(--border-medium)', textColor: 'var(--text-muted)' }
+                            gradient="linear-gradient(90deg, #a5b4fc 0%, #6366f1 100%)"
+                            badge={avg > 0
+                                ? { label: 'Live', bg: 'var(--accent-light)', color: 'var(--accent)', border: 'var(--accent-border)' }
+                                : { label: 'Estimated', bg: 'var(--surface-recessed)', color: 'var(--text-muted)', border: 'var(--border-medium)' }
                             }
                         />
                     </div>
 
-                    {avgMs > 0 && (
-                        <div className="mt-2 p-3 rounded-lg card-accent">
-                            <p className="text-[12px] leading-relaxed" style={{ color: '#4338ca' }}>
+                    {avg > 0 && (
+                        <div
+                            className="mt-1 p-3 rounded-lg"
+                            style={{ background: 'var(--accent-muted)', border: '1px solid var(--accent-border)' }}
+                        >
+                            <p className="text-[12px] leading-relaxed" style={{ color: '#3730a3' }}>
                                 <span className="font-bold">{speedup}× faster</span> than standard CPU inference
-                                {powerSaving > 0 && <> · <span className="font-bold">~{powerSaving}% less power</span> estimated</>}
-                                {' '}· Last query: <span className="font-mono font-bold">{lastMs}ms</span>
+                                {saving > 0 && <> · <span className="font-bold">~{saving}% less power</span></>}
+                                {' '}· Last: <span className="metric-mono font-bold">{last}ms</span>
                             </p>
                         </div>
                     )}
-                    {avgMs === 0 && (
-                        <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
-                            Run a search to see your real measured inference time.
+                    {avg === 0 && (
+                        <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                            Run a search to see your actual measured latency.
                         </p>
                     )}
                 </div>
 
-                {/* ── Sparkline ────────────────────────────────────────────────── */}
+                {/* ── Embed Time History ───────────────────────────────────────── */}
                 <div className="card p-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-[11.5px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
                             Embed Time History
                         </h3>
-                        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>last {Math.max(history.length, 0)} queries</span>
+                        <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
+                            {hist.length > 0 ? `last ${hist.length} queries` : 'awaiting first query'}
+                        </span>
                     </div>
+
                     <div className="flex items-end gap-6">
-                        <SparkLine history={history.length ? history : []} />
-                        {history.length > 0 && (
-                            <div className="text-[10px] space-y-1 pb-1" style={{ color: 'var(--text-muted)' }}>
-                                <div>min <span className="font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{Math.min(...history)}ms</span></div>
-                                <div>max <span className="font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{Math.max(...history)}ms</span></div>
-                                <div>avg <span className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{avgMs}ms</span></div>
+                        <SparkLine history={hist} />
+
+                        {hist.length > 0 ? (
+                            <div className="space-y-1 pb-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                                <div>min <span className="metric-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{Math.min(...hist)}ms</span></div>
+                                <div>max <span className="metric-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{Math.max(...hist)}ms</span></div>
+                                <div>avg <span className="metric-mono font-bold" style={{ color: 'var(--accent)' }}>{avg}ms</span></div>
                             </div>
+                        ) : (
+                            <p className="text-[11px] pb-1" style={{ color: 'var(--text-muted)' }}>
+                                History will populate after your first search.
+                            </p>
                         )}
                     </div>
                 </div>
@@ -277,14 +283,12 @@ export default function PerformanceTab() {
                 {/* ── Privacy statement ────────────────────────────────────────── */}
                 <div className="card p-3.5 flex items-center gap-3">
                     <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-base"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
                         style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}
-                    >
-                        🔒
-                    </div>
-                    <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                    >🔒</div>
+                    <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                         All inference runs <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>locally on this device</span>.
-                        No queries, documents, or embeddings leave your machine. Zero cloud dependency.
+                        No queries or embeddings leave your machine.
                     </p>
                 </div>
 
@@ -293,12 +297,12 @@ export default function PerformanceTab() {
                     {[
                         { label: 'Embedding Model', value: 'BGE-small-en-v1.5', detail: '384 dimensions' },
                         { label: 'Inference Runtime', value: 'ONNX Runtime', detail: 'v1.20 · graph optimized' },
-                        { label: 'Vector Search', value: 'Cosine Similarity', detail: 'brute-force <1ms for ≤1k docs' },
+                        { label: 'Vector Search', value: 'Cosine Similarity', detail: 'brute-force <1ms ≤1k docs' },
                     ].map((item) => (
                         <div key={item.label} className="card-recessed p-3">
-                            <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{item.label}</div>
-                            <div className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{item.value}</div>
-                            <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.detail}</div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>{item.label}</div>
+                            <div className="text-[12.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{item.value}</div>
+                            <div className="text-[10.5px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.detail}</div>
                         </div>
                     ))}
                 </div>

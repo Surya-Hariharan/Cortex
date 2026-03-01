@@ -20,12 +20,12 @@ function createWindow() {
         height: 820,
         minWidth: 900,
         minHeight: 600,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#FFFFFF',         // matches --surface-card (navbar bg)
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-            color: '#0f172a',
-            symbolColor: '#94a3b8',
-            height: 36,
+            color: '#FFFFFF',               // exact navbar background
+            symbolColor: '#475569',         // --text-secondary: neutral dark gray icons
+            height: 56,                     // matches navbar height
         },
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -76,7 +76,7 @@ async function initializeServices() {
         try {
             const stats = getDatabase()?.getStats();
             if (stats) peerDiscovery.setDocCount(stats.documents);
-        } catch (_) {}
+        } catch (_) { }
         console.log('[Cortex] Mesh peer discovery started');
     } catch (error) {
         console.error('[Cortex] Service initialization error:', error.message);

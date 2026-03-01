@@ -98,36 +98,57 @@ export default function App() {
 
             {/* ── Header ──────────────────────────────────────────────────────── */}
             <header
-                className="flex items-center justify-between px-4 flex-shrink-0"
+                className="flex items-center justify-between flex-shrink-0"
                 style={{
-                    height: '44px',
-                    background: 'var(--surface-card)',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04)',
+                    height: '56px',
+                    minHeight: '56px',
+                    /* Very subtle warm-white gradient gives the header gentle depth  */
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)',
+                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04)',
                     WebkitAppRegion: 'drag',
+                    paddingLeft: 0,
+                    paddingRight: 0,
                 }}
             >
-                {/* Left: Logo + Tabs */}
-                <div className="flex items-center gap-0" style={{ WebkitAppRegion: 'no-drag' }}>
-                    {/* Logo mark */}
-                    <div className="flex items-center gap-2 pr-4 mr-1" style={{ borderRight: '1px solid var(--border-subtle)' }}>
+                {/* ── Left group: Logo + Tab nav ─────────────────────────────── */}
+                <div className="flex items-stretch h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+
+                    {/* Logo */}
+                    <div
+                        className="flex items-center gap-2.5"
+                        style={{
+                            padding: '0 20px 0 24px',
+                            borderRight: '1px solid rgba(0,0,0,0.06)',
+                            flexShrink: 0,
+                        }}
+                    >
                         <div
-                            className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)' }}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                                background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+                                boxShadow: '0 2px 8px rgba(99,102,241,0.32)',
+                            }}
                         >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="3" />
                                 <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
                             </svg>
                         </div>
-                        <span className="text-[13px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Cortex</span>
+                        <div>
+                            <div
+                                className="text-[13.5px] font-bold tracking-tight leading-none"
+                                style={{ color: '#1e293b', letterSpacing: '-0.02em' }}
+                            >Cortex</div>
+                            <div
+                                className="text-[9px] font-semibold uppercase tracking-[0.1em] mt-[3px]"
+                                style={{ color: '#94a3b8' }}
+                            >Offline AI</div>
+                        </div>
                     </div>
 
-                    {/* Tab Navigation */}
-                    <nav
-                        className="flex items-center gap-0.5 mx-2 rounded-lg p-0.5"
-                        style={{ background: 'var(--surface-recessed)' }}
-                    >
+                    {/* Tab nav — underline style, full navbar height */}
+                    <nav className="flex items-stretch h-full" style={{ padding: '0 8px' }}>
                         {TABS.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
@@ -135,51 +156,82 @@ export default function App() {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`tab-btn flex items-center gap-1.5 ${isActive ? 'tab-btn-active' : 'tab-btn-inactive'}`}
+                                    className="relative flex items-center gap-1.5 transition-all duration-150 select-none flex-shrink-0"
+                                    style={{
+                                        padding: '0 14px',
+                                        fontSize: '12.5px',
+                                        fontWeight: isActive ? 600 : 500,
+                                        color: isActive ? '#6366f1' : '#64748b',
+                                        /* 2px bottom underline for active — flush with header bottom border */
+                                        borderBottom: isActive ? '2px solid #6366f1' : '2px solid transparent',
+                                        borderTop: '2px solid transparent',   /* balance the layout */
+                                        background: 'transparent',
+                                        outline: 'none',
+                                        cursor: 'pointer',
+                                        borderRadius: 0,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isActive) {
+                                            e.currentTarget.style.color = '#334155';
+                                            e.currentTarget.style.background = 'rgba(99,102,241,0.04)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isActive) {
+                                            e.currentTarget.style.color = '#64748b';
+                                            e.currentTarget.style.background = 'transparent';
+                                        }
+                                    }}
                                 >
                                     <Icon />
-                                    <span className="text-[12.5px]">{tab.label}</span>
+                                    <span>{tab.label}</span>
                                 </button>
                             );
                         })}
                     </nav>
                 </div>
 
-                {/* Right: Badges + Upload */}
-                <div className="flex items-center gap-2.5" style={{ WebkitAppRegion: 'no-drag' }}>
-                    {/* Provider badge */}
+                {/* ── Right group: status + upload ───────────────────────────── */}
+                {/* paddingRight: 148px — reserves space for Windows Min/Max/Close  */}
+                {/* The 3 native controls each ≈46px wide = ~138px + 10px buffer   */}
+                <div
+                    className="flex items-center gap-2"
+                    style={{
+                        WebkitAppRegion: 'no-drag',
+                        paddingLeft: '12px',
+                        paddingRight: '148px',
+                    }}
+                >
+                    {/* ONNX provider badge */}
                     <span
-                        className="flex items-center gap-1.5 px-2.5 py-[3px] text-[10px] font-semibold rounded-full border"
-                        style={
-                            perfProvider === 'dml'
+                        className="flex items-center gap-1.5 text-[10.5px] font-semibold rounded-full border"
+                        style={{
+                            padding: '3px 10px',
+                            ...(perfProvider === 'dml'
                                 ? { background: '#ecfdf5', color: '#065f46', borderColor: '#6ee7b7' }
-                                : { background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-border)' }
-                        }
+                                : { background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' }),
+                        }}
                     >
-                        <div
-                            className="w-[5px] h-[5px] rounded-full flex-shrink-0"
-                            style={{ background: perfProvider === 'dml' ? '#10b981' : 'var(--accent)' }}
-                        />
+                        <div className="w-[5px] h-[5px] rounded-full flex-shrink-0"
+                            style={{ background: perfProvider === 'dml' ? '#10b981' : '#6366f1' }} />
                         {perfProvider === 'dml' ? 'DirectML' : 'ONNX Runtime'}
                     </span>
 
-                    {/* Separator + stats */}
+                    {/* Doc count — shown only when > 0 */}
                     {stats.documents > 0 && (
                         <>
-                            <div className="w-px h-3.5" style={{ background: 'var(--border-subtle)' }} />
-                            <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                                <span className="flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                                    {stats.documents} docs
-                                </span>
-                                <span style={{ color: 'var(--border-medium)' }}>·</span>
+                            <div className="w-px h-3.5 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.08)' }} />
+                            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: '#94a3b8' }}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
+                                <span>{stats.documents} docs</span>
+                                <span style={{ color: '#e2e8f0' }}>·</span>
                                 <span>{stats.embeddings} vectors</span>
                             </div>
                         </>
                     )}
 
-                    {/* Separator + Upload */}
-                    <div className="w-px h-3.5" style={{ background: 'var(--border-subtle)' }} />
+                    {/* Upload PDF */}
+                    <div className="w-px h-3.5 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.08)' }} />
                     <button
                         onClick={async () => {
                             if (window.electronAPI) {
@@ -193,7 +245,8 @@ export default function App() {
                                 }
                             }
                         }}
-                        className="btn-ghost flex items-center gap-1.5 text-[11.5px] py-1 px-2.5"
+                        className="btn-ghost flex items-center gap-1.5 text-[11.5px]"
+                        style={{ padding: '5px 10px' }}
                     >
                         <UploadIcon />
                         Upload PDF

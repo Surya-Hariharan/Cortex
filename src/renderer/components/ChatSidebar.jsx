@@ -121,8 +121,15 @@ function CtxMenu({ x, y, items, onClose }) {
 }
 
 /* ── Main component ──────────────────────────────────────────────────────── */
-export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }) {
-    const [collapsed, setCollapsed] = useState(false);
+export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat, collapsed: collapsedProp, onCollapsedChange }) {
+    // Support both controlled (prop-driven) and uncontrolled collapse state
+    const [collapsedInternal, setCollapsedInternal] = useState(false);
+    const isControlled = collapsedProp !== undefined;
+    const collapsed = isControlled ? collapsedProp : collapsedInternal;
+    const setCollapsed = isControlled
+        ? (v) => onCollapsedChange?.(typeof v === 'function' ? v(collapsed) : v)
+        : setCollapsedInternal;
+
     const [projects, setProjects] = useState([]);
     const [chats, setChats] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');

@@ -4,8 +4,6 @@ import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
 import NotesTab from './components/NotesTab';
 import Toast from './components/Toast';
-import ChatSidebar from './components/ChatSidebar';
-import ChatPane from './components/ChatPane';
 
 const TABS = [
     { id: 'search', label: 'Search', icon: SearchIcon },
@@ -88,7 +86,7 @@ export default function App() {
 
     const renderTab = () => {
         switch (activeTab) {
-            case 'search': return <SearchTab onToast={showToast} />;
+            case 'search': return <SearchTab onToast={showToast} activeChatId={activeChatId} setActiveChatId={setActiveChatId} />;
             case 'notes': return <NotesTab onToast={showToast} />;
             case 'network': return <NetworkTab />;
             case 'performance': return <PerformanceTab />;
@@ -259,24 +257,10 @@ export default function App() {
                 </div>
             </header>
 
-            {/* ── Body: sidebar + content ──────────────────────────────────────── */}
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                <ChatSidebar
-                    activeChatId={activeChatId}
-                    onSelectChat={setActiveChatId}
-                    onNewChat={(chat) => setActiveChatId(chat?.id ?? null)}
-                />
-                <main
-                    key={activeChatId ?? activeTab}
-                    className="flex-1 overflow-hidden page-fade"
-                    style={{ display: 'flex', minWidth: 0 }}
-                >
-                    {activeChatId
-                        ? <ChatPane chatId={activeChatId} onTitleUpdate={() => { }} />
-                        : renderTab()
-                    }
-                </main>
-            </div>
+            {/* ── Body: full-width; sidebar is owned by SearchTab ──────────────── */}
+            <main key={activeTab} className="flex-1 overflow-hidden page-fade" style={{ display: 'flex', minWidth: 0 }}>
+                {renderTab()}
+            </main>
 
             {/* ── Toast ─────────────────────────────────────────────────────── */}
             {toast && (

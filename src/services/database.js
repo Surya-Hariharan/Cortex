@@ -47,8 +47,33 @@ function initializeDatabase(dbPath) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS projects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS chats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER DEFAULT NULL,
+      title TEXT NOT NULL DEFAULT 'New Chat',
+      last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id INTEGER NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+      content TEXT NOT NULL,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_documents_subject ON documents(subject);
     CREATE INDEX IF NOT EXISTS idx_embeddings_doc_id ON embeddings(doc_id);
+    CREATE INDEX IF NOT EXISTS idx_chats_project ON chats(project_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_chat ON chat_messages(chat_id);
   `);
 
     return db;
@@ -171,6 +196,99 @@ class DatabaseWrapper {
 
     toggleNoteComplete(id) {
         this.db.prepare('UPDATE notes SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END WHERE id = ?').run(id);
+    }
+
+    // ── Projects ───────────────────────────────────────────────────────────
+
+    createProject(name) {
+        const result = this.db.prepare('INSERT INTO projects (name) VALUES (?)').run(name);
+        return result.lastInsertRowid;
+    }
+
+    getProjects() {
+        const projects = this.db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all();
+        return projects.map((p) => ({
+            id: p.id,
+            name: p.name,
+            createdAt: p.created_at,
+            chatCount: this.db.prepare('SELECT COUNT(*) as c FROM chats WHERE project_id = ?').get(p.id).c,
+        }));
+    }
+
+    deleteProject(id) {
+        this.db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+    }
+
+    renameProject(id, name) {
+        this.db.prepare('UPDATE projects SET name = ? WHERE id = ?').run(name, id);
+    }
+
+    // ── Chats ─────────────────────────────────────────────────────────────
+
+    createChat(projectId = null, title = 'New Chat') {
+        const result = this.db.prepare(
+            'INSERT INTO chats (project_id, title) VALUES (?, ?)'
+        ).run(projectId, title);
+        return { id: result.lastInsertRowid, title, projectId };
+    }
+
+    getChats(projectId = undefined) {
+        const rows = projectId !== undefined
+            ? this.db.prepare('SELECT * FROM chats WHERE project_id = ? ORDER BY last_updated DESC').all(projectId)
+            : this.db.prepare('SELECT * FROM chats ORDER BY last_updated DESC LIMIT 50').all();
+        return rows.map((r) => ({
+            id: r.id,
+            title: r.title,
+            projectId: r.project_id,
+            lastUpdated: r.last_updated,
+        }));
+    }
+
+    deleteChat(id) {
+        this.db.prepare('DELETE FROM chats WHERE id = ?').run(id);
+    }
+
+    updateChatTitle(id, title) {
+        this.db.prepare('UPDATE chats SET title = ? WHERE id = ?').run(title, id);
+    }
+
+    touchChat(id) {
+        this.db.prepare("UPDATE chats SET last_updated = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+    }
+
+    searchChats(query) {
+        const pattern = `%${query}%`;
+        return this.db.prepare(`
+            SELECT DISTINCT c.id, c.title, c.last_updated
+            FROM chats c
+            LEFT JOIN chat_messages m ON m.chat_id = c.id
+            WHERE c.title LIKE ? OR m.content LIKE ?
+            ORDER BY c.last_updated DESC LIMIT 20
+        `).all(pattern, pattern).map((r) => ({
+            id: r.id, title: r.title, lastUpdated: r.last_updated,
+        }));
+    }
+
+    // ── Chat Messages ──────────────────────────────────────────────────────
+
+    getChatMessages(chatId) {
+        return this.db.prepare(
+            'SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY timestamp ASC'
+        ).all(chatId).map((r) => ({
+            id: r.id,
+            chatId: r.chat_id,
+            role: r.role,
+            content: r.content,
+            timestamp: r.timestamp,
+        }));
+    }
+
+    addChatMessage(chatId, role, content) {
+        const result = this.db.prepare(
+            'INSERT INTO chat_messages (chat_id, role, content) VALUES (?, ?, ?)'
+        ).run(chatId, role, content);
+        this.touchChat(chatId);
+        return result.lastInsertRowid;
     }
 }
 

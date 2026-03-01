@@ -258,7 +258,7 @@ export default function App() {
             </header>
 
             {/* ── Body: full-width; sidebar is owned by SearchTab ──────────────── */}
-            <main key={activeTab} className="flex-1 overflow-hidden page-fade" style={{ display: 'flex', minWidth: 0 }}>
+            <main key={activeTab} className="flex-1 overflow-hidden page-fade">
                 {renderTab()}
             </main>
 

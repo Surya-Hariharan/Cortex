@@ -3,12 +3,12 @@ const path = require('path');
 const fs = require('fs');
 
 // Services
-const { initializeDatabase, getDatabase } = require('../services/database');
-const { EmbeddingsEngine } = require('../services/embeddings');
-const { searchVectors } = require('../services/vectorSearch');
-const { extractPdfText } = require('../services/pdfHandler');
-const { ragSearch } = require('../services/ragPipeline');
-const { PeerDiscovery } = require('../services/peerDiscovery');
+const { initializeDatabase, getDatabase } = require('./services/database');
+const { EmbeddingsEngine } = require('./services/embeddings');
+const { searchVectors } = require('./services/vectorSearch');
+const { extractPdfText } = require('./services/pdfHandler');
+const { ragSearch } = require('./services/ragPipeline');
+const { PeerDiscovery } = require('./services/peerDiscovery');
 
 let mainWindow;
 let embeddingsEngine;
@@ -36,7 +36,7 @@ function createWindow() {
     });
 
     // Load renderer
-    const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
+    const rendererPath = path.join(__dirname, '../dist/renderer/index.html');
     if (fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
     } else {

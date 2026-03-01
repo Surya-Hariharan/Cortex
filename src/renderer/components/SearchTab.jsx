@@ -21,7 +21,6 @@ const SUGGESTION_GROUPS = [
 const ALL_SUGGESTIONS = SUGGESTION_GROUPS.flatMap((g) => g.items);
 
 export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
@@ -112,56 +111,16 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
 
     const hasResults = results !== null;
 
-    /* ── Gutter toggle arrow icon ── */
-    const GutterToggle = () => (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            style={{ transform: sidebarCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.25s ease' }}>
-            <polyline points="15 18 9 12 15 6" />
-        </svg>
-    );
-
     return (
         /* ── Search-specific layout: sidebar + content ──────────────────────── */
-        <div style={{ display: 'flex', width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
 
-            {/* Sidebar — owned exclusively by SearchTab */}
+            {/* Sidebar — owned exclusively by SearchTab, always expanded */}
             <ChatSidebar
                 activeChatId={activeChatId}
                 onSelectChat={setActiveChatId}
                 onNewChat={(chat) => setActiveChatId?.(chat?.id ?? null)}
-                collapsed={sidebarCollapsed}
-                onCollapsedChange={setSidebarCollapsed}
             />
-
-            {/* Gutter toggle — positioned at the seam */}
-            <button
-                onClick={() => setSidebarCollapsed((v) => !v)}
-                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                style={{
-                    position: 'absolute',
-                    left: sidebarCollapsed ? '58px' : '254px',
-                    top: '120px',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: 'var(--surface-card)',
-                    border: '1px solid var(--border-subtle)',
-                    boxShadow: 'var(--shadow-md)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: 'var(--text-secondary)',
-                    zIndex: 20,
-                    transition: 'left 0.25s ease, color 0.15s ease, box-shadow 0.15s ease',
-                    padding: 0,
-                    flexShrink: 0,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-            >
-                <GutterToggle />
-            </button>
 
             {/* Content area */}
             <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--surface-app)' }}>

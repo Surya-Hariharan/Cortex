@@ -292,11 +292,27 @@ export default function PerformanceTab() {
                         value={count || '0'}
                         sub="this session"
                     />
+
+                    {/* Model on disk — completes the metrics panel */}
+                    <div
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                        style={{ background: 'var(--surface-recessed)', border: '1px solid var(--border-subtle)' }}
+                    >
+                        <span className="text-base">📦</span>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Model on disk</div>
+                            <div className="metric-mono font-bold text-[18px] leading-tight" style={{ color: 'var(--text-primary)' }}>22 MB</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>BGE-small-en-v1.5</div>
+                            <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>384-dim, ONNX fp32</div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── CENTER COLUMN: Primary visualization anchor ─────────────── */}
-                <div className="flex flex-col gap-4">
-                    {/* History card grows to fill – flex-1 is the key */}
+                {/* This column has only one card which grows to fill 100% height   */}
+                <div className="flex flex-col" style={{ minHeight: 0 }}>
                     <div className="card flex flex-col" style={{ padding: '18px 20px', flex: 1, minHeight: 0 }}>
                         <div className="flex items-center justify-between mb-4">
                             <div>
@@ -335,22 +351,6 @@ export default function PerformanceTab() {
                                 ))}
                             </div>
                         )}
-                    </div>
-
-                    {/* Model size chip – fixed height below chart */}
-                    <div
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl flex-shrink-0"
-                        style={{ background: 'var(--surface-recessed)', border: '1px solid var(--border-subtle)' }}
-                    >
-                        <span className="text-base">📦</span>
-                        <div className="flex-1 min-w-0">
-                            <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Model on disk</div>
-                            <div className="metric-mono font-bold text-[18px] leading-tight" style={{ color: 'var(--text-primary)' }}>22 MB</div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>BGE-small-en-v1.5</div>
-                            <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>384-dim, ONNX fp32</div>
-                        </div>
                     </div>
                 </div>
 

@@ -11,6 +11,7 @@
   font-display: swap;
   src: url('./fonts/Inter-Regular.woff2') format('woff2');
 }
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -18,6 +19,7 @@
   font-display: swap;
   src: url('./fonts/Inter-Medium.woff2') format('woff2');
 }
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -25,6 +27,7 @@
   font-display: swap;
   src: url('./fonts/Inter-SemiBold.woff2') format('woff2');
 }
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -32,6 +35,7 @@
   font-display: swap;
   src: url('./fonts/Inter-Bold.woff2') format('woff2');
 }
+
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
@@ -39,6 +43,7 @@
   font-display: swap;
   src: url('./fonts/JetBrainsMono-Regular.woff2') format('woff2');
 }
+
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
@@ -50,21 +55,55 @@
 /* ── Design Tokens ────────────────────────────────────────────────────────── */
 
 :root {
-  --surface-app:      #EFF3FA;
-  --surface-card:     #FFFFFF;
-  --surface-recessed: #E8EEF5;
-  --surface-hover:    #E2E9F4;
-  --border-subtle:    rgba(148, 163, 184, 0.22);
-  --border-medium:    rgba(100, 116, 139, 0.30);
-  --border-focus:     rgba(99, 102, 241, 0.40);
-  --text-primary:     #1e293b;
-  --text-secondary:   #475569;
-  --text-muted:       #94a3b8;
-  --text-placeholder: #b0bec9;
-  --accent:           #4f46e5;
-  --accent-hover:     #4338ca;
-  --accent-light:     #eef2ff;
-  --accent-muted:     rgba(99, 102, 241, 0.08);
+  /* ── 3-layer surface system ── */
+  --surface-app: #F4F6FB;
+  /* Level 0 – app shell background */
+  --surface-sidebar: #EDF0F7;
+  /* Level 1 – sidebars, secondary panels */
+  --surface-card: #FFFFFF;
+  /* Level 2 – content cards */
+  --surface-recessed: #E8EDF5;
+  /* Sunken inputs, inset areas */
+  --surface-hover: #E2E8F4;
+  /* Hover state fill */
+
+  /* ── Borders ── */
+  --border-subtle: rgba(148, 163, 184, 0.20);
+  --border-medium: rgba(100, 116, 139, 0.28);
+  --border-strong: rgba(100, 116, 139, 0.45);
+  --border-focus: rgba(99, 102, 241, 0.40);
+
+  /* ── Text hierarchy (4 levels) ── */
+  --text-hero: #0F172A;
+  /* Hero headings */
+  --text-primary: #1E293B;
+  /* Section titles, key labels */
+  --text-secondary: #475569;
+  /* Body text */
+  --text-muted: #94A3B8;
+  /* Captions, metadata */
+  --text-placeholder: #B0BEC9;
+  /* Input placeholder */
+
+  /* ── Accent (Indigo) ── */
+  --accent: #4F46E5;
+  --accent-hover: #4338CA;
+  --accent-pressed: #3730A3;
+  --accent-light: #EEF2FF;
+  --accent-muted: rgba(99, 102, 241, 0.07);
+  --accent-border: rgba(99, 102, 241, 0.22);
+
+  /* ── Semantic ── */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+
+  /* ── Elevation (shadows) ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.10), 0 4px 10px rgba(0, 0, 0, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.16);
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -84,12 +123,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.22);
+  background: rgba(100, 116, 139, 0.18);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.38);
+  background: rgba(100, 116, 139, 0.32);
 }
 
 body {
@@ -101,25 +140,33 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Component Classes ────────────────────────────────────────────────────── */
 
 @layer components {
 
-  /* Cards & Surfaces */
+  /* ── Card & Surface System ── */
+
   .card {
     background: var(--surface-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    transition: box-shadow 0.18s ease, border-color 0.18s ease;
   }
 
-  .card-md {
+  .card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-medium);
+  }
+
+  .card-flat {
     background: var(--surface-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.04);
+    border-radius: 10px;
+    /* no shadow – for dense list items */
   }
 
   .card-recessed {
@@ -130,199 +177,356 @@ body {
 
   .card-accent {
     background: var(--accent-muted);
-    border: 1px solid rgba(99, 102, 241, 0.18);
+    border: 1px solid var(--accent-border);
     border-radius: 10px;
   }
 
-  /* Legacy aliases — keep so existing JSX using these doesn't break */
+  /* Legacy aliases */
   .glass-panel {
-    @apply card;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
   }
 
   .glass-panel-light {
-    @apply card-recessed;
+    background: var(--surface-recessed);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
   }
 
-  /* Buttons */
+  /* ── Buttons ── */
+
   .btn-primary {
-    @apply px-4 py-2 text-white text-sm font-semibold rounded-lg
-           transition-all duration-150 active:scale-[0.97]
-           disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-sm font-semibold rounded-lg text-white transition-all duration-150 select-none disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--accent);
-    box-shadow: 0 1px 3px rgba(79,70,229,0.25);
+    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.10);
   }
+
   .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
-    box-shadow: 0 2px 8px rgba(79,70,229,0.30);
+    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    transform: translateY(-0.5px);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    background: var(--accent-pressed);
+    box-shadow: none;
+    transform: scale(0.98);
+    transition-duration: 80ms;
   }
 
   .btn-ghost {
-    @apply px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150;
+    @apply px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 select-none;
     color: var(--text-secondary);
   }
+
   .btn-ghost:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
   }
 
-  /* Tabs */
+  .btn-ghost:active {
+    transform: scale(0.97);
+    transition-duration: 80ms;
+  }
+
+  /* ── Tab Navigation ── */
+
   .tab-btn {
-    @apply px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 relative;
+    @apply px-3.5 py-1.5 text-sm font-medium rounded-md transition-all duration-150 relative select-none;
+    letter-spacing: -0.01em;
   }
 
   .tab-btn-active {
-    background: var(--accent-light);
+    background: var(--surface-card);
     color: var(--accent);
     font-weight: 600;
+    box-shadow: var(--shadow-sm);
   }
 
   .tab-btn-inactive {
     color: var(--text-secondary);
   }
+
   .tab-btn-inactive:hover {
-    background: var(--surface-hover);
+    background: rgba(255, 255, 255, 0.55);
     color: var(--text-primary);
   }
 
-  /* Inputs */
+  /* ── Inputs ── */
+
   .input-base {
-    @apply w-full rounded-lg px-3 py-2 text-sm outline-none transition-all duration-150;
+    @apply w-full rounded-lg px-3 py-2 outline-none transition-all duration-150;
     background: var(--surface-recessed);
     border: 1px solid var(--border-medium);
     color: var(--text-primary);
     font-size: 14px;
+    font-family: inherit;
   }
+
   .input-base::placeholder {
     color: var(--text-placeholder);
   }
+
   .input-base:focus {
-    border-color: rgba(99, 102, 241, 0.5);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.10);
+    background: var(--surface-card);
+    border-color: rgba(99, 102, 241, 0.50);
+    box-shadow: var(--shadow-focus);
   }
 
-  /* Status dots */
+  /* ── Status dots ── */
+
   .status-dot {
     @apply w-2 h-2 rounded-full flex-shrink-0;
   }
 
   .status-online {
-    background: #10b981;
+    background: var(--success);
   }
 
   .status-idle {
-    background: #f59e0b;
+    background: var(--warning);
   }
 
   .status-offline {
-    background: #cbd5e1;
+    background: #CBD5E1;
   }
 
-  /* Score bar */
+  /* ── Score bar ── */
+
   .score-bar {
     @apply h-1.5 rounded-full bg-gradient-to-r;
-    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: width 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Shimmer / skeleton */
+  /* ── Shimmer skeleton ── */
+
   .shimmer-bg {
-    background: linear-gradient(
-      90deg,
-      rgba(99, 102, 241, 0) 0%,
-      rgba(99, 102, 241, 0.06) 50%,
-      rgba(99, 102, 241, 0) 100%
-    );
+    background: linear-gradient(90deg,
+        var(--surface-recessed) 0%,
+        var(--surface-hover) 50%,
+        var(--surface-recessed) 100%);
     background-size: 200% 100%;
-    animation: shimmer 2s linear infinite;
+    animation: shimmerSlide 1.8s ease-in-out infinite;
   }
 
-  /* Gradient text (used sparingly in light mode) */
+  /* ── Gradient text ── */
+
   .gradient-text {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   }
 
-  /* Glow / focus borders (legacy compat) */
+  /* ── Focus ring helpers ── */
+
   .glow-border {
     border: 1px solid var(--border-subtle);
   }
+
   .glow-border-active {
     border-color: rgba(99, 102, 241, 0.45);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.10), 0 4px 16px rgba(99, 102, 241, 0.08);
+    box-shadow: var(--shadow-focus), var(--shadow-md);
+  }
+
+  /* ── Interactive list item ── */
+
+  .list-item {
+    @apply transition-all duration-150 rounded-lg;
+    border: 1px solid transparent;
+  }
+
+  .list-item:hover {
+    background: var(--surface-hover);
+  }
+
+  .list-item-selected {
+    background: var(--accent-light) !important;
+    border-color: var(--accent-border) !important;
+  }
+
+  /* ── Page fade wrapper ── */
+
+  .page-fade {
+    animation: pageFadeIn 0.22s ease-out both;
   }
 }
 
-/* ── Animations ───────────────────────────────────────────────────────────── */
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-@keyframes shimmer {
-  0%   { backgroundPosition: '-200% 0'; }
-  100% { backgroundPosition: '200% 0'; }
-}
+@keyframes shimmerSlide {
+  0% {
+    background-position: -200% 0;
+  }
 
-@keyframes barFillIn {
-  from { width: 0; }
-  to   { width: var(--bar-width, 100%); }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
-  50%       { box-shadow: 0 0 0 3px rgba(99,102,241,0.18); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.07);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+  }
 }
 
-.animate-slide-up   { animation: slideUp   0.30s ease-out both; }
-.animate-slide-down { animation: slideDown 0.25s ease-out both; }
-.animate-scale-in   { animation: scaleIn   0.22s ease-out both; }
-.animate-fade-in    { animation: fadeIn    0.28s ease-out both; }
-.animate-spin-slow  { animation: spin      1.1s linear infinite; }
-.animate-pulse-glow { animation: pulseGlow 3s ease-in-out infinite; }
+@keyframes barFillIn {
+  from {
+    width: 0;
+  }
 
-/* Staggered delays */
-.stagger-1 { animation-delay: 0.04s; }
-.stagger-2 { animation-delay: 0.08s; }
-.stagger-3 { animation-delay: 0.12s; }
-.stagger-4 { animation-delay: 0.16s; }
-.stagger-5 { animation-delay: 0.20s; }
+  to {
+    width: var(--bar-target, 100%);
+  }
+}
 
-/* Typewriter cursor for AI synthesis */
+/* ── Utility Classes ──────────────────────────────────────────────────────── */
+
+.animate-slide-up {
+  animation: slideUp 0.28s ease-out both;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.22s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.20s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out both;
+}
+
+.animate-spin-slow {
+  animation: spin 1.1s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+.stagger-1 {
+  animation-delay: 0.04s;
+}
+
+.stagger-2 {
+  animation-delay: 0.08s;
+}
+
+.stagger-3 {
+  animation-delay: 0.12s;
+}
+
+.stagger-4 {
+  animation-delay: 0.16s;
+}
+
+.stagger-5 {
+  animation-delay: 0.20s;
+}
+
+/* Typewriter cursor */
 .typewriter-cursor::after {
   content: '▋';
   display: inline-block;
   animation: blink 1s step-end infinite;
   color: var(--accent);
-  margin-left: 1px;
-  font-size: 0.72em;
+  margin-left: 2px;
+  font-size: 0.70em;
   vertical-align: middle;
 }
 
-/* Performance bar smooth fill */
+/* Performance / latency bar */
 .perf-bar {
-  transition: width 0.85s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: width 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Monospace metric value */
+.metric-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }

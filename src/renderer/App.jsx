@@ -14,23 +14,23 @@ const TABS = [
 
 function SearchIcon() {
     return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
         </svg>
     );
 }
 function NotesIcon() {
     return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+            <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
         </svg>
     );
 }
 function NetworkIcon() {
     return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="5" r="3" /><circle cx="4" cy="19" r="3" /><circle cx="20" cy="19" r="3" />
             <line x1="12" y1="8" x2="4" y2="16" /><line x1="12" y1="8" x2="20" y2="16" />
         </svg>
@@ -38,15 +38,14 @@ function NetworkIcon() {
 }
 function PerfIcon() {
     return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
     );
 }
-
 function UploadIcon() {
     return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
@@ -84,41 +83,51 @@ export default function App() {
         setToast({ message, type, id: Date.now() });
     };
 
+    const renderTab = () => {
+        switch (activeTab) {
+            case 'search': return <SearchTab onToast={showToast} />;
+            case 'notes': return <NotesTab onToast={showToast} />;
+            case 'network': return <NetworkTab />;
+            case 'performance': return <PerformanceTab />;
+            default: return null;
+        }
+    };
+
     return (
         <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--surface-app)' }}>
 
-            {/* ── Header / Title Bar ─────────────────────────────────────────── */}
+            {/* ── Header ──────────────────────────────────────────────────────── */}
             <header
-                className="flex items-center justify-between px-5 border-b"
+                className="flex items-center justify-between px-4 flex-shrink-0"
                 style={{
-                    height: '48px',
+                    height: '44px',
                     background: 'var(--surface-card)',
-                    borderColor: 'var(--border-subtle)',
-                    boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04)',
                     WebkitAppRegion: 'drag',
                 }}
             >
-                {/* Left: Logo + Nav */}
-                <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' }}>
-                    {/* Logo */}
-                    <div className="flex items-center gap-2.5 mr-5">
+                {/* Left: Logo + Tabs */}
+                <div className="flex items-center gap-0" style={{ WebkitAppRegion: 'no-drag' }}>
+                    {/* Logo mark */}
+                    <div className="flex items-center gap-2 pr-4 mr-1" style={{ borderRight: '1px solid var(--border-subtle)' }}>
                         <div
-                            className="w-7 h-7 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0"
+                            className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
                             style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)' }}
                         >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="3" />
                                 <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
                             </svg>
                         </div>
-                        <div>
-                            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Cortex</h1>
-                            <p className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: 'var(--text-muted)' }}>Offline AI</p>
-                        </div>
+                        <span className="text-[13px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Cortex</span>
                     </div>
 
                     {/* Tab Navigation */}
-                    <nav className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: 'var(--surface-recessed)' }}>
+                    <nav
+                        className="flex items-center gap-0.5 mx-2 rounded-lg p-0.5"
+                        style={{ background: 'var(--surface-recessed)' }}
+                    >
                         {TABS.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
@@ -129,60 +138,62 @@ export default function App() {
                                     className={`tab-btn flex items-center gap-1.5 ${isActive ? 'tab-btn-active' : 'tab-btn-inactive'}`}
                                 >
                                     <Icon />
-                                    <span>{tab.label}</span>
+                                    <span className="text-[12.5px]">{tab.label}</span>
                                 </button>
                             );
                         })}
                     </nav>
                 </div>
 
-                {/* Right: Provider badge + stats + upload */}
-                <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' }}>
+                {/* Right: Badges + Upload */}
+                <div className="flex items-center gap-2.5" style={{ WebkitAppRegion: 'no-drag' }}>
                     {/* Provider badge */}
                     <span
-                        className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold rounded-full border"
+                        className="flex items-center gap-1.5 px-2.5 py-[3px] text-[10px] font-semibold rounded-full border"
                         style={
                             perfProvider === 'dml'
                                 ? { background: '#ecfdf5', color: '#065f46', borderColor: '#6ee7b7' }
-                                : { background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'rgba(99,102,241,0.25)' }
+                                : { background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-border)' }
                         }
                     >
                         <div
-                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            className="w-[5px] h-[5px] rounded-full flex-shrink-0"
                             style={{ background: perfProvider === 'dml' ? '#10b981' : 'var(--accent)' }}
                         />
-                        {perfProvider === 'dml' ? 'DirectML Active' : 'ONNX Runtime'}
+                        {perfProvider === 'dml' ? 'DirectML' : 'ONNX Runtime'}
                     </span>
 
-                    {/* Doc/vector stats */}
+                    {/* Separator + stats */}
                     {stats.documents > 0 && (
-                        <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span>{stats.documents} docs</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                        <>
+                            <div className="w-px h-3.5" style={{ background: 'var(--border-subtle)' }} />
+                            <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                                <span className="flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                    {stats.documents} docs
+                                </span>
+                                <span style={{ color: 'var(--border-medium)' }}>·</span>
                                 <span>{stats.embeddings} vectors</span>
                             </div>
-                        </div>
+                        </>
                     )}
 
-                    {/* Upload PDF */}
+                    {/* Separator + Upload */}
+                    <div className="w-px h-3.5" style={{ background: 'var(--border-subtle)' }} />
                     <button
                         onClick={async () => {
                             if (window.electronAPI) {
                                 const result = await window.electronAPI.uploadPdf();
-                                if (result && result.success) {
-                                    showToast(`Indexed "${result.title}" (${result.chunks} chunks)`);
+                                if (result?.success) {
+                                    showToast(`Indexed "${result.title}" · ${result.chunks} chunks`);
                                     const newStats = await window.electronAPI.getStats();
                                     setStats(newStats);
-                                } else if (result && result.error) {
+                                } else if (result?.error) {
                                     showToast(result.error, 'error');
                                 }
                             }
                         }}
-                        className="btn-ghost flex items-center gap-1.5 text-xs"
+                        className="btn-ghost flex items-center gap-1.5 text-[11.5px] py-1 px-2.5"
                     >
                         <UploadIcon />
                         Upload PDF
@@ -190,12 +201,9 @@ export default function App() {
                 </div>
             </header>
 
-            {/* ── Main Content ───────────────────────────────────────────────── */}
-            <main className="flex-1 overflow-hidden">
-                {activeTab === 'search' && <SearchTab onToast={showToast} />}
-                {activeTab === 'notes' && <NotesTab onToast={showToast} />}
-                {activeTab === 'network' && <NetworkTab />}
-                {activeTab === 'performance' && <PerformanceTab />}
+            {/* ── Main Content with page fade ─────────────────────────────────── */}
+            <main key={activeTab} className="flex-1 overflow-hidden page-fade">
+                {renderTab()}
             </main>
 
             {/* ── Toast ─────────────────────────────────────────────────────── */}

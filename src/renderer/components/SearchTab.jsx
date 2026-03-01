@@ -113,7 +113,7 @@ export default function SearchTab({ onToast }) {
         <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)' }}>
 
             {/* ── Hero + Search Bar ────────────────────────────────────────────── */}
-            <div className={`flex flex-col items-center transition-all duration-500 ease-in-out ${hasResults ? 'pt-4 pb-3' : 'pt-[9vh] pb-5'}`}>
+            <div className={`flex flex-col items-center transition-all duration-500 ease-in-out ${hasResults ? 'pt-4 pb-3' : 'pt-[18vh] pb-5'}`}>
 
                 {/* Hero text – only before first search */}
                 {!hasResults && (

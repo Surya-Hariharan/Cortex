@@ -1,0 +1,52 @@
+{
+  "name": "cortex",
+  "version": "1.0.0",
+  "description": "Cortex — Offline AI Productivity Platform for Students",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "npm run build:renderer && electron .",
+    "setup-demo": "electron scripts/setup-demo.js",
+    "build:renderer": "webpack --config webpack.config.js",
+    "watch:renderer": "webpack --config webpack.config.js --watch",
+    "dev": "concurrently \"npm run watch:renderer\" \"wait-on dist/renderer/index.html && electron .\""
+  },
+  "keywords": [
+    "electron",
+    "ai",
+    "second-brain",
+    "semantic-search",
+    "onnx"
+  ],
+  "author": "Cortex Team",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "electron-is-dev": "^2.0.0",
+    "onnxruntime-node": "^1.20.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@babel/preset-react": "^7.23.3",
+    "@electron/rebuild": "^3.7.2",
+    "autoprefixer": "^10.4.17",
+    "babel-loader": "^9.1.3",
+    "concurrently": "^8.2.2",
+    "css-loader": "^6.10.0",
+    "css-minimizer-webpack-plugin": "^6.0.0",
+    "electron": "^28.2.0",
+    "electron-rebuild": "^3.2.9",
+    "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.8.0",
+    "postcss": "^8.4.35",
+    "postcss-loader": "^8.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "style-loader": "^3.3.4",
+    "tailwindcss": "^3.4.1",
+    "wait-on": "^7.2.0",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

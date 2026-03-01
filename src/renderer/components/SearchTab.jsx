@@ -8,6 +8,16 @@ const SEARCH_STAGES = [
     'Synthesizing answer…',
 ];
 
+const SUGGESTIONS = [
+    { group: 'Physics', items: ['What is entropy?', 'Quantum tunneling explained'] },
+    { group: 'CS', items: ['Binary search tree operations', 'TCP three-way handshake'] },
+    { group: 'Math', items: ['Eigenvalues and eigenvectors', 'Taylor series expansion'] },
+    { group: 'Chemistry', items: ['SN2 reaction mechanism'] },
+    { group: 'ML', items: ['Gradient descent optimization'] },
+];
+
+const ALL_SUGGESTIONS = SUGGESTIONS.flatMap((g) => g.items);
+
 export default function SearchTab({ onToast }) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState(null);
@@ -20,7 +30,6 @@ export default function SearchTab({ onToast }) {
     const stageTimerRef = useRef(null);
 
     useEffect(() => {
-        // Auto-focus search input
         if (inputRef.current) inputRef.current.focus();
     }, []);
 
@@ -36,7 +45,6 @@ export default function SearchTab({ onToast }) {
         if (typewriterRef.current) clearInterval(typewriterRef.current);
         if (stageTimerRef.current) clearInterval(stageTimerRef.current);
 
-        // Advance stage label every 160ms for visual effect
         let stage = 0;
         stageTimerRef.current = setInterval(() => {
             stage = Math.min(stage + 1, SEARCH_STAGES.length - 1);
@@ -104,32 +112,57 @@ export default function SearchTab({ onToast }) {
     };
 
     return (
-        <div className="h-full flex flex-col">
-            {/* ── Search Section ─────────────────────────────────────────────── */}
-            <div className={`flex flex-col items-center transition-all duration-500 ${results !== null ? 'pt-6 pb-4' : 'pt-[18vh] pb-8'
-                }`}>
-                {/* Hero text - shows only before first search */}
+        <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)' }}>
+
+            {/* ── Search Section ──────────────────────────────────────────────── */}
+            <div className={`flex flex-col items-center transition-all duration-500 ${results !== null ? 'pt-5 pb-3' : 'pt-[11vh] pb-6'}`}>
+
+                {/* Hero – shown only before first search */}
                 {results === null && (
-                    <div className="text-center mb-8 animate-fade-in">
-                        <h2 className="text-3xl font-bold mb-2">
-                            <span className="gradient-text">Search your knowledge</span>
+                    <div className="text-center mb-7 animate-fade-in">
+                        <h2 className="text-[28px] font-bold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>
+                            Search your knowledge
                         </h2>
-                        <p className="text-dark-400 text-sm max-w-md">
-                            Ask anything — Cortex searches your entire document library using AI-powered semantic understanding
+                        <p className="text-[15px] max-w-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                            Ask anything — Cortex searches your entire document library using AI-powered semantic understanding.
                         </p>
                     </div>
                 )}
 
                 {/* Search Bar */}
                 <form onSubmit={handleSearch} className="w-full max-w-2xl px-6">
-                    <div className={`glass-panel flex items-center gap-3 px-4 py-2.5 transition-all duration-300 ${isSearching ? 'glow-border-active animate-pulse-glow' : 'glow-border hover:glow-border-active'
-                        }`}>
+                    <div
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${isSearching ? 'animate-pulse-glow' : ''}`}
+                        style={{
+                            background: 'var(--surface-card)',
+                            border: isSearching
+                                ? '1px solid rgba(99,102,241,0.45)'
+                                : '1px solid var(--border-subtle)',
+                            boxShadow: isSearching
+                                ? '0 0 0 3px rgba(99,102,241,0.10), 0 4px 16px rgba(99,102,241,0.08)'
+                                : '0 4px 16px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05)',
+                        }}
+                        onFocus={(e) => {
+                            if (!isSearching) {
+                                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10), 0 4px 16px rgba(99,102,241,0.08)';
+                                e.currentTarget.style.borderColor = 'rgba(99,102,241,0.40)';
+                            }
+                        }}
+                        onBlur={(e) => {
+                            if (!isSearching) {
+                                e.currentTarget.style.boxShadow = '0 4px 16px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05)';
+                                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                            }
+                        }}
+                    >
                         {isSearching ? (
-                            <div className="w-5 h-5 border-2 border-synapse-400/30 border-t-synapse-400 rounded-full animate-spin-slow" />
+                            <div
+                                className="w-4 h-4 rounded-full border-2 animate-spin-slow flex-shrink-0"
+                                style={{ borderColor: 'rgba(99,102,241,0.25)', borderTopColor: 'var(--accent)' }}
+                            />
                         ) : (
-                            <svg className="w-5 h-5 text-dark-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.35-4.35" />
+                            <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                             </svg>
                         )}
                         <input
@@ -138,94 +171,103 @@ export default function SearchTab({ onToast }) {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="What is the second law of thermodynamics?"
-                            className="flex-1 bg-transparent text-dark-100 placeholder-dark-500 text-sm font-medium outline-none"
+                            className="flex-1 bg-transparent outline-none text-base font-medium"
+                            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
                             disabled={isSearching}
                         />
                         <button
                             type="submit"
                             disabled={!query.trim() || isSearching}
-                            className="btn-primary text-sm py-1.5 px-4"
+                            className="btn-primary text-sm py-1.5 px-4 flex-shrink-0"
                         >
                             Search
                         </button>
                     </div>
                 </form>
 
-                {/* Search metadata + stage indicator */}
+                {/* Meta row + stage indicator */}
                 {searchMeta && !isSearching && (
-                    <div className="flex items-center gap-4 mt-3 text-xs text-dark-500 animate-fade-in">
+                    <div className="flex items-center gap-4 mt-2.5 text-xs animate-fade-in" style={{ color: 'var(--text-muted)' }}>
                         <span>
-                            Found <strong className="text-dark-300">{results?.length || 0}</strong> results
+                            Found <strong style={{ color: 'var(--text-secondary)' }}>{results?.length || 0}</strong> results
                         </span>
-                        <span>•</span>
+                        <span>·</span>
                         <span className="flex items-center gap-1">
-                            ⚡ <strong className="text-synapse-400">{searchMeta.time}ms</strong> ONNX
+                            ⚡ <strong style={{ color: 'var(--accent)' }}>{searchMeta.time}ms</strong> ONNX
                         </span>
-                        <span>•</span>
+                        <span>·</span>
                         <span>
-                            Searched <strong className="text-dark-300">{searchMeta.total}</strong> vectors
+                            <strong style={{ color: 'var(--text-secondary)' }}>{searchMeta.total}</strong> vectors searched
                         </span>
                     </div>
                 )}
                 {isSearching && searchStage >= 0 && (
-                    <div className="flex items-center gap-2 mt-3 text-xs text-synapse-400 animate-fade-in">
-                        <div className="w-3 h-3 border-2 border-synapse-400/30 border-t-synapse-400 rounded-full animate-spin-slow flex-shrink-0" />
+                    <div className="flex items-center gap-2 mt-2.5 text-xs animate-fade-in" style={{ color: 'var(--accent)' }}>
+                        <div
+                            className="w-3 h-3 rounded-full border-2 animate-spin-slow flex-shrink-0"
+                            style={{ borderColor: 'rgba(99,102,241,0.2)', borderTopColor: 'var(--accent)' }}
+                        />
                         <span>{SEARCH_STAGES[Math.min(searchStage, SEARCH_STAGES.length - 1)]}</span>
                     </div>
                 )}
             </div>
 
-            {/* ── Results ────────────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6">                {/* Synthesized AI answer */}
+            {/* ── Results ─────────────────────────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+
+                {/* AI Synthesis */}
                 {synthesizedAnswer !== null && results && results.length > 0 && (
                     <div className="max-w-2xl mx-auto mb-4 animate-scale-in">
-                        <div className="glass-panel p-4" style={{ borderColor: 'rgba(92,124,250,0.25)' }}>
+                        <div className="card-accent p-4">
                             <div className="flex items-center gap-2 mb-2.5">
-                                <div className="w-5 h-5 rounded-md bg-synapse-600/20 flex items-center justify-center text-[10px]">💡</div>
-                                <span className="text-[11px] font-semibold text-synapse-400 uppercase tracking-wider">AI Synthesis</span>
-                                <span className="text-[10px] text-dark-500 ml-auto">from top {Math.min(results.length, 3)} passages</span>
+                                <div
+                                    className="w-5 h-5 rounded-md flex items-center justify-center text-[11px]"
+                                    style={{ background: 'var(--accent-muted)' }}
+                                >💡</div>
+                                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)' }}>
+                                    AI Synthesis
+                                </span>
+                                <span className="text-[10px] ml-auto" style={{ color: 'var(--text-muted)' }}>
+                                    from top {Math.min(results.length, 3)} passages
+                                </span>
                             </div>
-                            <p className="text-sm text-dark-200 leading-relaxed typewriter-cursor">
+                            <p className="text-sm leading-relaxed typewriter-cursor" style={{ color: 'var(--text-secondary)' }}>
                                 {synthesizedAnswer}
                             </p>
                         </div>
                     </div>
-                )}                {results !== null && results.length === 0 && (
+                )}
+
+                {/* Empty state */}
+                {results !== null && results.length === 0 && (
                     <div className="text-center py-16 animate-fade-in">
                         <div className="text-4xl mb-3">🔎</div>
-                        <p className="text-dark-400 text-sm">No results found. Try a different query.</p>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No results found. Try a different query.</p>
                     </div>
                 )}
 
+                {/* Result cards */}
                 {results && results.length > 0 && (
-                    <div className="max-w-2xl mx-auto space-y-3">
+                    <div className="max-w-2xl mx-auto space-y-2.5">
                         {results.map((result, idx) => (
                             <ResultCard
                                 key={result.docId + '-' + result.rank}
                                 result={result}
                                 index={idx}
-                                onShare={() => handleShare(result)}
                                 onToast={onToast}
                             />
                         ))}
                     </div>
                 )}
 
-                {/* Suggested queries - shows only before first search */}
+                {/* Suggestion chips – shown only before first search */}
                 {results === null && (
-                    <div className="max-w-2xl mx-auto mt-4 animate-fade-in">
-                        <p className="text-xs text-dark-500 font-medium mb-3 text-center">Try searching for:</p>
+                    <div className="max-w-2xl mx-auto mt-5 animate-fade-in">
+                        <p className="text-xs font-semibold mb-3 text-center uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                            Try searching for
+                        </p>
                         <div className="flex flex-wrap justify-center gap-2">
-                            {[
-                                'What is entropy?',
-                                'Binary search tree operations',
-                                'Eigenvalues and eigenvectors',
-                                'SN2 reaction mechanism',
-                                'Gradient descent optimization',
-                                'Quantum tunneling',
-                                'TCP three-way handshake',
-                                'Taylor series expansion',
-                            ].map((suggestion) => (
+                            {ALL_SUGGESTIONS.map((suggestion) => (
                                 <button
                                     key={suggestion}
                                     onClick={() => {
@@ -235,7 +277,25 @@ export default function SearchTab({ onToast }) {
                                             if (form) form.requestSubmit();
                                         }, 50);
                                     }}
-                                    className="px-3 py-1.5 glass-panel-light text-xs text-dark-300 hover:text-synapse-300 hover:border-synapse-600/30 transition-all duration-200 cursor-pointer"
+                                    className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150"
+                                    style={{
+                                        background: 'var(--surface-card)',
+                                        border: '1px solid var(--border-subtle)',
+                                        color: 'var(--text-secondary)',
+                                        boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'var(--accent-light)';
+                                        e.currentTarget.style.color = 'var(--accent)';
+                                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.25)';
+                                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(99,102,241,0.08)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'var(--surface-card)';
+                                        e.currentTarget.style.color = 'var(--text-secondary)';
+                                        e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,23,42,0.04)';
+                                    }}
                                 >
                                     {suggestion}
                                 </button>

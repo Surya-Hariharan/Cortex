@@ -10,6 +10,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Network
     shareToNetwork: (docId) => ipcRenderer.invoke('share-to-network', docId),
     getPeers: () => ipcRenderer.invoke('get-peers'),
+    getPeerDocuments: (peerId) => ipcRenderer.invoke('get-peer-documents', peerId),
+    requestPeerDocument: (peerId, docId) => ipcRenderer.invoke('request-peer-document', peerId, docId),
+    getMeshStatus: () => ipcRenderer.invoke('get-mesh-status'),
+    onPeersUpdated: (callback) => ipcRenderer.on('peers-updated', (event, peers) => callback(peers)),
+    removePeersUpdatedListener: () => ipcRenderer.removeAllListeners('peers-updated'),
     // Performance
     getPerfStats: () => ipcRenderer.invoke('get-perf-stats'),
     // Notes

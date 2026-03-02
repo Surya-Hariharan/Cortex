@@ -2,18 +2,26 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { encryptText, decryptText, encryptEmbedding, decryptEmbedding } = require('./encryption');
+const { storageManager } = require('./storage/storageManager');
 
 let db = null;
 
 /**
  * Initialize SQLite database with schema
+ * 
+ * NOTE: Phase 2D+ uses storageManager for vector operations.
+ * This function now initializes the new storage architecture.
  */
-function initializeDatabase(dbPath) {
+async function initializeDatabase(dbPath) {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
 
+    // Initialize new storage architecture (Phase 2D)
+    await storageManager.initialize(dir);
+
+    // Keep legacy SQLite reference for non-vector operations
     db = new Database(dbPath);
 
     // Enable WAL mode for better performance
@@ -102,23 +110,45 @@ function initializeDatabase(dbPath) {
       UNIQUE(peer_id, doc_id)
     );
 
-    CREATE INDEX IF NOT EXISTS idx_peer_docs_peer ON peer_documents(peer_id);
-    CREATE INDEX IF NOT EXISTS idx_peer_docs_modified ON peer_documents(last_modified);
-  `);
-
-    return db;
-}
-
+/**
+ * Get database wrapper
+ * 
+ * NOTE: Phase 2D+ - Returns compatibility wrapper that delegates
+ * document/vector operations to storageManager.
+ */
 function getDatabase() {
     return db ? new DatabaseWrapper(db) : null;
 }
 
+/**
+/**
+ * Database Wrapper - Phase 2D Compatibility Layer
+ * 
+ * Maintains backward compatibility while delegating to new storage architecture.
+ * 
+ * Legacy Methods (deprecated):
+ * - insertDocument() → use storageManager.indexDocument()
+ * - insertEmbedding() → handled automatically by indexer
+ * - getAllEmbeddings() → use storageManager.search()
+ * 
+ * Active Methods (forwarded to storageManager):
+ * - Notes, Projects, Chats, Mesh operations
+ */
 class DatabaseWrapper {
     constructor(database) {
         this.db = database;
+        this.storageManager = storageManager;
     }
 
+    // ================= Legacy Document/Embedding Methods (Deprecated) =================
+
+    /**
+     * @deprecated Use storageManager.indexDocument() instead
+     */
     insertDocument(title, subject, content, chunkIndex = 0) {
+        console.warn('[Database] insertDocument() is deprecated. Use storageManager.indexDocument()');
+        
+        // For backward compatibility, store in legacy format
         const stmt = this.db.prepare(
             'INSERT INTO documents (title, subject, content, chunk_index) VALUES (?, ?, ?, ?)'
         );
@@ -126,7 +156,13 @@ class DatabaseWrapper {
         return result.lastInsertRowid;
     }
 
+    /**
+     * @deprecated Embeddings are now handled by storageManager automatically
+     */
     insertEmbedding(docId, vector) {
+        console.warn('[Database] insertEmbedding() is deprecated. Handled automatically by indexer.');
+        
+        // For backward compatibility, store in legacy format
         const buffer = encryptEmbedding(vector);
         const stmt = this.db.prepare(
             'INSERT INTO embeddings (doc_id, vector) VALUES (?, ?)'
@@ -134,53 +170,84 @@ class DatabaseWrapper {
         stmt.run(docId, buffer);
     }
 
+    /**
+     * Get all embeddings (compatibility mode)
+     * @deprecated Use storageManager.search() for efficient queries
+     */
     getAllEmbeddings() {
-        const rows = this.db.prepare(`
-      SELECT e.id, e.doc_id, e.vector, d.title, d.subject, d.content, d.chunk_index
-      FROM embeddings e
-      JOIN documents d ON e.doc_id = d.id
-    `).all();
-
-        return rows.map((row) => ({
-            id: row.id,
-            docId: row.doc_id,
-            vector: decryptEmbedding(row.vector),
-            title: row.title,
-            subject: row.subject,
-            content: decryptText(row.content),
-            chunkIndex: row.chunk_index,
-        }));
+        console.warn('[Database] getAllEmbeddings() is deprecated. Use storageManager.search() instead.');
+        
+        // Delegate to storage manager (returns new format)
+        return this.storageManager.getAllEmbeddings();
     }
 
+    /**
+     * @deprecated Use storageManager.getDocument()
+     */
     getDocumentById(docId) {
         return this.db.prepare('SELECT * FROM documents WHERE id = ?').get(docId);
     }
 
+    /**
+     * @deprecated Use storageManager metadata search
+     */
     searchDocumentsByText(query) {
         return this.db.prepare(
             'SELECT * FROM documents WHERE content LIKE ? LIMIT 20'
         ).all(`%${query}%`);
     }
 
-    getStats() {
-        const docCount = this.db.prepare('SELECT COUNT(*) as count FROM documents').get();
-        const embCount = this.db.prepare('SELECT COUNT(*) as count FROM embeddings').get();
-        const subjects = this.db.prepare('SELECT DISTINCT subject FROM documents').all();
-        return {
-            documents: docCount.count,
-            embeddings: embCount.count,
-            subjects: subjects.map((s) => s.subject),
-        };
+    /**
+     * Get statistics (delegates to storageManager)
+     */
+    async getStats() {
+        try {
+            const stats = await this.storageManager.getStats();
+            return {
+                documents: stats.documents,
+                embeddings: stats.vectors,
+                subjects: ['General'], // Legacy compatibility
+            };
+        } catch (error) {
+            // Fallback to legacy if storageManager not ready
+            const docCount = this.db.prepare('SELECT COUNT(*) as count FROM documents').get();
+            const embCount = this.db.prepare('SELECT COUNT(*) as count FROM embeddings').get();
+            return {
+                documents: docCount.count || 0,
+                embeddings: embCount.count || 0,
+                subjects: [],
+            };
+        }
     }
 
-    // Bulk insert for setup script
+    /**
+     * Bulk insert for setup script
+     * @deprecated Use storageManager.indexDocumentsBatch()
+     */
     insertBatch(documents) {
+        console.warn('[Database] insertBatch() is deprecated. Use storageManager.indexDocumentsBatch()');
+        
         const insertDoc = this.db.prepare(
             'INSERT INTO documents (title, subject, content, chunk_index) VALUES (?, ?, ?, ?)'
         );
         const insertEmb = this.db.prepare(
             'INSERT INTO embeddings (doc_id, vector) VALUES (?, ?)'
         );
+
+        const transaction = this.db.transaction((docs) => {
+            for (const doc of docs) {
+                const result = insertDoc.run(doc.title, doc.subject, encryptText(doc.content), doc.chunkIndex || 0);
+                if (doc.vector) {
+                    const buffer = encryptEmbedding(doc.vector);
+                    insertEmb.run(result.lastInsertRowid, buffer);
+                }
+            }
+        });
+
+        transaction(documents);
+    }
+
+    // ================= Active Methods (Forwarded to StorageManager) =================   );
 
         const transaction = this.db.transaction((docs) => {
             for (const doc of docs) {

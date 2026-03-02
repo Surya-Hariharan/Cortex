@@ -2,7 +2,7 @@
   "name": "cortex",
   "version": "1.0.0",
   "description": "Cortex — Offline AI Productivity Platform for Students",
-  "main": "backend/main.js",
+  "main": "../backend/main.js",
   "scripts": {
     "start": "npm run build:renderer && electron .",
     "setup-demo": "electron scripts/setup-demo.js",

@@ -36,6 +36,35 @@ function initializeMetadataStore(dbPath) {
     // Enable WAL mode for concurrent reads
     db.pragma('journal_mode = WAL');
 
+        // Handle legacy schema where documents table exists without Phase 2D columns
+        try {
+                const docColumns = db.prepare("PRAGMA table_info(documents)").all();
+                const hasDocId = docColumns.some((col) => col.name === 'doc_id');
+                const hasFileHash = docColumns.some((col) => col.name === 'file_hash');
+
+                if (docColumns.length > 0 && (!hasDocId || !hasFileHash)) {
+                        console.warn('[MetadataStore] Legacy documents schema detected. Migrating to Phase 2D schema...');
+
+                        db.exec(`
+                            ALTER TABLE documents RENAME TO documents_legacy;
+
+                            CREATE TABLE documents (
+                                doc_id TEXT PRIMARY KEY,
+                                title TEXT NOT NULL,
+                                file_path TEXT,
+                                file_hash TEXT UNIQUE NOT NULL,
+                                created_at INTEGER NOT NULL,
+                                updated_at INTEGER NOT NULL,
+                                owner_device TEXT NOT NULL
+                            );
+                        `);
+
+                        console.warn('[MetadataStore] Legacy documents moved to documents_legacy; new documents table created.');
+                }
+        } catch (schemaError) {
+                console.warn('[MetadataStore] Legacy schema check skipped:', schemaError.message);
+        }
+
     // Create new storage schema
     db.exec(`
     -- Documents: Core metadata, file integrity, ownership

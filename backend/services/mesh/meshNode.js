@@ -1,18 +1,41 @@
 const { setupProtocolHandlers, sendHandshake, requestMetadata } = require('./protocolHandlers');
 const { generatePeerSeed } = require('./crypto');
 const os = require('os');
+const path = require('path');
+const { pathToFileURL } = require('url');
 
 let libp2pDeps = null;
+
+function resolveModulePath(packageName) {
+    try {
+        return require.resolve(packageName);
+    } catch (_) {
+        const frontendNodeModules = path.resolve(__dirname, '../../../frontend/node_modules');
+        try {
+            return require.resolve(packageName, { paths: [frontendNodeModules] });
+        } catch {
+            if (packageName === 'libp2p') {
+                return path.resolve(frontendNodeModules, 'libp2p/dist/src/index.js');
+            }
+            throw _;
+        }
+    }
+}
+
+async function importResolved(packageName) {
+    const resolvedPath = resolveModulePath(packageName);
+    return import(pathToFileURL(resolvedPath).href);
+}
 
 async function getLibp2pDeps() {
     if (libp2pDeps) return libp2pDeps;
 
     const [libp2pMod, tcpMod, noiseMod, yamuxMod, mdnsMod] = await Promise.all([
-        import('libp2p'),
-        import('@libp2p/tcp'),
-        import('@chainsafe/libp2p-noise'),
-        import('@chainsafe/libp2p-yamux'),
-        import('@libp2p/mdns'),
+        importResolved('libp2p'),
+        importResolved('@libp2p/tcp'),
+        importResolved('@chainsafe/libp2p-noise'),
+        importResolved('@chainsafe/libp2p-yamux'),
+        importResolved('@libp2p/mdns'),
     ]);
 
     libp2pDeps = {

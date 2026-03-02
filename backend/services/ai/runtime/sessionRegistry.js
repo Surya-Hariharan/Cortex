@@ -88,7 +88,7 @@ class SessionRegistry {
                     modelPath,
                     loadTime,
                     loadedAt: new Date().toISOString(),
-                    provider: this._getActiveProvider(session, sessionOptions.executionProviders),
+                    provider: this._getActiveProvider(hwCaps, sessionOptions.executionProviders),
                     executionProviders: sessionOptions.executionProviders.map(p => p.name),
                     inputNames: session.inputNames,
                     outputNames: session.outputNames,
@@ -114,12 +114,14 @@ class SessionRegistry {
      * Determine which provider is actually being used
      * @private
      */
-    _getActiveProvider(session, requestedProviders) {
-        // ONNX Runtime doesn't expose this directly, so we infer from what was requested
-        // In practice, it uses the first available provider from the list
+    _getActiveProvider(hwCaps, requestedProviders) {
+        const availableProviders = Array.isArray(hwCaps?.availableProviders)
+            ? hwCaps.availableProviders
+            : ['cpu'];
+
         for (const provider of requestedProviders) {
             const providerName = provider.name || provider;
-            if (ort.InferenceSession.availableProviders().includes(providerName)) {
+            if (availableProviders.includes(providerName)) {
                 return providerName;
             }
         }

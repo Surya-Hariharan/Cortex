@@ -222,29 +222,99 @@ function registerIpcHandlers() {
 
     // Share to network — broadcast to real discovered peers
     ipcMain.handle('share-to-network', async (event, docId) => {
-        // Small delay for UX feedback, then report real peer count
-        await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400));
-        const peers = peerDiscovery ? peerDiscovery.getPeers().filter(p => p.status === 'online') : [];
-        return { success: true, peersReached: peers.length };
+        try {
+            // Small delay for UX feedback
+            await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400));
+            
+            const mesh = getMeshManager();
+            if (!mesh || !mesh.isRunning()) {
+                return { success: false, error: 'Mesh network not running', peersReached: 0 };
+            }
+            
+            const peers = mesh.getPeers().filter(p => p.status === 'online');
+            
+            // In future phases, this would actually broadcast the document
+            // For now, just report how many peers could receive it
+            return { success: true, peersReached: peers.length };
+        } catch (error) {
+            console.error('[Cortex] Share to network error:', error);
+            return { success: false, error: error.message, peersReached: 0 };
+        }
     });
 
-    // Get real discovered peers (with mock fallback when no LAN peers found)
+    // Get real discovered peers via libp2p mesh
     ipcMain.handle('get-peers', async () => {
-        let realPeers = peerDiscovery ? peerDiscovery.getPeers() : [];
-
-        // If no real peers found yet, show demo peers so the UI isn't empty for judges
-        if (realPeers.length === 0) {
-            realPeers = [
-                { id: 'demo-1', name: 'Arjun\'s Laptop', status: 'online', docs: 47, lastSeen: 'now', os: 'Windows 11', ip: '192.168.1.14' },
-                { id: 'demo-2', name: 'Priya\'s Desktop', status: 'online', docs: 32, lastSeen: '2m ago', os: 'Windows 11', ip: '192.168.1.22' },
-                { id: 'demo-3', name: 'Lab PC - Room 204', status: 'online', docs: 89, lastSeen: '1m ago', os: 'Ubuntu 22.04', ip: '192.168.1.105' },
-                { id: 'demo-4', name: 'Rahul\'s MacBook', status: 'idle', docs: 15, lastSeen: '12m ago', os: 'macOS Sonoma', ip: '192.168.1.8' },
-                { id: 'demo-5', name: 'Study Group Hub', status: 'online', docs: 156, lastSeen: 'now', os: 'Windows 10', ip: '192.168.1.50' },
-                { id: 'demo-6', name: 'Library Terminal 3', status: 'offline', docs: 203, lastSeen: '2h ago', os: 'Windows 10', ip: '192.168.1.201' },
-            ];
+        try {
+            const mesh = getMeshManager();
+            
+            if (!mesh || !mesh.isRunning()) {
+                // Mesh not started yet - return empty (UI will show scanning)
+                return { peers: [] };
+            }
+            
+            const realPeers = mesh.getPeers();
+            
+            // Return real peers from libp2p mesh network
+            return { peers: realPeers };
+        } catch (error) {
+            console.error('[Cortex] Error getting peers:', error);
+            return { peers: [] };
         }
+    });
 
-        return { peers: realPeers };
+    // Get peer documents (metadata only)
+    ipcMain.handle('get-peer-documents', async (event, peerId) => {
+        try {
+            const mesh = getMeshManager();
+            if (!mesh) {
+                return { documents: [] };
+            }
+            
+            const documents = peerId 
+                ? mesh.getPeerDocuments(peerId)
+                : mesh.getAllPeerDocuments();
+            
+            return { documents };
+        } catch (error) {
+            console.error('[Cortex] Error getting peer documents:', error);
+            return { documents: [] };
+        }
+    });
+
+    // Request document from peer (stub - not implemented)
+    ipcMain.handle('request-peer-document', async (event, peerId, docId) => {
+        try {
+            const mesh = getMeshManager();
+            if (!mesh) {
+                return { error: 'Mesh network not available' };
+            }
+            
+            // This will throw "Not Implemented"
+            await mesh.requestDocument(peerId, docId);
+            
+            return { success: true };
+        } catch (error) {
+            console.log('[Cortex] Document request (expected to fail):', error.message);
+            return { 
+                error: error.message,
+                notImplemented: true 
+            };
+        }
+    });
+
+    // Get mesh network status
+    ipcMain.handle('get-mesh-status', async () => {
+        try {
+            const mesh = getMeshManager();
+            if (!mesh) {
+                return { running: false };
+            }
+            
+            return mesh.getStatus();
+        } catch (error) {
+            console.error('[Cortex] Error getting mesh status:', error);
+            return { running: false, error: error.message };
+        }
     });
 
     // ── Notes & Deadlines ─────────────────────────────────────────────────

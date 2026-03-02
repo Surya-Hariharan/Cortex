@@ -525,4 +525,9 @@ class DatabaseWrapper {
     }
 }
 
-module.exports = { initializeDatabase, getDatabase, DatabaseWrapper };
+module.exports = { 
+    initializeDatabase, 
+    getDatabase, 
+    getStorageManager, // Phase 2D: Direct access to new storage layer
+    DatabaseWrapper 
+};

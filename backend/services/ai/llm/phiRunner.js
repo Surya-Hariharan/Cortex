@@ -1,41 +1,19 @@
-const { pipeline, env, BaseStreamer } = require('@xenova/transformers');
 const path = require('path');
 
-// Configure Transformers.js offline behavior
-env.localModelPath = path.join(__dirname, '../../../../../models');
-env.allowRemoteModels = true; // allow download on first run
-env.cacheDir = path.join(__dirname, '../../../../../models/.cache');
-// Disable local file check if they don't exist yet, forcing a download
-env.allowLocalModels = true;
+let transformers = null;
 
-class CallbackStreamer extends BaseStreamer {
-    constructor(tokenizer, callback, onFirstToken) {
-        super();
-        this.tokenizer = tokenizer;
-        this.callback = callback;
-        this.onFirstToken = onFirstToken;
-        this.tokenCache = [];
-        this.first = true;
-    }
+async function getTransformers() {
+    if (transformers) return transformers;
 
-    put(value) {
-        if (value.length === 0) return;
+    const mod = await import('@xenova/transformers');
 
-        // value is typically a nested array [[token_id, ...]]
-        const tokens = Array.isArray(value[0]) ? value[0] : value;
-        this.tokenCache.push(...tokens);
+    mod.env.localModelPath = path.join(__dirname, '../../../../../models');
+    mod.env.allowRemoteModels = true;
+    mod.env.cacheDir = path.join(__dirname, '../../../../../models/.cache');
+    mod.env.allowLocalModels = true;
 
-        if (this.first) {
-            this.first = false;
-            if (this.onFirstToken) this.onFirstToken();
-        }
-
-        // Decode the entire generated text so far
-        const text = this.tokenizer.decode(this.tokenCache, { skip_special_tokens: true });
-        this.callback(text);
-    }
-
-    end() { }
+    transformers = mod;
+    return transformers;
 }
 
 class PhiRunner {
@@ -55,6 +33,7 @@ class PhiRunner {
         const t0 = Date.now();
 
         try {
+            const { pipeline } = await getTransformers();
             this.generator = await pipeline('text-generation', this.modelId, {
                 quantized: true,       // Use INT8 automatically
             });
@@ -80,6 +59,35 @@ class PhiRunner {
         console.log('[PhiRunner] Starting inference...');
         const startTime = Date.now();
         let ttft = 0; // Time to first token
+
+        const { BaseStreamer } = await getTransformers();
+
+        class CallbackStreamer extends BaseStreamer {
+            constructor(tokenizer, callback, onFirstToken) {
+                super();
+                this.tokenizer = tokenizer;
+                this.callback = callback;
+                this.onFirstToken = onFirstToken;
+                this.tokenCache = [];
+                this.first = true;
+            }
+
+            put(value) {
+                if (value.length === 0) return;
+                const tokens = Array.isArray(value[0]) ? value[0] : value;
+                this.tokenCache.push(...tokens);
+
+                if (this.first) {
+                    this.first = false;
+                    if (this.onFirstToken) this.onFirstToken();
+                }
+
+                const text = this.tokenizer.decode(this.tokenCache, { skip_special_tokens: true });
+                this.callback(text);
+            }
+
+            end() { }
+        }
 
         const streamer = new CallbackStreamer(
             this.generator.tokenizer,

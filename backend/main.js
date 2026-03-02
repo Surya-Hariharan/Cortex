@@ -1,6 +1,15 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const Module = require('module');
+
+// Ensure backend can resolve dependencies installed in frontend/node_modules
+const frontendNodeModules = path.resolve(__dirname, '../frontend/node_modules');
+if (fs.existsSync(frontendNodeModules)) {
+    const existingNodePath = process.env.NODE_PATH ? `${process.env.NODE_PATH}${path.delimiter}` : '';
+    process.env.NODE_PATH = `${existingNodePath}${frontendNodeModules}`;
+    Module._initPaths();
+}
 
 // Services
 const { initializeDatabase, getDatabase, getStorageManager } = require('./services/database');

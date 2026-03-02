@@ -1,11 +1,30 @@
-const { createLibp2p } = require('libp2p');
-const { tcp } = require('@libp2p/tcp');
-const { noise } = require('@chainsafe/libp2p-noise');
-const { yamux } = require('@chainsafe/libp2p-yamux');
-const { mdns } = require('@libp2p/mdns');
 const { setupProtocolHandlers, sendHandshake, requestMetadata } = require('./protocolHandlers');
 const { generatePeerSeed } = require('./crypto');
 const os = require('os');
+
+let libp2pDeps = null;
+
+async function getLibp2pDeps() {
+    if (libp2pDeps) return libp2pDeps;
+
+    const [libp2pMod, tcpMod, noiseMod, yamuxMod, mdnsMod] = await Promise.all([
+        import('libp2p'),
+        import('@libp2p/tcp'),
+        import('@chainsafe/libp2p-noise'),
+        import('@chainsafe/libp2p-yamux'),
+        import('@libp2p/mdns'),
+    ]);
+
+    libp2pDeps = {
+        createLibp2p: libp2pMod.createLibp2p,
+        tcp: tcpMod.tcp,
+        noise: noiseMod.noise,
+        yamux: yamuxMod.yamux,
+        mdns: mdnsMod.mdns,
+    };
+
+    return libp2pDeps;
+}
 
 /**
  * Cortex Mesh Node - libp2p P2P Networking Core
@@ -49,6 +68,8 @@ class MeshNode {
 
             // Get or create persistent peer ID
             const peerIdData = this._getOrCreatePeerId();
+
+            const { createLibp2p, tcp, noise, yamux, mdns } = await getLibp2pDeps();
 
             // Create libp2p node
             this.node = await createLibp2p({

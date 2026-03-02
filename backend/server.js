@@ -19,6 +19,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Serve static frontend files
+const publicDir = path.join(__dirname, '../frontend/public');
+app.use(express.static(publicDir));
+
 // Multer for PDF upload
 const upload = multer({ dest: path.join(__dirname, '../data/uploads/') });
 
@@ -425,12 +429,18 @@ app.post('/api/chats/:chatId/messages', async (req, res) => {
     } catch (e) { res.json({ error: e.message }); }
 });
 
+// ── SPA Fallback (serve index.html for non-API routes) ────────────────────────
+app.get('*', (req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+});
+
 // ── Start Server ──────────────────────────────────────────────────────────────
 
 async function start() {
     await initializeServices();
     app.listen(PORT, () => {
-        console.log(`[Cortex] ✓ API server running on http://localhost:${PORT}`);
+        console.log(`[Cortex] ✓ Server running on http://localhost:${PORT}`);
+        console.log(`[Cortex]   Open http://localhost:${PORT} in your browser`);
     });
 }
 

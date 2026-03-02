@@ -1,5 +1,5 @@
 const { EmbeddingsEngine } = require('../../../services/embeddings');
-const { PhiRunner } = require('./llm/phiRunner');
+const { PhiRunner } = require('../llm/phiRunner');
 const path = require('path');
 
 class AIManager {

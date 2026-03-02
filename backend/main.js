@@ -77,6 +77,29 @@ function createWindow() {
     `);
     }
 
+    // ── Zoom via Ctrl +/-/0 ──────────────────────────────────────────────────
+    const ZOOM_STEP = 0.1;
+    const ZOOM_MIN  = 0.5;
+    const ZOOM_MAX  = 2.0;
+
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (!input.control && !input.meta) return;
+        const key = input.key;
+
+        if ((key === '=' || key === '+') && input.type === 'keyDown') {
+            const current = mainWindow.webContents.getZoomFactor();
+            mainWindow.webContents.setZoomFactor(Math.min(+(current + ZOOM_STEP).toFixed(1), ZOOM_MAX));
+            event.preventDefault();
+        } else if (key === '-' && input.type === 'keyDown') {
+            const current = mainWindow.webContents.getZoomFactor();
+            mainWindow.webContents.setZoomFactor(Math.max(+(current - ZOOM_STEP).toFixed(1), ZOOM_MIN));
+            event.preventDefault();
+        } else if ((key === '0' || key === 'num0') && input.type === 'keyDown') {
+            mainWindow.webContents.setZoomFactor(1.0);
+            event.preventDefault();
+        }
+    });
+
     mainWindow.on('closed', () => {
         mainWindow = null;
     });

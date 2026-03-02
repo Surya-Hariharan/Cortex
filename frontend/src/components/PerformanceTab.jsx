@@ -11,7 +11,7 @@ function SparkLine({ history }) {
         return (
             <div
                 className="w-full shimmer-bg rounded-lg flex flex-col items-center justify-center gap-2"
-                style={{ flex: 1, minHeight: '80px', border: '1px solid var(--border-subtle)' }}
+                style={{ flex: 1, minHeight: 0, border: '1px solid var(--border-subtle)', overflow: 'hidden' }}
             >
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -36,7 +36,7 @@ function SparkLine({ history }) {
             viewBox={`0 0 100 ${H}`}
             preserveAspectRatio="none"
             /* flex:1 lets this SVG stretch to fill the flex container */
-            style={{ flex: 1, minHeight: '80px', width: '100%', display: 'block', overflow: 'visible' }}
+            style={{ flex: 1, minHeight: 0, width: '100%', display: 'block', overflow: 'hidden' }}
         >
             <defs>
                 <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
@@ -89,7 +89,9 @@ function LatencyBar({ label, valueMs, maxMs, gradient, badge }) {
 function CompactMetric({ icon, label, value, sub, accent }) {
     return (
         <div
-            className="flex items-center gap-3 px-4 py-2.5 rounded-xl",
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
+            style={{
+                background: accent ? 'var(--accent-light)' : 'var(--surface-recessed)',
                 border: accent ? '1px solid var(--accent-border)' : '1px solid var(--border-subtle)',
             }}
         >
@@ -157,8 +159,8 @@ export default function PerformanceTab() {
     const maxMs = CLOUD_MS + 80;
 
     return (
-        /* h-full + flex-col lets the grid grow to fill the entire available workspace */
-        <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)', padding: '12px 24px 12px', gap: '12px' }}>
+        /* height is fully constrained by parent; overflow hidden prevents any child from escaping */
+        <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)', padding: '12px 24px 12px', gap: '12px', overflow: 'hidden' }}>
 
             {/* ══ Full-width header ════════════════════════════════════════════ */}
             <div
@@ -208,10 +210,11 @@ export default function PerformanceTab() {
                 className="grid"
                 style={{
                     gridTemplateColumns: '4fr 5fr 3fr',
-                    gap: '20px',
-                    flex: 1,             /* ← fills remaining vertical space */
+                    gap: '16px',
+                    flex: 1,
                     alignItems: 'stretch',
-                    minHeight: 0,        /* allow flex child to shrink below content size */
+                    minHeight: 0,
+                    overflow: 'hidden',
                 }}
             >
 
@@ -312,9 +315,8 @@ export default function PerformanceTab() {
                 </div>
 
                 {/* ── CENTER COLUMN: Primary visualization anchor ─────────────── */}
-                {/* This column has only one card which grows to fill 100% height   */}
-                <div className="flex flex-col" style={{ minHeight: 0 }}>
-                    <div className="card flex flex-col" style={{ padding: '14px 16px', flex: 1, minHeight: 0 }}>
+                <div className="flex flex-col" style={{ minHeight: 0, overflow: 'hidden' }}>
+                    <div className="card flex flex-col" style={{ padding: '14px 16px', height: '260px', minHeight: 0, overflow: 'hidden' }}>
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
@@ -330,7 +332,7 @@ export default function PerformanceTab() {
                         </div>
 
                         {/* SparkLine grows to fill remaining card space */}
-                        <div className="flex flex-col flex-1 min-h-0">
+                        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
                             <SparkLine history={hist} />
                         </div>
 
@@ -400,26 +402,6 @@ export default function PerformanceTab() {
                                     No queries, documents, or embeddings leave this device.
                                 </p>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Active provider chip */}
-                    <div
-                        className="px-4 py-3 rounded-xl"
-                        style={{
-                            background: prov === 'dml' ? '#ecfdf5' : 'var(--accent-light)',
-                            border: `1px solid ${prov === 'dml' ? '#6ee7b7' : 'var(--accent-border)'}`,
-                        }}
-                    >
-                        <div className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                            style={{ color: prov === 'dml' ? '#065f46' : 'var(--accent)' }}>
-                            Active Backend
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full" style={{ background: prov === 'dml' ? '#10b981' : 'var(--accent)' }} />
-                            <span className="text-[12.5px] font-bold" style={{ color: prov === 'dml' ? '#065f46' : 'var(--accent)' }}>
-                                {prov === 'dml' ? 'DirectML (GPU)' : 'ONNX CPU Optimized'}
-                            </span>
                         </div>
                     </div>
 

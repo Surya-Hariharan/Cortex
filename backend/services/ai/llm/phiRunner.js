@@ -7,9 +7,9 @@ async function getTransformers() {
 
     const mod = await import('@xenova/transformers');
 
-    mod.env.localModelPath = path.join(__dirname, '../../../../../models');
+    mod.env.localModelPath = path.join(__dirname, '../../../../models');
     mod.env.allowRemoteModels = true;
-    mod.env.cacheDir = path.join(__dirname, '../../../../../models/.cache');
+    mod.env.cacheDir = path.join(__dirname, '../../../../models/.cache');
     mod.env.allowLocalModels = true;
 
     transformers = mod;

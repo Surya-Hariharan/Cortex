@@ -16,7 +16,7 @@ const { validateModelDir, getModelInfo } = require('../shared/modelLoader');
  */
 class BGERunner {
     constructor(modelDir) {
-        this.modelDir = modelDir || path.join(__dirname, '../../../../../models/bge-small-en-v1.5');
+        this.modelDir = modelDir || path.join(__dirname, '../../../../models/bge-small-en-v1.5');
         this.modelKey = 'bge-small-en-v1.5';
         this.tokenizer = null;
         this.ready = false;

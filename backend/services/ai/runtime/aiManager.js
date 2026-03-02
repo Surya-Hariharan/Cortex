@@ -21,7 +21,7 @@ const path = require('path');
  */
 class AIManager {
     constructor() {
-        const modelDir = path.join(__dirname, '../../../../../models/bge-small-en-v1.5');
+        const modelDir = path.join(__dirname, '../../../../models/bge-small-en-v1.5');
         
         // Model runners (plugins)
         this.embedder = new BGERunner(modelDir);
@@ -49,8 +49,13 @@ class AIManager {
         
         // Initialize embedder (used frequently for search)
         // LLM is lazily initialized on first use to save boot time
-        await this.embedder.initialize();
-        console.log('[AIManager] Embeddings engine ready.');
+        try {
+            await this.embedder.initialize();
+            console.log('[AIManager] Embeddings engine ready.');
+        } catch (error) {
+            console.warn('[AIManager] Embeddings engine unavailable:', error.message);
+            console.warn('[AIManager] Running in limited mode until model files are available.');
+        }
         
         this.initialized = true;
     }

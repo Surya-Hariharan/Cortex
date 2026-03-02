@@ -22,7 +22,25 @@ class HardwareDetector {
 
         console.log('[HardwareDetector] Scanning available execution providers...');
 
-        const availableProviders = ort.InferenceSession.availableProviders();
+        let availableProviders = ['cpu'];
+        try {
+            if (typeof ort.getAvailableExecutionProviders === 'function') {
+                availableProviders = await Promise.resolve(ort.getAvailableExecutionProviders());
+            } else if (
+                ort.InferenceSession &&
+                typeof ort.InferenceSession.getAvailableExecutionProviders === 'function'
+            ) {
+                availableProviders = await Promise.resolve(ort.InferenceSession.getAvailableExecutionProviders());
+            } else if (
+                ort.InferenceSession &&
+                typeof ort.InferenceSession.availableProviders === 'function'
+            ) {
+                availableProviders = await Promise.resolve(ort.InferenceSession.availableProviders());
+            }
+        } catch (providerError) {
+            console.warn('[HardwareDetector] Could not query execution providers, defaulting to CPU:', providerError.message);
+            availableProviders = ['cpu'];
+        }
         console.log('[HardwareDetector] Available providers:', availableProviders);
 
         // Determine best provider

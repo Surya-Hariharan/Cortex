@@ -108,7 +108,6 @@ async function initializeServices() {
     } catch (error) {
         console.error('[Cortex] Service initialization error:', error);
         console.log('[Cortex] App will run with limited functionality.');
-        throw error; // Re-throw to help diagnose initialization issues
     }
 }
 

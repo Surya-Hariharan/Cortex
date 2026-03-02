@@ -157,17 +157,61 @@ function registerIpcHandlers() {
 
     // Performance stats (provider, embed timing)
     ipcMain.handle('get-perf-stats', async () => {
-        let embedderStats = { ready: false, provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], cpuBaselineMs: 41, speedupX: null };
-        if (aiManager.embedder.isReady()) {
-            embedderStats = { ...aiManager.embedder.getPerfStats(), ready: true };
-        }
+        try {
+            // Use new getRuntimeInfo for comprehensive runtime metadata
+            const runtimeInfo = aiManager.getRuntimeInfo();
+            
+            // Maintain backward compatibility with old format
+            const embedderStats = runtimeInfo.models.embedding.ready 
+                ? {
+                    ready: true,
+                    modelName: runtimeInfo.models.embedding.name,
+                    provider: runtimeInfo.models.embedding.provider,
+                    lastEmbedTimeMs: runtimeInfo.models.embedding.performance.lastInferenceMs,
+                    avgEmbedTimeMs: runtimeInfo.models.embedding.performance.avgInferenceMs,
+                    embedHistory: [], // Could be populated if needed
+                    cpuBaselineMs: 41,
+                    speedupX: runtimeInfo.models.embedding.performance.speedupX,
+                    inferenceCount: runtimeInfo.models.embedding.performance.inferenceCount
+                }
+                : {
+                    ready: false,
+                    provider: 'cpu',
+                    lastEmbedTimeMs: 0,
+                    avgEmbedTimeMs: 0,
+                    embedHistory: [],
+                    cpuBaselineMs: 41,
+                    speedupX: null
+                };
 
-        let llmStats = { ready: false };
-        if (aiManager.llm && aiManager.llm.ready) {
-            llmStats = aiManager.llm.getPerfStats();
-        }
+            const llmStats = runtimeInfo.models.llm.ready
+                ? {
+                    ready: true,
+                    modelId: runtimeInfo.models.llm.name,
+                    inferenceCount: runtimeInfo.models.llm.performance.inferenceCount,
+                    lastStats: {
+                        loadTime: runtimeInfo.models.llm.performance.loadTimeMs,
+                        ttft: runtimeInfo.models.llm.performance.ttftMs,
+                        tokensPerSec: runtimeInfo.models.llm.performance.tokensPerSec,
+                        totalTime: 0
+                    }
+                }
+                : { ready: false };
 
-        return { embedder: embedderStats, llm: llmStats };
+            // Return enhanced format with runtime info
+            return {
+                embedder: embedderStats,
+                llm: llmStats,
+                runtime: runtimeInfo // Full runtime metadata for advanced UI
+            };
+        } catch (error) {
+            console.error('[Cortex] Error getting perf stats:', error);
+            return {
+                embedder: { ready: false, provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], cpuBaselineMs: 41, speedupX: null },
+                llm: { ready: false },
+                runtime: null
+            };
+        }
     });
 
     // Share to network — broadcast to real discovered peers

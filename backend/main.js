@@ -11,6 +11,24 @@ if (fs.existsSync(frontendNodeModules)) {
     Module._initPaths();
 }
 
+// Polyfill CustomEvent for ESM deps (libp2p stack) in Electron main process
+if (typeof globalThis.CustomEvent === 'undefined') {
+    const BaseEvent = globalThis.Event || class {
+        constructor(type) {
+            this.type = type;
+        }
+    };
+
+    class NodeCustomEvent extends BaseEvent {
+        constructor(type, params = {}) {
+            super(type, params);
+            this.detail = params.detail ?? null;
+        }
+    }
+
+    globalThis.CustomEvent = NodeCustomEvent;
+}
+
 // Services
 const { initializeDatabase, getDatabase, getStorageManager } = require('./services/database');
 const { aiManager } = require('./services/ai/runtime/aiManager');

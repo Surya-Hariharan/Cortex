@@ -8,10 +8,10 @@ const { aiManager } = require('./services/ai/runtime/aiManager');
 const { searchVectors } = require('./services/vectorSearch');
 const { extractPdfText } = require('./services/pdfHandler');
 const { ragSearch } = require('./services/ragPipeline');
-const { PeerDiscovery } = require('./services/peerDiscovery');
+const { createMeshManager, getMeshManager } = require('./services/mesh/meshManager');
 
 let mainWindow;
-let peerDiscovery;
+let meshManager;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -66,18 +66,24 @@ async function initializeServices() {
         await aiManager.initialize();
         console.log('[Cortex] AI engines initialized');
 
-        // Start LAN peer discovery
-        peerDiscovery = new PeerDiscovery();
-        peerDiscovery.start();
-        // Update doc count for broadcasting
-        try {
-            const stats = getDatabase()?.getStats();
-            if (stats) peerDiscovery.setDocCount(stats.documents);
-        } catch (_) { }
-        console.log('[Cortex] Mesh peer discovery started');
+        // Start mesh networking (libp2p-based P2P)
+        meshManager = createMeshManager(getDatabase());
+        
+        // Setup peer change callback to notify UI
+        meshManager.onPeersChanged = (peers) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('peers-updated', peers);
+            }
+        };
+        
+        // Start mesh networking
+        await meshManager.start();
+        console.log('[Cortex] Mesh networking started (libp2p)');
+        
     } catch (error) {
         console.error('[Cortex] Service initialization error:', error.message);
-        console.log('[Cortex] App will run with limited functionality. Run "npm run setup-demo" first.');
+        console.log('[Cortex] App will run with limited functionality.');
+    }
 
         // Still start peer discovery even without embeddings
         if (!peerDiscovery) {

@@ -74,6 +74,36 @@ function initializeDatabase(dbPath) {
     CREATE INDEX IF NOT EXISTS idx_embeddings_doc_id ON embeddings(doc_id);
     CREATE INDEX IF NOT EXISTS idx_chats_project ON chats(project_id);
     CREATE INDEX IF NOT EXISTS idx_messages_chat ON chat_messages(chat_id);
+
+    -- Mesh network tables for peer-to-peer functionality
+    CREATE TABLE IF NOT EXISTS mesh_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS peers (
+      peer_id TEXT PRIMARY KEY,
+      device_name TEXT NOT NULL,
+      last_seen INTEGER NOT NULL,
+      doc_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS peer_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      peer_id TEXT NOT NULL,
+      doc_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      subject TEXT DEFAULT 'Unknown',
+      chunk_count INTEGER DEFAULT 0,
+      last_modified INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (peer_id) REFERENCES peers(peer_id) ON DELETE CASCADE,
+      UNIQUE(peer_id, doc_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_peer_docs_peer ON peer_documents(peer_id);
+    CREATE INDEX IF NOT EXISTS idx_peer_docs_modified ON peer_documents(last_modified);
   `);
 
     return db;
@@ -289,6 +319,142 @@ class DatabaseWrapper {
         ).run(chatId, role, content);
         this.touchChat(chatId);
         return result.lastInsertRowid;
+    }
+
+    // ── Mesh Networking ────────────────────────────────────────────────────
+
+    /**
+     * Store mesh peer ID for persistent identity
+     */
+    storeMeshPeerId(peerId) {
+        this.db.prepare(
+            'INSERT OR REPLACE INTO mesh_config (key, value) VALUES (?, ?)'
+        ).run('peer_id', peerId);
+    }
+
+    /**
+     * Get stored mesh peer ID
+     */
+    getMeshPeerId() {
+        const row = this.db.prepare(
+            'SELECT value FROM mesh_config WHERE key = ?'
+        ).get('peer_id');
+        return row ? row.value : null;
+    }
+
+    /**
+     * Upsert peer information
+     */
+    upsertPeer(peerId, deviceName, lastSeen) {
+        this.db.prepare(`
+            INSERT INTO peers (peer_id, device_name, last_seen)
+            VALUES (?, ?, ?)
+            ON CONFLICT(peer_id) DO UPDATE SET
+                device_name = excluded.device_name,
+                last_seen = excluded.last_seen
+        `).run(peerId, deviceName, lastSeen);
+    }
+
+    /**
+     * Get all known peers
+     */
+    getPeers() {
+        return this.db.prepare('SELECT * FROM peers ORDER BY last_seen DESC').all();
+    }
+
+    /**
+     * Get specific peer
+     */
+    getPeer(peerId) {
+        return this.db.prepare('SELECT * FROM peers WHERE peer_id = ?').get(peerId);
+    }
+
+    /**
+     * Update peer document count
+     */
+    updatePeerDocCount(peerId, docCount) {
+        this.db.prepare(
+            'UPDATE peers SET doc_count = ? WHERE peer_id = ?'
+        ).run(docCount, peerId);
+    }
+
+    /**
+     * Upsert peer document metadata
+     */
+    upsertPeerDocument(peerId, docId, title, subject, chunkCount, lastModified) {
+        this.db.prepare(`
+            INSERT INTO peer_documents (peer_id, doc_id, title, subject, chunk_count, last_modified)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(peer_id, doc_id) DO UPDATE SET
+                title = excluded.title,
+                subject = excluded.subject,
+                chunk_count = excluded.chunk_count,
+                last_modified = excluded.last_modified
+        `).run(peerId, docId, title, subject, chunkCount, lastModified);
+    }
+
+    /**
+     * Get documents from a specific peer
+     */
+    getPeerDocuments(peerId) {
+        return this.db.prepare(`
+            SELECT * FROM peer_documents
+            WHERE peer_id = ?
+            ORDER BY last_modified DESC
+        `).all(peerId).map(row => ({
+            id: row.id,
+            peerId: row.peer_id,
+            docId: row.doc_id,
+            title: row.title,
+            subject: row.subject,
+            chunkCount: row.chunk_count,
+            lastModified: row.last_modified,
+            createdAt: row.created_at
+        }));
+    }
+
+    /**
+     * Get all peer documents with peer info
+     */
+    getAllPeerDocuments() {
+        return this.db.prepare(`
+            SELECT 
+                pd.*,
+                p.device_name as peer_name
+            FROM peer_documents pd
+            JOIN peers p ON pd.peer_id = p.peer_id
+            ORDER BY pd.last_modified DESC
+            LIMIT 100
+        `).all().map(row => ({
+            id: row.id,
+            peerId: row.peer_id,
+            peerName: row.peer_name,
+            docId: row.doc_id,
+            title: row.title,
+            subject: row.subject,
+            chunkCount: row.chunk_count,
+            lastModified: row.last_modified,
+            createdAt: row.created_at
+        }));
+    }
+
+    /**
+     * Delete old peer documents (cleanup)
+     */
+    cleanupOldPeerDocuments(maxAgeMs) {
+        const cutoff = Date.now() - maxAgeMs;
+        return this.db.prepare(
+            'DELETE FROM peer_documents WHERE last_modified < ?'
+        ).run(cutoff);
+    }
+
+    /**
+     * Delete documents from disconnected peer
+     */
+    deletePeerDocuments(peerId) {
+        return this.db.prepare(
+            'DELETE FROM peer_documents WHERE peer_id = ?'
+        ).run(peerId);
     }
 }
 

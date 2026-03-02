@@ -461,3 +461,15 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
+
+app.on('before-quit', async () => {
+    // Cleanup mesh networking
+    if (meshManager) {
+        console.log('[Cortex] Stopping mesh network...');
+        try {
+            await meshManager.stop();
+        } catch (error) {
+            console.error('[Cortex] Error stopping mesh network:', error);
+        }
+    }
+});

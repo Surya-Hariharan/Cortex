@@ -11,7 +11,7 @@ function SparkLine({ history }) {
         return (
             <div
                 className="w-full shimmer-bg rounded-lg flex flex-col items-center justify-center gap-2"
-                style={{ flex: 1, minHeight: '120px', border: '1px solid var(--border-subtle)' }}
+                style={{ flex: 1, minHeight: '80px', border: '1px solid var(--border-subtle)' }}
             >
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -36,7 +36,7 @@ function SparkLine({ history }) {
             viewBox={`0 0 100 ${H}`}
             preserveAspectRatio="none"
             /* flex:1 lets this SVG stretch to fill the flex container */
-            style={{ flex: 1, minHeight: '120px', width: '100%', display: 'block', overflow: 'visible' }}
+            style={{ flex: 1, minHeight: '80px', width: '100%', display: 'block', overflow: 'visible' }}
         >
             <defs>
                 <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
@@ -89,9 +89,7 @@ function LatencyBar({ label, valueMs, maxMs, gradient, badge }) {
 function CompactMetric({ icon, label, value, sub, accent }) {
     return (
         <div
-            className="flex items-center gap-3 px-4 py-3 rounded-xl"
-            style={{
-                background: accent ? 'var(--accent-light)' : 'var(--surface-recessed)',
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl",
                 border: accent ? '1px solid var(--accent-border)' : '1px solid var(--border-subtle)',
             }}
         >
@@ -113,7 +111,7 @@ function CompactMetric({ icon, label, value, sub, accent }) {
 /* ── Info card (right column) ───────────────────────────────────────────────── */
 function InfoCard({ icon, label, value, detail }) {
     return (
-        <div className="card px-4 py-3.5">
+        <div className="card px-4 py-2.5">
             <div className="flex items-start gap-2.5">
                 <div className="text-base mt-0.5 flex-shrink-0">{icon}</div>
                 <div className="min-w-0">
@@ -160,12 +158,12 @@ export default function PerformanceTab() {
 
     return (
         /* h-full + flex-col lets the grid grow to fill the entire available workspace */
-        <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)', padding: '16px 32px 20px', gap: '16px' }}>
+        <div className="h-full flex flex-col" style={{ background: 'var(--surface-app)', padding: '12px 24px 12px', gap: '12px' }}>
 
             {/* ══ Full-width header ════════════════════════════════════════════ */}
             <div
-                className="card flex items-center justify-between mb-6"
-                style={{ padding: '14px 20px', borderLeft: '3px solid var(--accent)' }}
+                className="card flex items-center justify-between flex-shrink-0"
+                style={{ padding: '10px 18px', borderLeft: '3px solid var(--accent)' }}
             >
                 <div className="flex items-center gap-3">
                     <div
@@ -218,10 +216,10 @@ export default function PerformanceTab() {
             >
 
                 {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3" style={{ overflowY: 'auto', minHeight: 0 }}>
 
                     {/* 1a. Latency comparison – most dominant card in left col */}
-                    <div className="card" style={{ padding: '18px 20px' }}>
+                    <div className="card" style={{ padding: '14px 16px' }}>
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
                                 Inference Latency
@@ -316,7 +314,7 @@ export default function PerformanceTab() {
                 {/* ── CENTER COLUMN: Primary visualization anchor ─────────────── */}
                 {/* This column has only one card which grows to fill 100% height   */}
                 <div className="flex flex-col" style={{ minHeight: 0 }}>
-                    <div className="card flex flex-col" style={{ padding: '18px 20px', flex: 1, minHeight: 0 }}>
+                    <div className="card flex flex-col" style={{ padding: '14px 16px', flex: 1, minHeight: 0 }}>
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
@@ -358,7 +356,7 @@ export default function PerformanceTab() {
                 </div>
 
                 {/* ── RIGHT COLUMN: System context & metadata ─────────────────── */}
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3" style={{ overflowY: 'auto', minHeight: 0 }}>
                     <div className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>
                         System Context
                     </div>

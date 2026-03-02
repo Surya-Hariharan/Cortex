@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Services
-const { initializeDatabase, getDatabase } = require('./services/database');
+const { initializeDatabase, getDatabase, getStorageManager } = require('./services/database');
 const { aiManager } = require('./services/ai/runtime/aiManager');
 const { searchVectors } = require('./services/vectorSearch');
 const { extractPdfText } = require('./services/pdfHandler');
@@ -57,14 +57,30 @@ function createWindow() {
 
 async function initializeServices() {
     try {
-        // Initialize database
-        const dbPath = path.join(__dirname, '../../data/cortex.db');
-        initializeDatabase(dbPath);
-        console.log('[Cortex] Database initialized');
-
-        // Initialize AI components
+        // Initialize AI components first (needed for embeddings)
         await aiManager.initialize();
-        console.log('[Cortex] AI engines initialized');
+        console.log('[Cortex] ✓ AI engines initialized');
+
+        // Initialize new storage architecture (Phase 2D: SQLite + LanceDB)
+        const dataDir = path.join(__dirname, '../data');
+        const dbPath = path.join(dataDir, 'cortex.db');
+        
+        await initializeDatabase(dbPath);
+        console.log('[Cortex] ✓ Storage architecture initialized (Phase 2D)');
+        
+        const storageManager = getStorageManager();
+        if (storageManager.isReady()) {
+            const stats = await storageManager.getStats();
+            console.log(`[Cortex]   → ${stats.documents} documents, ${stats.chunks} chunks, ${stats.vectors} vectors`);
+            console.log(`[Cortex]   → Embedding version: ${stats.embeddingVersion}`);
+            
+            // Check if migration needed
+            const migrationInfo = storageManager.checkMigration();
+            if (migrationInfo) {
+                console.warn('[Cortex] ⚠ Embedding version migration required!');
+                console.warn(`[Cortex]   → Run migration via Performance tab or call storageManager.migrateAll()`);
+            }
+        }
 
         // Start mesh networking (libp2p-based P2P)
         meshManager = createMeshManager(getDatabase());
@@ -78,18 +94,12 @@ async function initializeServices() {
         
         // Start mesh networking
         await meshManager.start();
-        console.log('[Cortex] Mesh networking started (libp2p)');
+        console.log('[Cortex] ✓ Mesh networking started (libp2p)');
         
     } catch (error) {
-        console.error('[Cortex] Service initialization error:', error.message);
+        console.error('[Cortex] Service initialization error:', error);
         console.log('[Cortex] App will run with limited functionality.');
-    }
-
-        // Still start peer discovery even without embeddings
-        if (!peerDiscovery) {
-            peerDiscovery = new PeerDiscovery();
-            peerDiscovery.start();
-        }
+        throw error; // Re-throw to help diagnose initialization issues
     }
 }
 

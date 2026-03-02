@@ -14,11 +14,20 @@ function resolveModulePath(packageName) {
         try {
             return require.resolve(packageName, { paths: [frontendNodeModules] });
         } catch {
-            if (packageName === 'libp2p') {
-                return path.resolve(frontendNodeModules, 'libp2p/dist/src/index.js');
+            const distEntry = path.resolve(frontendNodeModules, packageName, 'dist/src/index.js');
+            if (fsExists(distEntry)) {
+                return distEntry;
             }
             throw _;
         }
+    }
+}
+
+function fsExists(targetPath) {
+    try {
+        return require('fs').existsSync(targetPath);
+    } catch {
+        return false;
     }
 }
 

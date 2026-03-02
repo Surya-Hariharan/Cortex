@@ -8,7 +8,8 @@
     "setup-demo": "electron scripts/setup-demo.js",
     "build:renderer": "webpack --config webpack.config.js",
     "watch:renderer": "webpack --config webpack.config.js --watch",
-    "dev": "concurrently \"npm run watch:renderer\" \"wait-on dist/renderer/index.html && electron .\""
+    "dev": "concurrently \"npm run watch:renderer\" \"wait-on dist/renderer/index.html && electron .\"",
+    "dev:web": "webpack serve --config webpack.config.js"
   },
   "keywords": [
     "electron",
@@ -58,6 +59,7 @@
     "tailwindcss": "^3.4.1",
     "wait-on": "^7.2.0",
     "webpack": "^5.90.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.3"
   }
 }

@@ -316,7 +316,7 @@ export default function PerformanceTab() {
 
                 {/* ── CENTER COLUMN: Primary visualization anchor ─────────────── */}
                 <div className="flex flex-col" style={{ minHeight: 0, overflow: 'hidden' }}>
-                    <div className="card flex flex-col" style={{ padding: '14px 16px', height: '260px', minHeight: 0, overflow: 'hidden' }}>
+                    <div className="card flex flex-col" style={{ padding: '14px 16px', height: '130px', minHeight: 0, overflow: 'hidden' }}>
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
@@ -339,7 +339,7 @@ export default function PerformanceTab() {
                         {/* Stats row below graph */}
                         {hist.length > 0 && (
                             <div
-                                className="grid grid-cols-3 gap-3 mt-4 pt-4"
+                                className="grid grid-cols-3 gap-3 mt-2 pt-2"
                                 style={{ borderTop: '1px solid var(--border-subtle)' }}
                             >
                                 {[
@@ -369,12 +369,7 @@ export default function PerformanceTab() {
                         value="BGE-small-en-v1.5"
                         detail="384 dimensions · multilingual capable"
                     />
-                    <InfoCard
-                        icon="⚙️"
-                        label="Inference Runtime"
-                        value="ONNX Runtime"
-                        detail="v1.20 · graph-level optimization"
-                    />
+
                     <InfoCard
                         icon="🔍"
                         label="Vector Search"

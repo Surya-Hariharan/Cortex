@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import api from './api';
 import SearchTab from './components/SearchTab';
 import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
@@ -60,20 +61,17 @@ export default function App() {
     const [toast, setToast] = useState(null);
     const [perfProvider, setPerfProvider] = useState('cpu');
     const perfPollRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
-        if (window.electronAPI) {
-            window.electronAPI.getStats().then(setStats).catch(() => { });
-        }
+        api.getStats().then(setStats).catch(() => { });
     }, []);
 
     useEffect(() => {
         const poll = () => {
-            if (window.electronAPI) {
-                window.electronAPI.getPerfStats()
-                    .then((p) => { if (p) setPerfProvider(p.provider); })
-                    .catch(() => { });
-            }
+            api.getPerfStats()
+                .then((p) => { if (p) setPerfProvider(p.embedder?.provider || 'cpu'); })
+                .catch(() => { });
         };
         poll();
         perfPollRef.current = setInterval(poll, 4000);
@@ -82,6 +80,26 @@ export default function App() {
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type, id: Date.now() });
+    };
+
+    const handlePdfUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        // Reset the input so the same file can be re-uploaded
+        e.target.value = '';
+
+        try {
+            const result = await api.uploadPdf(file);
+            if (result?.success) {
+                showToast(`Indexed "${result.title}" · ${result.chunks} chunks`);
+                const newStats = await api.getStats();
+                setStats(newStats);
+            } else if (result?.error) {
+                showToast(result.error, 'error');
+            }
+        } catch (err) {
+            showToast('Upload failed: ' + err.message, 'error');
+        }
     };
 
     const renderTab = () => {
@@ -106,13 +124,12 @@ export default function App() {
                     background: 'linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%)',
                     borderBottom: '1px solid rgba(0,0,0,0.07)',
                     boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 3px 12px rgba(0,0,0,0.06)',
-                    WebkitAppRegion: 'drag',
                     paddingLeft: 0,
                     paddingRight: 0,
                 }}
             >
                 {/* ── Left group: Logo + Tab nav + Upload PDF ─────────────────── */}
-                <div className="flex items-stretch h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+                <div className="flex items-stretch h-full">
 
                     {/* Logo */}
                     <div
@@ -193,21 +210,17 @@ export default function App() {
                         })}
                     </nav>
 
-                    {/* Upload PDF — action adjacent to navigation */}
+                    {/* Upload PDF — using file input instead of Electron dialog */}
                     <div className="flex items-center" style={{ padding: '0 8px 0 4px', borderLeft: '1px solid rgba(0,0,0,0.06)' }}>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".pdf"
+                            onChange={handlePdfUpload}
+                            style={{ display: 'none' }}
+                        />
                         <button
-                            onClick={async () => {
-                                if (window.electronAPI) {
-                                    const result = await window.electronAPI.uploadPdf();
-                                    if (result?.success) {
-                                        showToast(`Indexed "${result.title}" · ${result.chunks} chunks`);
-                                        const newStats = await window.electronAPI.getStats();
-                                        setStats(newStats);
-                                    } else if (result?.error) {
-                                        showToast(result.error, 'error');
-                                    }
-                                }
-                            }}
+                            onClick={() => fileInputRef.current?.click()}
                             className="btn-ghost flex items-center gap-1.5 text-[11.5px]"
                             style={{ padding: '5px 12px' }}
                         >
@@ -217,14 +230,12 @@ export default function App() {
                     </div>
                 </div>
 
-                {/* ── Right group: ONNX status + doc count only ────────────────── */}
-                {/* paddingRight: 148px = 3 native Win32 controls × ≈46px + buffer    */}
+                {/* ── Right group: ONNX status + doc count ────────────────────── */}
                 <div
                     className="flex items-center gap-2"
                     style={{
-                        WebkitAppRegion: 'no-drag',
                         paddingLeft: '16px',
-                        paddingRight: '148px',
+                        paddingRight: '24px',
                     }}
                 >
                     {/* ONNX provider badge */}

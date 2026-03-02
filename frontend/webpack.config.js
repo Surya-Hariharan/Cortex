@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const isDevServer = process.env.WEBPACK_SERVE === 'true';
 
 module.exports = {
   mode: 'development',
@@ -29,7 +30,7 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          MiniCssExtractPlugin.loader,
+          isDevServer ? 'style-loader' : MiniCssExtractPlugin.loader,
           'css-loader',
           'postcss-loader',
         ],
@@ -51,5 +52,15 @@ module.exports = {
       filename: 'styles.css',
     }),
   ],
+  devServer: {
+    static: path.resolve(__dirname, 'dist/renderer'),
+    port: 3000,
+    hot: true,
+    open: false,
+    historyApiFallback: true,
+    client: {
+      overlay: true,
+    },
+  },
   devtool: 'source-map',
 };

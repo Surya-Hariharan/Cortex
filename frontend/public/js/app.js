@@ -3,9 +3,11 @@ import { renderSearch, destroySearch } from './search.js';
 import { renderNotes, destroyNotes } from './notes.js';
 import { renderNetwork, destroyNetwork } from './network.js';
 import { renderPerformance, destroyPerformance } from './performance.js';
+import { renderLogin, destroyLogin } from './login.js';
 
 let activeTab = 'search';
 let perfPollId = null;
+let connectivityPollId = null;
 
 // ── Toast System ─────────────────────────────────────────────────────────────
 export function showToast(message, type = 'success') {
@@ -33,9 +35,7 @@ const renderers = { search: renderSearch, notes: renderNotes, network: renderNet
 
 function switchTab(tabId) {
     if (activeTab === tabId) return;
-    // Destroy current tab
     destroyers[activeTab]?.();
-    // Update nav
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
     });
@@ -58,7 +58,7 @@ async function updateStats() {
         } else {
             docStats.style.display = 'none';
         }
-    } catch { }
+    } catch {}
 }
 
 async function updateProvider() {
@@ -69,7 +69,25 @@ async function updateProvider() {
         const label = document.getElementById('provider-label');
         badge.classList.toggle('dml', prov === 'dml');
         label.textContent = prov === 'dml' ? 'DirectML' : 'ONNX Runtime';
-    } catch { }
+    } catch {}
+}
+
+// ── Connectivity Status ──────────────────────────────────────────────────────
+async function updateConnectivity() {
+    try {
+        const res = await api.checkConnectivity();
+        const dot = document.getElementById('connectivity-dot');
+        const label = document.getElementById('connectivity-label');
+        if (dot && label) {
+            dot.className = `conn-dot ${res.online ? 'online' : 'offline'}`;
+            label.textContent = res.online ? 'Online' : 'Offline';
+        }
+    } catch {
+        const dot = document.getElementById('connectivity-dot');
+        const label = document.getElementById('connectivity-label');
+        if (dot) dot.className = 'conn-dot offline';
+        if (label) label.textContent = 'Offline';
+    }
 }
 
 // ── PDF Upload ───────────────────────────────────────────────────────────────
@@ -95,19 +113,55 @@ function setupUpload() {
     });
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// ── Auth Guard ───────────────────────────────────────────────────────────────
+function showApp(user) {
+    document.getElementById('auth-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+
+    // Set user name in header
+    const userEl = document.getElementById('user-display');
+    if (userEl && user) {
+        userEl.textContent = user.name || user.email;
+        userEl.style.display = 'inline';
+    }
+
+    // Setup logout
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', () => api.logout());
+
+    setupUpload();
+    updateStats();
+    updateProvider();
+    updateConnectivity();
+    perfPollId = setInterval(updateProvider, 4000);
+    connectivityPollId = setInterval(updateConnectivity, 15000);
+
     // Tab nav
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
 
-    setupUpload();
-    updateStats();
-    updateProvider();
-    perfPollId = setInterval(updateProvider, 4000);
-
     // Render initial tab
     const content = document.getElementById('tab-content');
     renderers[activeTab]?.(content, showToast);
+}
+
+function showAuth() {
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('auth-container').style.display = 'block';
+    const authEl = document.getElementById('auth-container');
+    renderLogin(authEl, (user) => {
+        destroyLogin();
+        showApp(user);
+    });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    if (api.isAuthenticated()) {
+        const user = api.getUser();
+        showApp(user);
+    } else {
+        showAuth();
+    }
 });

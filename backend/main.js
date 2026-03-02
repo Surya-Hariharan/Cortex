@@ -57,7 +57,8 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: false,
+            sandbox: true,
+            enableRemoteModule: false
         },
     });
 
@@ -114,16 +115,16 @@ async function initializeServices() {
         // Initialize new storage architecture (Phase 2D: SQLite + LanceDB)
         const dataDir = path.join(__dirname, '../data');
         const dbPath = path.join(dataDir, 'cortex.db');
-        
+
         await initializeDatabase(dbPath);
         console.log('[Cortex] ✓ Storage architecture initialized (Phase 2D)');
-        
+
         const storageManager = getStorageManager();
         if (storageManager.isReady()) {
             const stats = await storageManager.getStats();
             console.log(`[Cortex]   → ${stats.documents} documents, ${stats.chunks} chunks, ${stats.vectors} vectors`);
             console.log(`[Cortex]   → Embedding version: ${stats.embeddingVersion}`);
-            
+
             // Check if migration needed
             const migrationInfo = storageManager.checkMigration();
             if (migrationInfo) {
@@ -134,18 +135,18 @@ async function initializeServices() {
 
         // Start mesh networking (libp2p-based P2P)
         meshManager = createMeshManager(getDatabase());
-        
+
         // Setup peer change callback to notify UI
         meshManager.onPeersChanged = (peers) => {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('peers-updated', peers);
             }
         };
-        
+
         // Start mesh networking
         await meshManager.start();
         console.log('[Cortex] ✓ Mesh networking started (libp2p)');
-        
+
     } catch (error) {
         console.error('[Cortex] Service initialization error:', error);
         console.log('[Cortex] App will run with limited functionality.');
@@ -189,17 +190,17 @@ function registerIpcHandlers() {
 
             const filePath = result.filePaths[0];
             const title = path.basename(filePath, '.pdf');
-            
+
             // Phase 2D: Use new storage manager
             const storageManager = getStorageManager();
-            
+
             if (!storageManager.isReady()) {
                 return { error: 'Storage not initialized' };
             }
 
             // Index document with progress tracking
             const indexResult = await storageManager.indexDocument(
-                filePath, 
+                filePath,
                 title,
                 (progress) => {
                     // Optional: Send progress to UI
@@ -215,19 +216,19 @@ function registerIpcHandlers() {
 
             if (!indexResult.success) {
                 if (indexResult.skipped) {
-                    return { 
-                        success: true, 
+                    return {
+                        success: true,
                         skipped: true,
-                        title, 
-                        message: indexResult.reason 
+                        title,
+                        message: indexResult.reason
                     };
                 }
                 return { error: indexResult.error };
             }
 
-            return { 
-                success: true, 
-                title, 
+            return {
+                success: true,
+                title,
                 chunks: indexResult.chunkCount,
                 docId: indexResult.docId,
                 embeddingVersion: indexResult.embeddingVersion,
@@ -243,7 +244,7 @@ function registerIpcHandlers() {
     ipcMain.handle('get-stats', async () => {
         try {
             const storageManager = getStorageManager();
-            
+
             if (storageManager && storageManager.isReady()) {
                 // Use new storage manager for accurate stats
                 const stats = await storageManager.getStats();
@@ -255,11 +256,11 @@ function registerIpcHandlers() {
                     needsMigration: stats.needsMigration,
                 };
             }
-            
+
             // Fallback to legacy
             const db = getDatabase();
             if (!db) return { documents: 0, embeddings: 0, chunks: 0 };
-            
+
             const stats = await db.getStats();
             return stats;
         } catch (error) {
@@ -273,9 +274,9 @@ function registerIpcHandlers() {
         try {
             // Use new getRuntimeInfo for comprehensive runtime metadata
             const runtimeInfo = aiManager.getRuntimeInfo();
-            
+
             // Maintain backward compatibility with old format
-            const embedderStats = runtimeInfo.models.embedding.ready 
+            const embedderStats = runtimeInfo.models.embedding.ready
                 ? {
                     ready: true,
                     modelName: runtimeInfo.models.embedding.name,
@@ -332,14 +333,14 @@ function registerIpcHandlers() {
         try {
             // Small delay for UX feedback
             await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400));
-            
+
             const mesh = getMeshManager();
             if (!mesh || !mesh.isRunning()) {
                 return { success: false, error: 'Mesh network not running', peersReached: 0 };
             }
-            
+
             const peers = mesh.getPeers().filter(p => p.status === 'online');
-            
+
             // In future phases, this would actually broadcast the document
             // For now, just report how many peers could receive it
             return { success: true, peersReached: peers.length };
@@ -353,14 +354,14 @@ function registerIpcHandlers() {
     ipcMain.handle('get-peers', async () => {
         try {
             const mesh = getMeshManager();
-            
+
             if (!mesh || !mesh.isRunning()) {
                 // Mesh not started yet - return empty (UI will show scanning)
                 return { peers: [] };
             }
-            
+
             const realPeers = mesh.getPeers();
-            
+
             // Return real peers from libp2p mesh network
             return { peers: realPeers };
         } catch (error) {
@@ -376,11 +377,11 @@ function registerIpcHandlers() {
             if (!mesh) {
                 return { documents: [] };
             }
-            
-            const documents = peerId 
+
+            const documents = peerId
                 ? mesh.getPeerDocuments(peerId)
                 : mesh.getAllPeerDocuments();
-            
+
             return { documents };
         } catch (error) {
             console.error('[Cortex] Error getting peer documents:', error);
@@ -395,16 +396,16 @@ function registerIpcHandlers() {
             if (!mesh) {
                 return { error: 'Mesh network not available' };
             }
-            
+
             // This will throw "Not Implemented"
             await mesh.requestDocument(peerId, docId);
-            
+
             return { success: true };
         } catch (error) {
             console.log('[Cortex] Document request (expected to fail):', error.message);
-            return { 
+            return {
                 error: error.message,
-                notImplemented: true 
+                notImplemented: true
             };
         }
     });
@@ -416,7 +417,7 @@ function registerIpcHandlers() {
             if (!mesh) {
                 return { running: false };
             }
-            
+
             return mesh.getStatus();
         } catch (error) {
             console.error('[Cortex] Error getting mesh status:', error);

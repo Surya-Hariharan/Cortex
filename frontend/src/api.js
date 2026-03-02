@@ -80,10 +80,10 @@ const api = {
     // Non-streaming search fallback
     searchSimple: (query) => jsonPost('/search', { query }),
 
-    uploadPdf: async (file) => {
+    uploadDocument: async (file) => {
         const formData = new FormData();
-        formData.append('pdf', file);
-        const res = await fetch(`${API_BASE}/upload-pdf`, {
+        formData.append('document', file);
+        const res = await fetch(`${API_BASE}/upload-document`, {
             method: 'POST',
             body: formData,
         });

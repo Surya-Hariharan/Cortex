@@ -1,4 +1,28 @@
 {
+  "name": "cortex",
+  "version": "1.0.0",
+  "description": "Cortex — Offline AI Productivity Platform for Students",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "setup": "npm install && echo Setup complete — run 'npm start' to launch.",
+    "test:full": "cross-env NODE_ENV=test node --expose-gc ./node_modules/jest/bin/jest.js --runInBand --detectOpenHandles"
+  },
+  "keywords": [
+    "ai",
+    "offline",
+    "second-brain",
+    "semantic-search",
+    "onnx",
+    "rag",
+    "embeddings"
+  ],
+  "author": "Cortex Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@chainsafe/libp2p-noise": "^17.0.0",
     "@chainsafe/libp2p-yamux": "^8.0.1",
@@ -8,14 +32,24 @@
     "@libp2p/webrtc": "^6.0.12",
     "@libp2p/websockets": "^10.1.4",
     "@xenova/transformers": "^2.17.2",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "libp2p": "^3.1.4",
+    "mammoth": "^1.11.0",
     "multer": "^2.1.0",
+    "nodemailer": "^8.0.1",
     "onnxruntime-node": "^1.24.2",
     "pdf-parse": "^2.4.5",
+    "ppu-paddle-ocr": "^3.6.0",
     "uint8arrays": "^5.1.0",
     "vectordb": "^0.21.2"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.2.2"
   }
 }

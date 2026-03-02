@@ -27,11 +27,17 @@ async function getDeps() {
 async function readAllChunks(stream) {
     const { pipe } = await getDeps();
     const chunks = [];
+    let totalSize = 0;
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB limit
 
     await pipe(
         stream,
         async function (source) {
             for await (const chunk of source) {
+                totalSize += chunk.byteLength || chunk.length;
+                if (totalSize > MAX_SIZE) {
+                    throw new Error('Payload too large: exceeded 2MB limit');
+                }
                 chunks.push(chunk.subarray());
             }
         }

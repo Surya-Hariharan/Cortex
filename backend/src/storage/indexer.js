@@ -1,20 +1,20 @@
 const path = require('path');
 const os = require('os');
-const { extractPdfText } = require('../pdfHandler');
+const { extractDocumentText } = require('../ai/rag/documentParser');
 const { aiManager } = require('../ai/runtime/aiManager');
 const { hashFile, generateChunkId, generateDocId } = require('./hashUtils');
 const { CURRENT_EMBEDDING_VERSION, CHUNK_CONFIG } = require('./config');
 
 /**
  * Document Indexer with Embedding Versioning
- * 
+ *
  * Purpose:
  * - Orchestrate PDF → chunks → embeddings → storage
  * - File hash deduplication
  * - Deterministic chunk IDs
  * - Version-aware embedding
  * - Device ownership tracking
- * 
+ *
  * Flow:
  * 1. Hash file (deduplication check)
  * 2. Extract & chunk PDF text
@@ -63,7 +63,7 @@ async function indexDocument(filePath, title, metadataStore, vectorStore, progre
 
         // Step 2: Extract and chunk PDF
         if (progressCallback) progressCallback({ stage: 'extracting', progress: 20 });
-        const chunks = await extractPdfText(filePath, CHUNK_CONFIG.chunkSize, CHUNK_CONFIG.overlap);
+        const chunks = await extractDocumentText(filePath);
         console.log(`[Indexer] Extracted ${chunks.length} chunks from: ${title}`);
 
         // Step 3: Store document metadata
@@ -169,7 +169,7 @@ async function indexDocumentsBatch(documents, metadataStore, vectorStore, progre
         console.log(`[Indexer] Processing document ${i + 1}/${documents.length}: ${doc.title}`);
 
         const result = await indexDocument(doc.filePath, doc.title, metadataStore, vectorStore);
-        
+
         if (result.success && !result.skipped) {
             results.indexed++;
         } else if (result.skipped) {

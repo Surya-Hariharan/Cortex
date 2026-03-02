@@ -1,18 +1,18 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
-const { encryptText, decryptText } = require('../encryption');
+const { encryptText, decryptText } = require('./encryption');
 const { CURRENT_EMBEDDING_VERSION } = require('./config');
 
 /**
  * Metadata Store - SQLite Backend
- * 
+ *
  * Purpose:
  * - Store document metadata (title, file path, hash, ownership)
  * - Store chunk metadata (content, version, device ownership)
  * - Track devices for mesh networking
  * - NO vector storage (moved to LanceDB)
- * 
+ *
  * Schema Philosophy:
  * - Relational metadata only
  * - Version-aware chunks
@@ -310,8 +310,8 @@ class MetadataStore {
      */
     getDocumentChunks(docId) {
         const stmt = this.db.prepare(`
-      SELECT * FROM chunks 
-      WHERE doc_id = ? 
+      SELECT * FROM chunks
+      WHERE doc_id = ?
       ORDER BY chunk_index ASC
     `);
         const rows = stmt.all(docId);
@@ -344,7 +344,7 @@ class MetadataStore {
      */
     getAllChunksWithMetadata() {
         const stmt = this.db.prepare(`
-      SELECT 
+      SELECT
         c.chunk_id,
         c.doc_id,
         c.content,
@@ -443,8 +443,8 @@ class MetadataStore {
      */
     needsMigration() {
         const stmt = this.db.prepare(`
-      SELECT DISTINCT embedding_version 
-      FROM chunks 
+      SELECT DISTINCT embedding_version
+      FROM chunks
       WHERE embedding_version != ?
     `);
         const outdatedVersions = stmt.all(CURRENT_EMBEDDING_VERSION);

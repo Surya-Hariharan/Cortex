@@ -82,14 +82,14 @@ export default function App() {
         setToast({ message, type, id: Date.now() });
     };
 
-    const handlePdfUpload = async (e) => {
+    const handleDocumentUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         // Reset the input so the same file can be re-uploaded
         e.target.value = '';
 
         try {
-            const result = await api.uploadPdf(file);
+            const result = await api.uploadDocument(file);
             if (result?.success) {
                 showToast(`Indexed "${result.title}" · ${result.chunks} chunks`);
                 const newStats = await api.getStats();
@@ -210,13 +210,13 @@ export default function App() {
                         })}
                     </nav>
 
-                    {/* Upload PDF — using file input instead of Electron dialog */}
+                    {/* Upload Document — using file input instead of Electron dialog */}
                     <div className="flex items-center" style={{ padding: '0 8px 0 4px', borderLeft: '1px solid rgba(0,0,0,0.06)' }}>
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".pdf"
-                            onChange={handlePdfUpload}
+                            accept=".pdf,.docx,.png,.jpg,.jpeg"
+                            onChange={handleDocumentUpload}
                             style={{ display: 'none' }}
                         />
                         <button
@@ -225,7 +225,7 @@ export default function App() {
                             style={{ padding: '5px 12px' }}
                         >
                             <UploadIcon />
-                            Upload PDF
+                            Upload Doc
                         </button>
                     </div>
                 </div>

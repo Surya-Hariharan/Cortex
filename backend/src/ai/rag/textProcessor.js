@@ -1,28 +1,11 @@
-const fs = require('fs');
 const path = require('path');
-const pdfParse = require('pdf-parse');
-
-/**
- * Extract text from a PDF file and chunk it
- * @param {string} filePath - absolute path to the PDF
- * @param {number} chunkSize - characters per chunk
- * @param {number} overlap - overlap between chunks
- * @returns {Promise<Array<{content: string, chunkIndex: number}>>}
- */
-async function extractPdfText(filePath, chunkSize = 512, overlap = 50) {
-    const buffer = fs.readFileSync(filePath);
-    const data = await pdfParse(buffer);
-    const text = data.text || '';
-
-    if (!text.trim()) {
-        return [{ content: `[Empty PDF: ${path.basename(filePath)}]`, chunkIndex: 0 }];
-    }
-
-    return chunkText(text, chunkSize, overlap);
-}
 
 /**
  * Split text into overlapping chunks
+ * @param {string} text - text to split
+ * @param {number} chunkSize - characters per chunk
+ * @param {number} overlap - overlap between chunks
+ * @returns {Array<{content: string, chunkIndex: number}>}
  */
 function chunkText(text, chunkSize = 512, overlap = 50) {
     // Clean up text
@@ -64,4 +47,4 @@ function chunkText(text, chunkSize = 512, overlap = 50) {
     return chunks;
 }
 
-module.exports = { extractPdfText, chunkText };
+module.exports = { chunkText };

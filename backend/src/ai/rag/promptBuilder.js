@@ -15,18 +15,24 @@ function buildPrompt(query, chunks) {
         contextText = "No relevant context found in documents.";
     }
 
+    // Sanitize user inputs and document context to prevent prompt injection attacks
+    // stripping ChatML special tokens that could break out of the boundaries
+    const sanitize = (text) => text.replace(/<\|/g, '[').replace(/\|>/g, ']');
+    const safeContext = sanitize(contextText.trim());
+    const safeQuery = sanitize(query);
+
     // Strict ChatML format required by Phi-3 models
     return `<|system|>
-You are an offline academic assistant. Answer the User Question strictly using the provided Context. 
+You are an offline academic assistant. Answer the User Question strictly using the provided Context.
 If the answer is not found in the Context, say "Not found in documents."
 Be concise and clear. Do not hallucinate external facts.
 <|end|>
 <|user|>
 Context:
-${contextText.trim()}
+${safeContext}
 
 User Question:
-${query}
+${safeQuery}
 <|end|>
 <|assistant|>
 `;

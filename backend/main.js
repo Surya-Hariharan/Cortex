@@ -126,7 +126,7 @@ function registerIpcHandlers() {
         }
     });
 
-    // Upload PDF
+    // Upload PDF (Phase 2D: Uses new storage architecture)
     ipcMain.handle('upload-pdf', async (event) => {
         try {
             const result = await dialog.showOpenDialog(mainWindow, {
@@ -139,35 +139,83 @@ function registerIpcHandlers() {
             }
 
             const filePath = result.filePaths[0];
-            const chunks = await extractPdfText(filePath);
-            const db = getDatabase();
             const title = path.basename(filePath, '.pdf');
-
-            for (const chunk of chunks) {
-                const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
-
-                if (aiManager.embedder.isReady()) {
-                    const vector = await aiManager.runEmbedding(chunk.content);
-                    db.insertEmbedding(docId, vector);
-                }
+            
+            // Phase 2D: Use new storage manager
+            const storageManager = getStorageManager();
+            
+            if (!storageManager.isReady()) {
+                return { error: 'Storage not initialized' };
             }
 
-            return { success: true, title, chunks: chunks.length };
+            // Index document with progress tracking
+            const indexResult = await storageManager.indexDocument(
+                filePath, 
+                title,
+                (progress) => {
+                    // Optional: Send progress to UI
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send('indexing-progress', {
+                            title,
+                            stage: progress.stage,
+                            progress: progress.progress,
+                        });
+                    }
+                }
+            );
+
+            if (!indexResult.success) {
+                if (indexResult.skipped) {
+                    return { 
+                        success: true, 
+                        skipped: true,
+                        title, 
+                        message: indexResult.reason 
+                    };
+                }
+                return { error: indexResult.error };
+            }
+
+            return { 
+                success: true, 
+                title, 
+                chunks: indexResult.chunkCount,
+                docId: indexResult.docId,
+                embeddingVersion: indexResult.embeddingVersion,
+                timeMs: indexResult.timeMs,
+            };
         } catch (error) {
             console.error('[Cortex] PDF upload error:', error);
             return { error: error.message };
         }
     });
 
-    // Get stats
+    // Get stats (Phase 2D: Enhanced with storage manager)
     ipcMain.handle('get-stats', async () => {
         try {
+            const storageManager = getStorageManager();
+            
+            if (storageManager && storageManager.isReady()) {
+                // Use new storage manager for accurate stats
+                const stats = await storageManager.getStats();
+                return {
+                    documents: stats.documents,
+                    embeddings: stats.vectors,
+                    chunks: stats.chunks,
+                    embeddingVersion: stats.embeddingVersion,
+                    needsMigration: stats.needsMigration,
+                };
+            }
+            
+            // Fallback to legacy
             const db = getDatabase();
-            if (!db) return { documents: 0, embeddings: 0 };
-            const stats = db.getStats();
+            if (!db) return { documents: 0, embeddings: 0, chunks: 0 };
+            
+            const stats = await db.getStats();
             return stats;
         } catch (error) {
-            return { documents: 0, embeddings: 0 };
+            console.error('[Cortex] Error getting stats:', error);
+            return { documents: 0, embeddings: 0, chunks: 0 };
         }
     });
 

@@ -64,7 +64,7 @@ function createWindow() {
     });
 
     // Load renderer
-    const rendererPath = path.join(__dirname, '../dist/renderer/index.html');
+    const rendererPath = path.join(__dirname, '../frontend/dist/renderer/index.html');
     if (fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
     } else {

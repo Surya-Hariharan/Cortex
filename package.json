@@ -4,11 +4,11 @@
   "description": "Cortex — Offline AI Productivity Platform for Students",
   "private": true,
   "scripts": {
-    "start": "concurrently \"npm run start:backend\" \"npm run start:electron\"",
+    "start": "npm run build:frontend && concurrently \"npm run start:backend\" \"npm run start:electron\"",
     "start:backend": "node backend/server.js",
     "start:electron": "electron backend/main.js",
-    "dev": "concurrently \"npm run start:backend\" \"npm run start:electron\"",
-    "setup": "npm install && echo Setup complete — run 'npm start' to launch.",
+    "dev": "npm run build:frontend && concurrently \"npm run start:backend\" \"npm run start:electron\"",
+    "setup": "npm install && echo Setup complete.",
     "build:frontend": "cd frontend && npm run build",
     "build:app": "npm run build:frontend && electron-builder",
     "test:full": "cross-env NODE_ENV=test node --expose-gc ./node_modules/jest/bin/jest.js --runInBand --detectOpenHandles"

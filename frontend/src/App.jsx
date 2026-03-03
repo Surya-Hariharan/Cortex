@@ -114,23 +114,34 @@ export default function App() {
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[var(--surface-app)]">
 
                 {/* ── Top Navbar ──────────────────────────────────────────────────────── */}
-                <header className="h-[60px] flex items-center justify-between px-6 border-b flex-shrink-0" style={{ borderColor: 'var(--border-subtle)', background: 'var(--surface-app)' }}>
+                <header style={{
+                    height: '56px', display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between', padding: '0 24px',
+                    borderBottom: '1px solid #E5E7EB', flexShrink: 0,
+                    background: '#FFFFFF',
+                }}>
 
                     {/* Navigation Tabs */}
-                    <nav className="flex items-center gap-1.5">
+                    <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                         {TABS.map((tab) => {
                             const isActive = activeTab === tab.id;
                             return (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className="px-3 py-1.5 text-[14px] font-medium rounded-lg transition-colors duration-150"
                                     style={{
-                                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                        background: isActive ? 'var(--surface-recessed)' : 'transparent',
+                                        padding: '6px 12px',
+                                        fontSize: '13.5px',
+                                        fontWeight: isActive ? 600 : 500,
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: isActive ? '#111827' : '#6B7280',
+                                        background: isActive ? '#F0F0F0' : 'transparent',
+                                        transition: 'background 150ms ease, color 150ms ease',
                                     }}
-                                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; } }}
-                                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; } }}
+                                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = '#374151'; } }}
+                                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; } }}
                                 >
                                     {tab.label}
                                 </button>
@@ -138,8 +149,8 @@ export default function App() {
                         })}
                     </nav>
 
-                    {/* Actions and Status */}
-                    <div className="flex items-center gap-4">
+                    {/* Actions Right */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -149,27 +160,37 @@ export default function App() {
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors border shadow-sm"
                             style={{
-                                color: 'var(--text-primary)',
-                                background: 'white',
-                                borderColor: 'var(--border-subtle)'
+                                display: 'flex', alignItems: 'center', gap: '7px',
+                                padding: '6px 12px', fontSize: '13px', fontWeight: 500,
+                                borderRadius: '8px', cursor: 'pointer',
+                                color: '#374151', background: 'white',
+                                border: '1px solid #E5E7EB',
+                                transition: 'background 150ms ease, border-color 150ms ease',
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-recessed)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.borderColor = '#D1D5DB'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#E5E7EB'; }}
                         >
                             <UploadIcon />
                             Upload
                         </button>
 
-                        <div className="w-px h-6 bg-[var(--border-subtle)]" />
+                        <div style={{ width: '1px', height: '20px', background: '#E5E7EB' }} />
 
-                        {/* Status Pill */}
-                        <div className="flex items-center gap-2 px-2.5 py-1 text-[12px] font-medium rounded-full cursor-help transition-colors"
-                             style={{ background: 'var(--surface-recessed)', color: 'var(--text-secondary)' }}
-                             title={perfProvider === 'dml' ? 'DirectML Active (GPU)' : 'ONNX Engine CPU'}
+                        {/* Status pill */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '5px 10px', borderRadius: '20px',
+                            background: '#F3F4F6', fontSize: '12px', fontWeight: 500,
+                            color: '#6B7280', cursor: 'default', userSelect: 'none',
+                        }}
+                            title={perfProvider === 'dml' ? 'DirectML GPU active' : 'ONNX CPU mode'}
                         >
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: perfProvider === 'dml' ? '#10B981' : 'var(--text-primary)' }} />
+                            <span style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: perfProvider === 'dml' ? '#10B981' : '#111827',
+                                display: 'inline-block',
+                            }} />
                             Offline
                         </div>
                     </div>

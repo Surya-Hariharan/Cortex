@@ -1,12 +1,21 @@
 # Dependencies
 node_modules/
 
-# Build output (legacy — no longer used)
+# Build output
 dist/
 build/
 out/
 
-# Data & models (large files, user-specific)
+# Electron packaging
+release/
+*.dmg
+*.exe
+*.deb
+*.rpm
+*.AppImage
+*.snap
+
+# Database and models
 data/
 models/
 *.db
@@ -18,42 +27,32 @@ models/
 # Environment
 .env
 .env.local
-.env.*.local
+.env.*
 
 # Logs
 logs/
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Cache
 .cache/
+.parcel-cache/
 .webpack/
 *.tsbuildinfo
 
-# OS generated
+# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Editor / IDE
+# Editor
 .idea/
-.vscode/settings.json
 *.sw?
 *.sublime-workspace
 
 # Testing
 coverage/
 .nyc_output/
-
-# Legacy Electron build artifacts
-release/
-*.dmg
-*.exe
-*.deb
-*.rpm
-*.AppImage
-*.snap
-
-# Legacy React/Webpack source (can be removed)
-frontend/src/
-frontend/dist/
+node_modules

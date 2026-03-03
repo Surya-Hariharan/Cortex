@@ -9,8 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
-const { initializeDatabase } = require('../backend/services/database');
-const { encryptText, encryptEmbedding } = require('../backend/services/encryption');
+const { initializeDatabase } = require('../src/services/database');
+const { encryptText, encryptEmbedding } = require('../src/services/encryption');
 
 const MODEL_DIR = path.join(__dirname, '..', 'models', 'bge-small-en-v1.5');
 const DATA_DIR = path.join(__dirname, '..', 'data');

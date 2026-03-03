@@ -9,13 +9,13 @@ const MOCK_DOCS = [
 ];
 
 const SUBJ = {
-    'Quantum Mechanics': { bg: '#fdf4ff', text: '#7e22ce', border: '#f0abfc' },
-    'Data Structures': { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' },
-    'Organic Chemistry': { bg: '#fffbeb', text: '#92400e', border: '#fde68a' },
-    'Computer Networks': { bg: '#f0fdfa', text: '#134e4a', border: '#99f6e4' },
-    'Prob & Statistics': { bg: '#eef2ff', text: '#3730a3', border: '#c7d2fe' },
+    'Quantum Mechanics': { bg: 'rgba(126,34,206,0.08)', text: '#7e22ce' },
+    'Data Structures': { bg: 'rgba(22,101,52,0.08)', text: '#166534' },
+    'Organic Chemistry': { bg: 'rgba(146,64,14,0.08)', text: '#92400e' },
+    'Computer Networks': { bg: 'rgba(19,78,74,0.08)', text: '#134e4a' },
+    'Prob & Statistics': { bg: 'rgba(55,48,163,0.08)', text: '#3730a3' },
 };
-const DSUBJ = { bg: '#f8fafc', text: '#334155', border: '#e2e8f0' };
+const DSUBJ = { bg: 'var(--surface-recessed)', text: 'var(--text-secondary)' };
 
 function emoji(name) {
     if (name.includes('Lab')) return '🖥️';
@@ -42,11 +42,11 @@ export default function NetworkTab() {
     const online = peers.filter((p) => p.status === 'online').length;
 
     return (
-        <div className="h-full flex" style={{ background: 'var(--surface-app)' }}>
+        <div className="h-full flex overflow-hidden" style={{ background: 'var(--surface-app)' }}>
 
             {/* ── Left sidebar ─────────────────────────────────────────────────── */}
             <div
-                className="w-[268px] flex flex-col flex-shrink-0"
+                className="w-[280px] flex flex-col flex-shrink-0"
                 style={{
                     background: 'var(--surface-sidebar)',
                     borderRight: '1px solid var(--border-subtle)',
@@ -54,44 +54,45 @@ export default function NetworkTab() {
             >
                 {/* Sidebar header */}
                 <div
-                    className="px-4 py-3"
-                    style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-card)' }}
+                    className="h-[60px] px-4 flex items-center justify-between"
+                    style={{ borderBottom: '1px solid var(--border-subtle)' }}
                 >
-                    <div className="flex items-center justify-between mb-0.5">
-                        <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mesh Network</h2>
-                        <span
-                            className="flex items-center gap-1 px-2 py-[2px] text-[10px] font-semibold rounded-full border"
-                            style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}
-                        >
-                            <div className="w-1.5 h-1.5 rounded-full status-online" />
-                            {online} online
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                        <h2 className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)' }}>Network</h2>
                     </div>
-                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Nearby devices on local network</p>
+                    <span
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md"
+                        style={{ background: 'var(--surface-recessed)', color: 'var(--text-secondary)' }}
+                    >
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        {online} online
+                    </span>
                 </div>
 
                 {/* Peer list */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                <div className="flex-1 overflow-y-auto p-2 space-y-[2px]">
+                    {peers.length === 0 && (
+                        <div className="text-center py-10 px-4 animate-fade-in">
+                            <p className="text-[13px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Scanning network...</p>
+                            <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Looking for nearby peers</p>
+                        </div>
+                    )}
                     {peers.map((peer, idx) => (
                         <PeerRow
                             key={peer.id}
                             peer={peer}
                             selected={selected?.id === peer.id}
-                            delay={`stagger-${Math.min(idx + 1, 5)}`}
                             onClick={() => setSelected(selected?.id === peer.id ? null : peer)}
                         />
                     ))}
-                    {peers.length === 0 && (
-                        <div className="text-center py-10 animate-fade-in">
-                            <div className="text-3xl mb-2">📡</div>
-                            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Scanning…</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer */}
                 <div className="p-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                    <div className="py-1.5 px-3 rounded-lg text-center" style={{ background: 'var(--surface-recessed)' }}>
+                    <div className="py-1.5 px-3 rounded-lg text-center">
                         <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
                             🔒 E2E encrypted · UDP port 41234
                         </p>
@@ -100,63 +101,62 @@ export default function NetworkTab() {
             </div>
 
             {/* ── Right panel ──────────────────────────────────────────────────── */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 bg-[var(--surface-app)]">
                 {selected ? (
                     /* Peer detail */
-                    <div className="p-6 animate-fade-in">
-                        <div className="flex items-center gap-4 mb-5">
+                    <div className="flex-1 overflow-y-auto px-10 py-12 animate-fade-in max-w-3xl mx-auto w-full">
+                        <div className="flex items-center gap-5 mb-8">
                             <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                                style={{ background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-md)' }}
+                                className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                                style={{ background: 'var(--surface-recessed)', border: '1px solid var(--border-subtle)' }}
                             >
                                 {emoji(selected.name)}
                             </div>
                             <div>
-                                <h2 className="text-[16px] font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>{selected.name}</h2>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <div className={`status-dot ${selected.status === 'online' ? 'status-online' : selected.status === 'idle' ? 'status-idle' : 'status-offline'}`} />
-                                    <span className="text-[12px] capitalize" style={{ color: 'var(--text-secondary)' }}>{selected.status}</span>
+                                <h2 className="text-[24px] font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>{selected.name}</h2>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                    <div className={`w-2 h-2 rounded-full ${selected.status === 'online' ? 'bg-green-500' : selected.status === 'idle' ? 'bg-yellow-500' : 'bg-gray-400'}`} />
+                                    <span className="text-[13px] capitalize font-medium" style={{ color: 'var(--text-secondary)' }}>{selected.status}</span>
                                     <span style={{ color: 'var(--border-medium)' }}>·</span>
-                                    <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{selected.lastSeen}</span>
+                                    <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>Last seen {selected.lastSeen}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 mb-5">
+                        <div className="grid grid-cols-3 gap-4 mb-8">
                             {[
                                 { label: 'Documents', value: selected.docs, icon: '📄' },
                                 { label: 'OS', value: selected.os, icon: '💻' },
                                 { label: 'IP', value: selected.ip, icon: '🌐' },
                             ].map((s) => (
-                                <div key={s.label} className="card-recessed p-3">
-                                    <div className="text-sm mb-1">{s.icon}</div>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
-                                    <div className="text-[13px] font-semibold metric-mono" style={{ color: 'var(--text-primary)' }}>{s.value}</div>
+                                <div key={s.label} className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-subtle)', background: 'var(--surface-card)' }}>
+                                    <div className="text-lg mb-2 opacity-80">{s.icon}</div>
+                                    <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
+                                    <div className="text-[14px] font-medium" style={{ color: 'var(--text-primary)', fontFamily: 'ui-monospace, Consolas, monospace' }}>{s.value}</div>
                                 </div>
                             ))}
                         </div>
 
-                        <button className="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
-                            </svg>
-                            Sync Documents
-                        </button>
+                        <div className="pt-6" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                            <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-medium transition-colors" style={{ background: 'var(--text-primary)', color: 'var(--surface-app)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Sync Documents
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     /* Activity feed */
                     <div className="flex-1 flex flex-col min-h-0">
-                        <div
-                            className="px-5 py-3.5"
-                            style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-card)' }}
-                        >
-                            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Recent Shared Documents</h2>
-                            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>From peers on this network</p>
+                        <div className="px-8 py-6 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                            <h2 className="text-[18px] font-semibold" style={{ color: 'var(--text-primary)' }}>Activity Feed</h2>
+                            <p className="text-[13px] mt-1" style={{ color: 'var(--text-muted)' }}>Recent documents shared across the mesh network.</p>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
                             {MOCK_DOCS.map((doc, idx) => (
-                                <DocCard key={idx} doc={doc} colors={SUBJ[doc.subject] || DSUBJ} delay={`stagger-${Math.min(idx + 1, 5)}`} />
+                                <DocCard key={idx} doc={doc} colors={SUBJ[doc.subject] || DSUBJ} />
                             ))}
                         </div>
                     </div>
@@ -166,79 +166,68 @@ export default function NetworkTab() {
     );
 }
 
-function PeerRow({ peer, selected, delay, onClick }) {
-    const [hov, setHov] = useState(false);
+function PeerRow({ peer, selected, onClick }) {
     return (
-        <button
+        <div
             onClick={onClick}
-            className={`w-full text-left p-2.5 rounded-lg transition-all duration-150 animate-slide-up ${delay}`}
-            style={{
-                background: selected ? 'var(--accent-light)' : hov ? 'var(--surface-hover)' : 'transparent',
-                border: selected ? '1px solid var(--accent-border)' : '1px solid transparent',
-            }}
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
+            className={`px-3 py-2.5 rounded-lg cursor-pointer flex items-center gap-3 transition-colors duration-150`}
+            style={{ background: selected ? 'rgba(0,0,0,0.05)' : 'transparent' }}
+            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; }}
+            onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
         >
-            <div className="flex items-center gap-2.5">
-                <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                    style={{ background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}
-                >
-                    {emoji(peer.name)}
+            <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                style={{ background: 'var(--surface-card)', border: '1px solid var(--border-subtle)' }}
+            >
+                {emoji(peer.name)}
+            </div>
+
+            <div className="min-w-0 flex-1">
+                <div className="flex justify-between items-start mb-0.5">
+                    <span className="text-[13px] font-medium truncate pr-2" style={{ color: 'var(--text-primary)' }}>
+                        {peer.name}
+                    </span>
+                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-[5.5px] ${peer.status === 'online' ? 'bg-green-500' : peer.status === 'idle' ? 'bg-yellow-500' : 'bg-gray-400'}`} />
                 </div>
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] font-semibold truncate" style={{ color: selected ? 'var(--accent)' : 'var(--text-primary)' }}>
-                            {peer.name}
-                        </span>
-                        <div className={`status-dot flex-shrink-0 ${peer.status === 'online' ? 'status-online' : peer.status === 'idle' ? 'status-idle' : 'status-offline'}`} />
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-[1px]">
-                        <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{peer.docs} docs</span>
-                        <span style={{ color: 'var(--border-medium)' }}>·</span>
-                        <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{peer.lastSeen}</span>
-                    </div>
+                <div className="flex items-center gap-1.5 text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                    <span>{peer.docs} shared</span>
+                    <span style={{ color: 'var(--border-medium)' }}>·</span>
+                    <span>{peer.lastSeen}</span>
                 </div>
             </div>
-        </button>
+        </div>
     );
 }
 
-function DocCard({ doc, colors, delay }) {
-    const [hov, setHov] = useState(false);
+function DocCard({ doc, colors }) {
     return (
         <div
-            className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-150 animate-slide-up ${delay}`}
-            style={{
-                background: 'var(--surface-card)',
-                border: '1px solid',
-                borderColor: hov ? 'var(--border-medium)' : 'var(--border-subtle)',
-                boxShadow: hov ? 'var(--shadow-lg)' : 'var(--shadow-md)',
-            }}
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
+            className="flex items-center gap-4 p-4 rounded-xl transition-colors duration-150 group"
+            style={{ border: '1px solid var(--border-subtle)', background: 'transparent' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.02)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
             <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'var(--accent-light)', border: '1px solid var(--accent-border)' }}
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'var(--surface-recessed)' }}
             >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--accent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ color: 'var(--text-muted)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                 </svg>
             </div>
 
             <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{doc.title}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>from {doc.from}</span>
+                <div className="text-[14px] font-medium truncate mb-0.5" style={{ color: 'var(--text-primary)' }}>{doc.title}</div>
+                <div className="flex items-center gap-2 text-[12px] truncate" style={{ color: 'var(--text-muted)' }}>
+                    <span>{doc.from}</span>
                     <span style={{ color: 'var(--border-medium)' }}>·</span>
-                    <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{doc.time}</span>
+                    <span>{doc.time}</span>
                 </div>
             </div>
 
             <span
-                className="text-[10px] px-2 py-[3px] rounded border font-semibold flex-shrink-0"
-                style={{ background: colors.bg, color: colors.text, borderColor: colors.border }}
+                className="text-[11px] px-2.5 py-1 rounded-md font-medium flex-shrink-0"
+                style={{ background: colors.bg, color: colors.text }}
             >
                 {doc.subject}
             </span>

@@ -20,20 +20,14 @@ function authMiddleware(req, res, next) {
     if (!db) return res.status(500).json({ error: 'Database not ready.' });
 
     // Validate session
-    const session = db.prepare('SELECT * FROM sessions WHERE session_id = ? AND expires_at > ?').get(sessionId, Date.now());
+    const session = db.getSession(sessionId);
     if (!session) return res.status(401).json({ error: 'Invalid or expired session.' });
 
     // Load user
-    const row = db.prepare('SELECT * FROM users WHERE user_id = ?').get(session.user_id);
-    if (!row) return res.status(401).json({ error: 'User not found.' });
+    const user = db.getUserById(session.userId);
+    if (!user) return res.status(401).json({ error: 'User not found.' });
 
-    req.user = {
-        userId: row.user_id, fullName: row.full_name, email: row.email,
-        collegeName: row.college_name, rollNumber: row.roll_number,
-        degree: row.degree, courseName: row.course_name,
-        academicLevel: row.academic_level, phoneNumber: row.phone_number,
-        isVerified: !!row.is_verified, authMode: row.auth_mode,
-    };
+    req.user = user;
     req.sessionId = sessionId;
     next();
 }

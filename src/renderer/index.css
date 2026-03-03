@@ -165,9 +165,12 @@ body {
   }
 
   /* ── Sidebar Nav ─────────────────────────────────────────── */
+  .sidebar-header {
+    @apply text-[10px] font-bold text-slate-400 dark:text-dark-500/60 uppercase tracking-[0.05em] px-2 py-3 select-none flex items-center justify-between;
+  }
+
   .sidebar-nav-item {
-    @apply flex items-center w-full h-10 rounded-xl text-[13px] font-bold transition-all duration-200 relative overflow-hidden;
-    /* Fixed base padding, no dynamic shifts */
+    @apply flex items-center w-full h-9 rounded-xl text-[13px] font-bold transition-all duration-200 relative;
     padding-left: 0;
   }
 
@@ -179,17 +182,43 @@ body {
     @apply bg-slate-200/80 dark:bg-dark-800 text-slate-900 dark:text-dark-50 shadow-sm;
   }
 
-  /* Reserved space for the accent line to prevent layout shift */
   .sidebar-accent-container {
     @apply w-1.5 h-full flex items-center justify-start flex-shrink-0;
   }
 
   .sidebar-active-accent {
-    @apply w-[3px] h-5 bg-synapse-500 rounded-r-full transition-opacity duration-200;
+    @apply w-[3px] h-4 bg-synapse-500 rounded-r-full transition-opacity duration-200;
   }
 
   .sidebar-icon-container {
     @apply w-10 flex-shrink-0 flex items-center justify-center;
+  }
+
+  /* 3-Dot Menu trigger */
+  .sidebar-menu-trigger {
+    @apply absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-slate-300/50 dark:hover:bg-dark-700/50 text-slate-400 hover:text-slate-600 dark:text-dark-500 dark:hover:text-dark-200 z-10;
+  }
+
+  /* ── Context Menu ────────────────────────────────────────── */
+  .context-menu {
+    @apply fixed z-[999] bg-white dark:bg-dark-900 border border-slate-200/60 dark:border-dark-700/60 rounded-xl shadow-xl py-1 min-w-[160px] animate-scale-in overflow-hidden backdrop-blur-xl;
+  }
+
+  .context-menu-item {
+    @apply flex items-center gap-2.5 px-3 py-2 text-[13px] font-bold text-slate-600 dark:text-dark-300 hover:bg-slate-100 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-dark-50 transition-colors w-full text-left;
+  }
+
+  .context-menu-item-destructive {
+    @apply text-red-500 hover:bg-red-500/10 hover:text-red-600;
+  }
+
+  /* ── Modal ───────────────────────────────────────────────── */
+  .modal-overlay {
+    @apply fixed inset-0 z-[1000] bg-dark-950/20 backdrop-blur-[2px] flex items-center justify-center animate-fade-in;
+  }
+
+  .modal-content {
+    @apply bg-white dark:bg-dark-900 border border-slate-200/60 dark:border-dark-700/60 rounded-2xl shadow-2xl p-6 max-w-[400px] w-full animate-scale-in mx-4;
   }
 
   /* ── Segmented Control ───────────────────────────────────── */

@@ -4,7 +4,7 @@ import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
 import NotesTab from './components/NotesTab';
 import Toast from './components/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy } from 'lucide-react';
 
 const TABS = [
     { id: 'search', label: 'Search', icon: <Search size={18} /> },
@@ -48,6 +48,16 @@ export default function App() {
     });
     const [activeChatId, setActiveChatId] = useState('c1');
     const [username, setUsername] = useState('Surya Hariharan');
+
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null });
+    const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
+
+    // Close context menu on outside click
+    useEffect(() => {
+        const handleClick = () => setContextMenu({ ...contextMenu, visible: false });
+        window.addEventListener('click', handleClick);
+        return () => window.removeEventListener('click', handleClick);
+    }, [contextMenu]);
 
     const perfPollRef = useRef(null);
 
@@ -192,8 +202,8 @@ export default function App() {
                     {/* Tools Section (Moved up) */}
                     <div>
                         {!isSidebarCollapsed && (
-                            <div className="px-2 pt-2 pb-1.5">
-                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500/50 tracking-wide uppercase">Pages</span>
+                            <div className="sidebar-header">
+                                <span>Pages</span>
                             </div>
                         )}
                         <div className="space-y-0.5 relative">
@@ -227,37 +237,64 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* Workspaces List */}
+                    {/* Projects Section */}
                     <div>
                         {!isSidebarCollapsed && (
-                            <div className="px-2 pb-2">
-                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500/50 tracking-wide uppercase">Projects</span>
+                            <div className="sidebar-header group">
+                                <span>Projects</span>
+                                <Plus size={14} className="opacity-0 group-hover:opacity-100 cursor-pointer hover:text-synapse-500 transition-all" />
                             </div>
                         )}
-
                         {isSidebarCollapsed ? (
                             <div className="flex flex-col gap-2.5 items-center mt-4 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
-                                {MOCK_PROJECTS.map((ws, i) => (
+                                {MOCK_PROJECTS.map((ws) => (
                                     <div key={ws.id} className="w-8 h-8 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center text-[10px] uppercase font-bold text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 hover:border-synapse-200 dark:hover:border-synapse-500 cursor-pointer transition-colors" title={ws.title}>
                                         {ws.title.substring(0, 2)}
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="space-y-4 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
+                            <div className="space-y-0.5 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
                                 {MOCK_PROJECTS.map(ws => (
                                     <div key={ws.id} className="space-y-0.5">
-                                        <button onClick={() => toggleWs(ws.id)} className="flex items-center justify-between w-full px-2 py-1.5 text-[11px] font-bold text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-100 group transition-colors">
-                                            <span className="truncate pr-2 uppercase pb-0.5 border-b border-transparent group-hover:border-slate-300 dark:group-hover:border-dark-600">{ws.title}</span>
+                                        <button
+                                            onClick={() => toggleWs(ws.id)}
+                                            onContextMenu={(e) => {
+                                                e.preventDefault();
+                                                setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
+                                            }}
+                                            className="sidebar-nav-item text-slate-600 dark:text-dark-400 group"
+                                        >
+                                            <div className="sidebar-accent-container" />
+                                            <div className="sidebar-icon-container opacity-40">
+                                                <Monitor size={16} />
+                                            </div>
+                                            <span className="truncate flex-1 text-left font-bold text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100 transition-colors uppercase text-[11px] tracking-wide">
+                                                {ws.title}
+                                            </span>
+                                            <div
+                                                className="sidebar-menu-trigger"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
+                                                }}
+                                            >
+                                                <MoreHorizontal size={14} />
+                                            </div>
                                         </button>
+
                                         {wsExpanded[ws.id] && (
-                                            <div className="space-y-1 mt-1.5 relative">
+                                            <div className="space-y-0.5 relative">
                                                 {ws.chats.map((chat) => {
                                                     const isActive = activeTab === 'search' && activeChatId === chat.id;
                                                     return (
                                                         <button
                                                             key={chat.id}
                                                             onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
+                                                            onContextMenu={(e) => {
+                                                                e.preventDefault();
+                                                                setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
+                                                            }}
                                                             className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'}`}
                                                         >
                                                             <div className="sidebar-accent-container">
@@ -267,6 +304,15 @@ export default function App() {
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                                                             </div>
                                                             <span className="truncate flex-1 text-left">{chat.title}</span>
+                                                            <div
+                                                                className="sidebar-menu-trigger"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
+                                                                }}
+                                                            >
+                                                                <MoreHorizontal size={14} />
+                                                            </div>
                                                         </button>
                                                     )
                                                 })}
@@ -277,29 +323,47 @@ export default function App() {
                             </div>
                         )}
 
-                        {/* Independent Chats Section */}
+                        {/* Your Chats Section */}
                         {!isSidebarCollapsed && (
-                            <div className="px-2 pt-6 pb-2">
-                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500/50 tracking-wide uppercase">Independent Chats</span>
+                            <div className="sidebar-header mt-4">
+                                <span>Your Chats</span>
                             </div>
                         )}
-                        <div className={`space-y-1 ${isSidebarCollapsed ? 'mt-4' : ''}`}>
+                        <div className={`space-y-0.5 ${isSidebarCollapsed ? 'mt-4' : ''}`}>
                             {MOCK_INDEPENDENT_CHATS.map((chat) => {
                                 const isActive = activeTab === 'search' && activeChatId === chat.id;
                                 return (
                                     <button
                                         key={chat.id}
                                         onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
-                                        className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center px-0 pl-0 hover:pl-0' : 'pl-3.5'}`}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
+                                        }}
+                                        className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
                                         title={isSidebarCollapsed ? chat.title : ''}
                                     >
-                                        {isActive && !isSidebarCollapsed && (
-                                            <div className="sidebar-active-accent" />
-                                        )}
+                                        <div className="sidebar-accent-container">
+                                            <div className={`sidebar-active-accent ${isActive && !isSidebarCollapsed ? 'opacity-100' : 'opacity-0'}`} />
+                                        </div>
                                         {isSidebarCollapsed ? (
                                             <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-synapse-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-300 dark:bg-dark-700'}`} />
                                         ) : (
-                                            <span className="truncate">{chat.title}</span>
+                                            <>
+                                                <div className="sidebar-icon-container opacity-40">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                                </div>
+                                                <span className="truncate flex-1 text-left">{chat.title}</span>
+                                                <div
+                                                    className="sidebar-menu-trigger"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
+                                                    }}
+                                                >
+                                                    <MoreHorizontal size={14} />
+                                                </div>
+                                            </>
                                         )}
                                     </button>
                                 );
@@ -337,6 +401,61 @@ export default function App() {
                     {activeTab === 'network' && <NetworkTab />}
                     {activeTab === 'performance' && <PerformanceTab />}
                 </main>
+
+                {/* ── Context Menu ────────────────────────────────────────────── */}
+                {contextMenu.visible && (
+                    <div
+                        className="context-menu"
+                        style={{ top: contextMenu.y, left: contextMenu.x }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button className="context-menu-item">
+                            <Edit size={14} /> Rename
+                        </button>
+                        <button className="context-menu-item">
+                            <Copy size={14} /> Duplicate
+                        </button>
+                        <div className="h-px bg-slate-100 dark:bg-dark-800 my-1" />
+                        <button
+                            className="context-menu-item context-menu-item-destructive"
+                            onClick={() => {
+                                setContextMenu({ ...contextMenu, visible: false });
+                                setDeleteConfirm({ visible: true, targetId: contextMenu.targetId, title: contextMenu.title });
+                            }}
+                        >
+                            <Trash2 size={14} /> Delete
+                        </button>
+                    </div>
+                )}
+
+                {/* ── Delete Confirmation Modal ───────────────────────────────── */}
+                {deleteConfirm.visible && (
+                    <div className="modal-overlay" onClick={() => setDeleteConfirm({ ...deleteConfirm, visible: false })}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-2">Delete {deleteConfirm.title}?</h3>
+                            <p className="text-sm text-slate-500 dark:text-dark-400 mb-6 leading-relaxed">
+                                This action cannot be undone. All data associated with this {deleteConfirm.targetId?.startsWith('w') ? 'project' : 'chat'} will be permanently removed.
+                            </p>
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setDeleteConfirm({ ...deleteConfirm, visible: false })}
+                                    className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        showToast(`Deleted ${deleteConfirm.title}`, 'success');
+                                        setDeleteConfirm({ ...deleteConfirm, visible: false });
+                                    }}
+                                    className="px-6 py-2 text-sm font-bold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors shadow-sm"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Toast ────────────────────────────────────────────────────────── */}
                 {toast && (

@@ -3,12 +3,19 @@ import SearchTab from './components/SearchTab';
 import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
 import NotesTab from './components/NotesTab';
+import AcademicHub from './components/AcademicHub';
+import MyContributions from './components/MyContributions';
+import DocumentStatus from './components/DocumentStatus';
+import StreamSelectorModal from './components/StreamSelectorModal';
 import Toast from './components/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, GraduationCap, BarChart3 } from 'lucide-react';
 
 const TABS = [
     { id: 'search', label: 'Search', icon: <Search size={18} /> },
     { id: 'notes', label: 'Notes', icon: <FileText size={18} /> },
+    { id: 'academic-hub', label: 'Academic Hub', icon: <GraduationCap size={18} /> },
+    { id: 'my-contributions', label: 'My Contributions', icon: <BarChart3 size={18} /> },
+    { id: 'indexing', label: 'Indexing Status', icon: <Database size={18} /> },
     { id: 'network', label: 'Network', icon: <Globe size={18} /> },
     { id: 'performance', label: 'Performance', icon: <Zap size={18} /> },
 ];
@@ -43,6 +50,8 @@ export default function App() {
     // New UI states
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [userStream, setUserStream] = useState(localStorage.getItem('cortex-user-stream'));
+    const [showStreamSelector, setShowStreamSelector] = useState(!localStorage.getItem('cortex-user-stream'));
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem('cortex-theme') || 'system';
     });
@@ -131,6 +140,19 @@ export default function App() {
 
     const toggleWs = (id) => {
         setWsExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const handleStreamSelect = (streamId) => {
+        localStorage.setItem('cortex-user-stream', streamId);
+        setUserStream(streamId);
+        setShowStreamSelector(false);
+        showToast(`Experience personalized for ${streamId.toUpperCase().replace('-', ' ')}`, 'success');
+    };
+
+    const handleStreamSkip = () => {
+        localStorage.setItem('cortex-user-stream', 'general');
+        setUserStream('general');
+        setShowStreamSelector(false);
     };
 
     const uploadPdf = async () => {
@@ -401,6 +423,9 @@ export default function App() {
                 <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
                     {activeTab === 'search' && <SearchTab onToast={showToast} onUploadPdf={uploadPdf} />}
                     {activeTab === 'notes' && <NotesTab onToast={showToast} />}
+                    {activeTab === 'academic-hub' && <AcademicHub userStream={userStream} />}
+                    {activeTab === 'my-contributions' && <MyContributions />}
+                    {activeTab === 'indexing' && <DocumentStatus />}
                     {activeTab === 'network' && <NetworkTab />}
                     {activeTab === 'performance' && <PerformanceTab />}
                 </main>
@@ -460,7 +485,6 @@ export default function App() {
                     </div>
                 )}
 
-                {/* ── Toast ────────────────────────────────────────────────────────── */}
                 {toast && (
                     <Toast
                         key={toast.id}
@@ -470,6 +494,13 @@ export default function App() {
                     />
                 )}
             </div>
+
+            {showStreamSelector && (
+                <StreamSelectorModal
+                    onSelect={handleStreamSelect}
+                    onSkip={handleStreamSkip}
+                />
+            )}
 
             {/* ── Profile Modal ────────────────────────────────────────────────── */}
             {showProfileModal && (

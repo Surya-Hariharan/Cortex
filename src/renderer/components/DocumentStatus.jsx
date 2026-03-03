@@ -1,0 +1,262 @@
+import React, { useState, useEffect } from 'react';
+import {
+    Database,
+    Zap,
+    RefreshCcw,
+    CheckCircle2,
+    AlertCircle,
+    Clock,
+    FileText,
+    Search,
+    Cpu,
+    Activity,
+    ChevronRight,
+    ArrowUpRight,
+    Play,
+    Pause
+} from 'lucide-react';
+
+const MOCK_INDEXED = [
+    { id: 'd1', name: 'Thermodynamics_Ch3.pdf', size: '2.4 MB', status: 'Indexed', type: 'PDF', date: '2026-03-01' },
+    { id: 'd2', name: 'Data_Structures_Lecture_1.pdf', size: '1.8 MB', status: 'Indexed', type: 'Handwritten', date: '2026-03-02' },
+    { id: 'd3', name: 'Microprocessors_Lab.docx', size: '850 KB', status: 'Indexed', type: 'DOCX', date: '2026-03-02' },
+];
+
+const MOCK_QUEUE = [
+    { id: 'q1', name: 'Operating_Systems_Final.pdf', stage: 'OCR Processing', progress: 65, startTime: '2m ago' },
+    { id: 'q2', name: 'Machine_Learning_Notes.pdf', stage: 'Embedding Generation', progress: 12, startTime: '10s ago' },
+];
+
+const MOCK_ERRORS = [
+    { id: 'e1', name: 'Corrupted_Scan_01.pdf', error: 'OCR Confidence low (42%)', date: '1h ago', status: 'Failed' },
+];
+
+const StatCard = ({ label, value, subtext, icon: Icon, color }) => (
+    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 group">
+        <div className="flex justify-between items-start mb-4">
+            <div className={`p-2.5 rounded-xl ${color} bg-opacity-10 text-opacity-90`}>
+                <Icon size={20} className={color.replace('bg-', 'text-')} />
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Real-time <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+        </div>
+        <h3 className="text-2xl font-black text-slate-800 dark:text-dark-50 mb-1">{value}</h3>
+        <p className="text-[11px] font-bold text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-[10px] text-slate-400 dark:text-dark-600 font-medium">{subtext}</p>
+    </div>
+);
+
+const ProgressBar = ({ progress, color = 'bg-synapse-600' }) => (
+    <div className="w-full h-1.5 bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
+        <div
+            className={`h-full ${color} transition-all duration-500 ease-out relative`}
+            style={{ width: `${progress}%` }}
+        >
+            <div className="absolute inset-0 bg-white/20 animate-progress-shimmer" />
+        </div>
+    </div>
+);
+
+export default function DocumentStatus() {
+    const [isPaused, setIsPaused] = useState(false);
+
+    return (
+        <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2 overflow-y-auto scrollbar-thin">
+            {/* Header */}
+            <header className="flex-shrink-0 px-8 py-6 mb-2">
+                <div className="max-w-[1240px] mx-auto flex justify-between items-end">
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-200 dark:shadow-none">
+                                <Database size={24} />
+                            </div>
+                            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50">
+                                Document <span className="text-violet-600 dark:text-violet-500">Processing</span>
+                            </h1>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-dark-400 font-medium">
+                            On-device OCR and semantic indexing status.
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setIsPaused(!isPaused)}
+                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${isPaused
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                }`}
+                        >
+                            {isPaused ? <Play size={16} /> : <Pause size={16} />}
+                            {isPaused ? 'Resume Indexing' : 'Pause Pipeline'}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div className="flex-1 px-8 pb-12">
+                <div className="max-w-[1240px] mx-auto space-y-8">
+
+                    {/* Performance Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard label="Total Indexed" value="1,284" subtext="84.2 GB consumed" icon={Database} color="bg-synapse-500" />
+                        <StatCard label="OCR Accuracy" value="98.2%" subtext="Avg confidence score" icon={Zap} color="bg-amber-500" />
+                        <StatCard label="Avg Index Time" value="4.2s" subtext="Per 100 pages" icon={Clock} color="bg-emerald-500" />
+                        <StatCard label="System Load" value="24%" subtext="NPU Acceleration Active" icon={Cpu} color="bg-blue-500" />
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                        {/* Left: Active Queue */}
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden shadow-sm">
+                                <div className="px-6 py-5 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Activity size={16} className="text-synapse-500" />
+                                        <h3 className="text-xs font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Processing Queue</h3>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{MOCK_QUEUE.length} Active Jobs</span>
+                                </div>
+
+                                <div className="divide-y divide-slate-100 dark:divide-dark-800">
+                                    {MOCK_QUEUE.map(job => (
+                                        <div key={job.id} className="p-6 hover:bg-slate-50/50 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-400">
+                                                        <FileText size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-slate-800 dark:text-dark-100">{job.name}</h4>
+                                                        <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-synapse-500 animate-pulse" />
+                                                            {job.stage} • {job.startTime}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-black text-synapse-600 dark:text-synapse-400">{job.progress}%</span>
+                                            </div>
+                                            <ProgressBar progress={job.progress} />
+                                        </div>
+                                    ))}
+                                    {MOCK_QUEUE.length === 0 && (
+                                        <div className="p-12 text-center">
+                                            <p className="text-sm text-slate-400 font-medium uppercase tracking-widest">Queue is empty</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Recent Indexed Documents */}
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden shadow-sm">
+                                <div className="px-6 py-5 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                                    <h3 className="text-xs font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Recently Indexed</h3>
+                                    <button className="text-[10px] font-black text-synapse-600 uppercase tracking-widest hover:underline">View All</button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50/50 dark:bg-dark-950/30 border-b border-slate-100 dark:border-dark-800">
+                                            <tr>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">File</th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
+                                            {MOCK_INDEXED.map(doc => (
+                                                <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-dark-800 flex items-center justify-center text-slate-400">
+                                                                <FileText size={16} />
+                                                            </div>
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-dark-200">{doc.name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                            <CheckCircle2 size={12} /> {doc.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-xs font-medium text-slate-400">{doc.date}</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Errors & Hardware */}
+                        <div className="space-y-6">
+                            {/* Error Section */}
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6 shadow-sm border-l-4 border-l-red-500">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <AlertCircle size={18} className="text-red-500" />
+                                    <h3 className="text-sm font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Processing Errors</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {MOCK_ERRORS.map(err => (
+                                        <div key={err.id} className="p-4 bg-red-50/30 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl">
+                                            <p className="text-xs font-bold text-slate-800 dark:text-dark-100 mb-1">{err.name}</p>
+                                            <p className="text-[11px] text-red-500 font-bold mb-3">{err.error}</p>
+                                            <button className="w-full py-2 bg-white dark:bg-dark-800 hover:bg-slate-50 text-slate-700 dark:text-dark-200 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-100 dark:border-dark-700 transition-all flex items-center justify-center gap-2">
+                                                <RefreshCcw size={12} /> Retry Indexing
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {MOCK_ERRORS.length === 0 && (
+                                        <div className="text-center py-4">
+                                            <CheckCircle2 size={24} className="text-emerald-500 mx-auto mb-2 opacity-20" />
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No issues detected</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Resource Usage Info (Static/Decorative) */}
+                            <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-synapse-500/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+                                            <Cpu size={18} className="text-synapse-400" />
+                                        </div>
+                                        <h3 className="text-xs font-black uppercase tracking-[0.2em]">Hardware Insight</h3>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                                <span>GPU Acceleration</span>
+                                                <span className="text-synapse-400">Active</span>
+                                            </div>
+                                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-synapse-500 w-[45%]" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                                <span>Embedding RAM</span>
+                                                <span className="text-emerald-400">1.2 GB</span>
+                                            </div>
+                                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-emerald-500 w-[20%]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button className="mt-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+                                        View System Logs <ArrowUpRight size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

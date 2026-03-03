@@ -381,9 +381,10 @@ body {
 
   .monitor-grid {
     background-image:
-      linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
+      linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: center;
   }
 
   .performance-chip {
@@ -398,6 +399,66 @@ body {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
     background-size: 200% 100%;
     animation: shimmer 2s infinite linear;
+  }
+
+  /* ── Academic Hub Specific ───────────────────────────────── */
+  .academic-hub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .filter-section {
+    @apply transition-all duration-300 ease-in-out overflow-hidden;
+  }
+
+  .note-card-glow {
+    @apply absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none;
+    background: radial-gradient(circle at center, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+  }
+
+  /* ── Dashboard & Table Specific ──────────────────────────── */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 dark:bg-dark-800 rounded-full;
+  }
+
+  .stats-card-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-synapse-500/5;
+  }
+
+  /* ── RAG & AI Search Specific ────────────────────────────── */
+  .rag-answer-container {
+    @apply leading-relaxed text-slate-700 dark:text-dark-200;
+  }
+
+  .citation-pill {
+    @apply inline-flex items-center justify-center w-5 h-5 rounded-md bg-synapse-100 dark:bg-synapse-900/40 text-synapse-700 dark:text-synapse-400 text-[10px] font-bold mx-0.5 cursor-pointer hover:bg-synapse-200 dark:hover:bg-synapse-800 transition-colors align-top;
+    margin-top: 2px;
+  }
+
+  .text-highlight {
+    @apply bg-synapse-50 dark:bg-synapse-900/20 border-b-2 border-synapse-200 dark:border-synapse-800 px-0.5;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-soft {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.6;
+    }
   }
 }
 
@@ -554,6 +615,25 @@ body {
 
 .animate-spin-slow {
   animation: spin 1.2s linear infinite;
+}
+
+.animate-progress-shimmer {
+  animation: progress-shimmer 2s infinite linear;
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  background-size: 200% 100%;
+}
+
+@keyframes progress-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Staggered animation delay for result cards */

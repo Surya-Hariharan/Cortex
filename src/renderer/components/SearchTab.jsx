@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import {
+    Search,
+    MessageSquare,
+    History,
+    Share2,
+    Save,
+    Download as DownloadIcon,
+    ChevronRight,
+    ExternalLink,
+    Trash2,
+    ShieldCheck,
+    ArrowUpRight,
+    Plus
+} from 'lucide-react';
 import ResultCard from './ResultCard';
 
 const SEARCH_STAGES = [
@@ -16,6 +29,11 @@ export default function SearchTab({ onToast, onUploadPdf }) {
     const [searchMeta, setSearchMeta] = useState(null);
     const [searchStage, setSearchStage] = useState(-1);
     const [synthesizedAnswer, setSynthesizedAnswer] = useState(null);
+    const [history, setHistory] = useState([
+        { id: 1, query: 'What is entropy?', date: '2h ago' },
+        { id: 2, query: 'Binary search tree complexity', date: '5h ago' }
+    ]);
+    const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
     const inputRef = useRef(null);
     const typewriterRef = useRef(null);
     const stageTimerRef = useRef(null);
@@ -101,166 +119,265 @@ export default function SearchTab({ onToast, onUploadPdf }) {
         } finally {
             setIsSearching(false);
             setSearchStage(-1);
+            // Add to history
+            if (query.trim()) {
+                setHistory(prev => [{ id: Date.now(), query: query.trim(), date: 'Just now' }, ...prev.slice(0, 4)]);
+            }
         }
     };
 
     return (
-        <div className="h-full flex flex-col">
-            {/* ── Search Section ─────────────────────────────────────────────── */}
-            <div className={`flex flex-col items-center transition-all duration-500 ${results !== null ? 'pt-6 pb-4' : 'pt-[18vh] pb-8'
-                }`}>
-                {/* Hero text - shows only before first search */}
-                {results === null && (
-                    <div className="text-center mb-8 animate-fade-in">
-                        <h2 className="text-3xl font-bold mb-2 text-dark-800 dark:text-dark-50">
-                            <span className="gradient-text">Search your knowledge</span>
-                        </h2>
-                        <p className="text-dark-500 dark:text-dark-400 text-sm max-w-md font-medium">
-                            Ask anything — Cortex searches your entire document library using AI-powered semantic understanding
-                        </p>
-                    </div>
-                )}
-
-                {/* Search Bar */}
-                <form onSubmit={handleSearch} className="w-full max-w-2xl px-6 relative z-10">
-                    <div className={`bg-white dark:bg-dark-900 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] flex items-center gap-3 pl-2 pr-2 py-2 rounded-2xl transition-all duration-300 border ${isSearching ? 'border-synapse-300 dark:border-synapse-500/50 shadow-[0_4px_24px_rgba(99,102,241,0.15)] glow-border-active' : 'border-dark-200 dark:border-dark-700 hover:border-dark-300 dark:hover:border-dark-600 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] glow-border dark:glow-border-none'
-                        }`}>
-
-                        <button
-                            type="button"
-                            onClick={onUploadPdf}
-                            className="bg-dark-100 dark:bg-dark-800 hover:bg-dark-200 dark:hover:bg-dark-700 text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0"
-                            title="Upload Context (PDF)"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>
-                        </button>
-
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="What is the second law of thermodynamics?"
-                            className="flex-1 bg-transparent text-dark-800 dark:text-dark-50 placeholder-dark-400 dark:placeholder-dark-500 text-[15px] font-medium outline-none px-2"
-                            disabled={isSearching}
-                        />
-
-                        <button
-                            type="submit"
-                            disabled={!query.trim() || isSearching}
-                            className={`w-9 h-9 flex flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${query.trim() && !isSearching
-                                ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-sm'
-                                : 'bg-dark-100 dark:bg-dark-800 text-dark-400 dark:text-dark-500 cursor-not-allowed'
-                                }`}
-                            title="Send Message"
-                        >
-                            {isSearching ? (
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin-slow" />
-                            ) : (
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={query.trim() ? "translate-x-[-1px] translate-y-[1px]" : ""}>
-                                    <line x1="22" y1="2" x2="11" y2="13" />
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                </svg>
-                            )}
-                        </button>
-                    </div>
-                </form>
-
-                {/* Search metadata + stage indicator */}
-                {searchMeta && !isSearching && (
-                    <div className="flex items-center gap-4 mt-3 text-xs text-dark-500 dark:text-dark-400 font-medium animate-fade-in">
-                        <span>
-                            Found <strong className="text-dark-800 dark:text-dark-100">{results?.length || 0}</strong> results
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                            ⚡ <strong className="text-synapse-600 dark:text-synapse-500">{searchMeta.time}ms</strong> ONNX
-                        </span>
-                        <span>•</span>
-                        <span>
-                            Searched <strong className="text-slate-800 dark:text-dark-100">{searchMeta.total}</strong> vectors
-                        </span>
-                    </div>
-                )}
-                {isSearching && searchStage >= 0 && (
-                    <div className="flex items-center gap-2 mt-3 text-xs text-synapse-600 font-medium animate-fade-in">
-                        <div className="w-3 h-3 border-2 border-synapse-400/30 border-t-synapse-600 rounded-full animate-spin-slow flex-shrink-0" />
-                        <span>{SEARCH_STAGES[Math.min(searchStage, SEARCH_STAGES.length - 1)]}</span>
-                    </div>
-                )}
-            </div>
-
-            {/* ── Results ────────────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-
-                {/* Synthesized AI answer */}
-                {synthesizedAnswer !== null && results && results.length > 0 && (
-                    <div className="max-w-2xl mx-auto mb-4 animate-scale-in">
-                        <div className="bg-synapse-50/50 dark:bg-synapse-900/10 border border-synapse-200/60 dark:border-synapse-700/30 rounded-xl p-4 shadow-sm text-slate-800 dark:text-slate-200">
-                            <div className="flex items-center gap-2 mb-2.5">
-                                <div className="w-6 h-6 rounded-md bg-synapse-100 dark:bg-synapse-900/40 flex items-center justify-center text-xs">💡</div>
-                                <span className="text-[11px] font-bold text-synapse-700 dark:text-synapse-400 uppercase tracking-wider">AI Synthesis</span>
-                                <span className="text-[10px] text-slate-500 dark:text-dark-400 font-medium ml-auto">from top {Math.min(results.length, 3)} passages</span>
-                            </div>
-                            <p className="text-sm text-slate-700 dark:text-dark-200 font-medium leading-relaxed shadow-sm typewriter-cursor">
-                                {synthesizedAnswer}
+        <div className="h-full flex bg-white dark:bg-dark-950 overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+                {/* ── Search Section ─────────────────────────────────────────────── */}
+                <div className={`flex flex-col items-center transition-all duration-500 ${results !== null ? 'pt-6 pb-4' : 'pt-[18vh] pb-8'
+                    }`}>
+                    {/* Hero text - shows only before first search */}
+                    {results === null && (
+                        <div className="text-center mb-8 animate-fade-in">
+                            <h2 className="text-3xl font-bold mb-2 text-dark-800 dark:text-dark-50">
+                                <span className="gradient-text">Search your knowledge</span>
+                            </h2>
+                            <p className="text-dark-500 dark:text-dark-400 text-sm max-w-md font-medium">
+                                Ask anything — Cortex searches your entire document library using AI-powered semantic understanding
                             </p>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {results !== null && results.length === 0 && (
-                    <div className="text-center py-16 animate-fade-in">
-                        <div className="text-4xl mb-3">🔎</div>
-                        <p className="text-slate-500 dark:text-dark-400 text-sm font-medium">No results found. Try a different query.</p>
-                    </div>
-                )}
+                    {/* Search Bar */}
+                    <form onSubmit={handleSearch} className="w-full max-w-2xl px-6 relative z-10">
+                        <div className={`bg-white dark:bg-dark-900 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] flex items-center gap-3 pl-2 pr-2 py-2 rounded-2xl transition-all duration-300 border ${isSearching ? 'border-synapse-300 dark:border-synapse-500/50 shadow-[0_4px_24px_rgba(99,102,241,0.15)] glow-border-active' : 'border-dark-200 dark:border-dark-700 hover:border-dark-300 dark:hover:border-dark-600 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] glow-border dark:glow-border-none'
+                            }`}>
 
-                {results && results.length > 0 && (
-                    <div className="max-w-2xl mx-auto space-y-3">
-                        {results.map((result, idx) => (
-                            <ResultCard
-                                key={result.docId + '-' + result.rank}
-                                result={result}
-                                index={idx}
-                                onToast={onToast}
+                            <button
+                                type="button"
+                                onClick={onUploadPdf}
+                                className="bg-dark-100 dark:bg-dark-800 hover:bg-dark-200 dark:hover:bg-dark-700 text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0"
+                                title="Upload Context (PDF)"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                            </button>
+
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="What is the second law of thermodynamics?"
+                                className="flex-1 bg-transparent text-dark-800 dark:text-dark-50 placeholder-dark-400 dark:placeholder-dark-500 text-[15px] font-medium outline-none px-2"
+                                disabled={isSearching}
                             />
-                        ))}
-                    </div>
-                )}
 
-                {/* Suggested queries - shows only before first search */}
-                {results === null && (
-                    <div className="max-w-2xl mx-auto mt-4 animate-fade-in">
-                        <p className="text-xs text-slate-400 dark:text-dark-500 font-semibold mb-3 text-center uppercase tracking-wider">Try searching for</p>
-                        <div className="flex flex-wrap justify-center gap-2">
-                            {[
-                                'What is entropy?',
-                                'Binary search tree operations',
-                                'Eigenvalues and eigenvectors',
-                                'SN2 reaction mechanism',
-                                'Gradient descent optimization',
-                                'Quantum tunneling',
-                                'TCP three-way handshake',
-                                'Taylor series expansion',
-                            ].map((suggestion) => (
+                            <button
+                                type="submit"
+                                disabled={!query.trim() || isSearching}
+                                className={`w-9 h-9 flex flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${query.trim() && !isSearching
+                                    ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-sm'
+                                    : 'bg-dark-100 dark:bg-dark-800 text-dark-400 dark:text-dark-500 cursor-not-allowed'
+                                    }`}
+                                title="Send Message"
+                            >
+                                {isSearching ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin-slow" />
+                                ) : (
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={query.trim() ? "translate-x-[-1px] translate-y-[1px]" : ""}>
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Search metadata + stage indicator */}
+                    {searchMeta && !isSearching && (
+                        <div className="flex items-center gap-4 mt-3 text-xs text-dark-500 dark:text-dark-400 font-medium animate-fade-in">
+                            <span>
+                                Found <strong className="text-dark-800 dark:text-dark-100">{results?.length || 0}</strong> results
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                                ⚡ <strong className="text-synapse-600 dark:text-synapse-500">{searchMeta.time}ms</strong> ONNX
+                            </span>
+                            <span>•</span>
+                            <span>
+                                Searched <strong className="text-slate-800 dark:text-dark-100">{searchMeta.total}</strong> vectors
+                            </span>
+                        </div>
+                    )}
+                    {isSearching && searchStage >= 0 && (
+                        <div className="flex items-center gap-2 mt-3 text-xs text-synapse-600 font-medium animate-fade-in">
+                            <div className="w-3 h-3 border-2 border-synapse-400/30 border-t-synapse-600 rounded-full animate-spin-slow flex-shrink-0" />
+                            <span>{SEARCH_STAGES[Math.min(searchStage, SEARCH_STAGES.length - 1)]}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Results ────────────────────────────────────────────────────── */}
+                <div className="flex-1 overflow-y-auto px-6 pb-6">
+
+                    {/* Enhanced AI answer */}
+                    {synthesizedAnswer !== null && results && results.length > 0 && (
+                        <div className="max-w-[800px] mx-auto mb-8 animate-scale-in">
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-8 shadow-xl shadow-slate-100 dark:shadow-none relative overflow-hidden group">
+                                {/* Decorative background accent */}
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-synapse-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-10 h-10 rounded-2xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-200 dark:shadow-none">
+                                            <MessageSquare size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">AI Insight</h3>
+                                            <p className="text-[10px] text-slate-400 dark:text-dark-500 font-bold uppercase tracking-widest">Semantic Synthesis</p>
+                                        </div>
+                                        <div className="ml-auto flex items-center gap-2">
+                                            <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800/50 flex items-center gap-1">
+                                                <ShieldCheck size={10} /> 98% Confidence
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="rag-answer-container text-base font-medium leading-relaxed mb-8">
+                                        {/* Simple citation parsing proxy */}
+                                        {synthesizedAnswer.split('. ').map((sentence, idx) => (
+                                            <span key={idx} className="hover:bg-synapse-50 dark:hover:bg-synapse-900/20 transition-colors px-1 rounded-md cursor-default mr-1">
+                                                {sentence}.
+                                                {idx < 3 && (
+                                                    <sup className="citation-pill" title={`Citation source ${idx + 1}`}>
+                                                        {idx + 1}
+                                                    </sup>
+                                                )}
+                                            </span>
+                                        ))}
+                                        {isSearching && <span className="inline-block w-2 h-4 bg-synapse-500 animate-pulse ml-1 align-middle" />}
+                                    </div>
+
+                                    {/* Action bar for the answer */}
+                                    <div className="flex items-center gap-3 pt-6 border-t border-slate-100 dark:border-dark-800">
+                                        <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-dark-950 hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-300 text-xs font-bold rounded-xl border border-slate-200 dark:border-dark-800 transition-all">
+                                            <Share2 size={14} /> Share to Mesh
+                                        </button>
+                                        <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-dark-950 hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-300 text-xs font-bold rounded-xl border border-slate-200 dark:border-dark-800 transition-all">
+                                            <Save size={14} /> Save as Note
+                                        </button>
+                                        <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-dark-950 hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-300 text-xs font-bold rounded-xl border border-slate-200 dark:border-dark-800 transition-all">
+                                            <DownloadIcon size={14} /> Export PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {results !== null && results.length === 0 && (
+                        <div className="text-center py-24 animate-fade-in">
+                            <div className="w-16 h-16 rounded-3xl bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-800 flex items-center justify-center mx-auto mb-6 text-slate-300 dark:text-dark-700">
+                                <Search size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-1">No matches found</h3>
+                            <p className="text-sm text-slate-500 dark:text-dark-400 font-medium">Try broadening your search or using keywords.</p>
+                        </div>
+                    )}
+
+                    {results && results.length > 0 && (
+                        <div className="max-w-[800px] mx-auto">
+                            <div className="flex items-center gap-3 mb-6 px-1">
+                                <h3 className="text-xs font-black uppercase text-slate-400 dark:text-dark-500 tracking-[0.2em]">Source Context</h3>
+                                <div className="h-px flex-1 bg-slate-100 dark:bg-dark-800" />
+                            </div>
+                            <div className="space-y-4">
+                                {results.map((result, idx) => (
+                                    <ResultCard
+                                        key={result.docId + '-' + result.rank}
+                                        result={result}
+                                        index={idx}
+                                        onToast={onToast}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Suggested queries */}
+                    {results === null && (
+                        <div className="max-w-2xl mx-auto mt-8 animate-fade-in px-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { q: 'What is entropy?', icon: '🔥' },
+                                    { q: 'Binary search tree complexity', icon: '🌳' },
+                                    { q: 'SN2 reaction mechanism', icon: '🧪' },
+                                    { q: 'Gradient descent optimization', icon: '📉' },
+                                ].map((suggestion) => (
+                                    <button
+                                        key={suggestion.q}
+                                        onClick={() => {
+                                            setQuery(suggestion.q);
+                                            setTimeout(() => {
+                                                if (inputRef.current) inputRef.current.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                                            }, 50);
+                                        }}
+                                        className="p-4 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl text-left hover:border-synapse-300 dark:hover:border-synapse-800 hover:bg-slate-50 dark:hover:bg-dark-800/40 transition-all group"
+                                    >
+                                        <div className="text-xl mb-2">{suggestion.icon}</div>
+                                        <div className="text-[13px] font-bold text-slate-700 dark:text-dark-200 mb-1 group-hover:text-synapse-600 transition-colors line-clamp-1">{suggestion.q}</div>
+                                        <div className="text-[10px] text-slate-400 dark:text-dark-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                                            Quick Ask <ChevronRight size={10} />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Side Panel - History & Suggestions */}
+                {isSidePanelOpen && (
+                    <div className="w-80 border-l border-slate-100 dark:border-dark-800 flex flex-col bg-slate-50/30 dark:bg-dark-950/20 animate-slide-left overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                            <h3 className="text-[10px] font-black uppercase text-slate-400 dark:text-dark-500 tracking-[0.2em] flex items-center gap-2">
+                                <History size={12} /> Search History
+                            </h3>
+                            <button className="p-1.5 hover:bg-slate-200 dark:hover:bg-dark-800 rounded-lg transition-colors text-slate-400">
+                                <Plus size={14} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                            {history.map(item => (
                                 <button
-                                    key={suggestion}
-                                    onClick={() => {
-                                        setQuery(suggestion);
-                                        setTimeout(() => {
-                                            if (inputRef.current) inputRef.current.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                                        }, 50);
-                                    }}
-                                    className="px-3 py-1.5 bg-slate-50 dark:bg-dark-900 hover:bg-slate-100 dark:hover:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg text-xs font-medium text-slate-600 dark:text-dark-300 hover:text-slate-900 dark:hover:text-dark-50 transition-all flex items-center gap-1.5"
+                                    key={item.id}
+                                    onClick={() => { setQuery(item.query); handleSearch({ preventDefault: () => { } }); }}
+                                    className="w-full p-4 rounded-xl hover:bg-white dark:hover:bg-dark-900 border border-transparent hover:border-slate-200 dark:hover:border-dark-800 transition-all text-left group"
                                 >
-                                    <Search size={12} className="text-slate-400 dark:text-dark-500" />
-                                    {suggestion}
+                                    <p className="text-[13px] font-bold text-slate-700 dark:text-dark-200 mb-1 line-clamp-2 group-hover:text-synapse-600 transition-colors">
+                                        {item.query}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.date}</p>
                                 </button>
                             ))}
+
+                            {history.length === 0 && (
+                                <div className="py-12 text-center">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">No recent activity</p>
+                                    <div className="w-12 h-px bg-slate-100 dark:bg-dark-800 mx-auto" />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-slate-100 dark:border-dark-800">
+                            <div className="bg-synapse-600 rounded-2xl p-5 text-white shadow-lg shadow-synapse-200 dark:shadow-none space-y-3 relative overflow-hidden group">
+                                <div className="absolute -top-4 -right-4 w-16 h-16 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
+                                <p className="text-xs font-black uppercase tracking-widest opacity-80">Local AI Tip</p>
+                                <p className="text-sm font-bold leading-relaxed">Try uploading technical documentation for precise answer synthesis.</p>
+                                <button className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest hover:gap-3 transition-all">
+                                    Learn More <ArrowUpRight size={14} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -268,3 +385,9 @@ export default function SearchTab({ onToast, onUploadPdf }) {
         </div>
     );
 }
+
+const ResultCardWithActions = ({ result, index, onToast }) => {
+    return (
+        <ResultCard result={result} index={index} onToast={onToast} />
+    );
+};

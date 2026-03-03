@@ -1,0 +1,24 @@
+# Cortex - Python Environment Requirements
+# 
+# Note: The core Cortex application runs entirely on Node.js/Electron.
+# These Python requirements are provided strictly for research, 
+# advanced data processing scripts, or model evaluations that 
+# you might want to run alongside the application.
+#
+# Install via: pip install -r requirements.txt
+
+# LLM & Embedding processing equivalents to what runs on-device via ONNX
+transformers>=4.38.0
+sentence-transformers>=2.4.0
+onnxruntime>=1.17.0
+tokenizers>=0.15.2
+torch>=2.2.0
+
+# Document Parsing utilities
+PyMuPDF>=1.23.21
+pdfminer.six>=20231228
+
+# Utilities
+numpy>=1.26.4
+tqdm>=4.66.2
+python-dotenv>=1.0.1

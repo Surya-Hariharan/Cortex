@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 
 const SUBJECT_COLORS = {
-    'Thermodynamics': { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-    'Data Structures': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-    'Linear Algebra': { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' },
-    'Organic Chemistry': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
-    'Machine Learning': { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
-    'Quantum Mechanics': { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' },
-    'Operating Systems': { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
-    'Calculus': { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
-    'Computer Networks': { bg: 'bg-teal-500/10', text: 'text-teal-400', border: 'border-teal-500/20' },
-    'Probability & Statistics': { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
+    'Thermodynamics': { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
+    'Data Structures': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    'Linear Algebra': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+    'Organic Chemistry': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+    'Machine Learning': { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+    'Quantum Mechanics': { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
+    'Operating Systems': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+    'Calculus': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    'Computer Networks': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+    'Probability & Statistics': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
 };
 
-const DEFAULT_COLOR = { bg: 'bg-dark-700/30', text: 'text-dark-300', border: 'border-dark-600/30' };
+const DEFAULT_COLOR = { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200' };
 
 function generateExplanation(result) {
     const pct = result.relevancePercent;
@@ -30,9 +30,9 @@ function generateExplanation(result) {
 
 function getScoreColor(score) {
     if (score >= 0.8) return 'from-emerald-400 to-emerald-500';
-    if (score >= 0.6) return 'from-synapse-400 to-synapse-500';
+    if (score >= 0.6) return 'from-synapse-500 to-synapse-600';
     if (score >= 0.4) return 'from-amber-400 to-amber-500';
-    return 'from-dark-400 to-dark-500';
+    return 'from-slate-300 to-slate-400';
 }
 
 export default function ResultCard({ result, index, onToast }) {
@@ -65,22 +65,22 @@ export default function ResultCard({ result, index, onToast }) {
     };
 
     return (
-        <div className={`glass-panel p-4 animate-slide-up ${delay} hover:border-dark-600/60 transition-all duration-200 group`}>
+        <div className={`glass-panel dark:bg-dark-900/80 dark:border-dark-700/60 p-4 animate-slide-up ${delay} hover:border-slate-300 dark:hover:border-dark-500 hover:shadow-md transition-all duration-200 group`}>
             {/* Top row: rank, title, subject, score */}
             <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Rank badge */}
-                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-dark-800/80 flex items-center justify-center text-xs font-bold text-dark-400">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-dark-400 border border-slate-200 dark:border-dark-700">
                         {result.rank}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-dark-100 truncate">{result.title}</h3>
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-dark-50 truncate">{result.title}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-md border ${colors.bg} ${colors.text} ${colors.border}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-md border ${colors.bg} ${colors.text} ${colors.border}`}>
                                 {result.subject}
                             </span>
-                            <span className="text-[10px] text-dark-500">Chunk {result.chunkIndex + 1}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-dark-500 font-medium">Chunk {result.chunkIndex + 1}</span>
                         </div>
                     </div>
                 </div>
@@ -88,21 +88,21 @@ export default function ResultCard({ result, index, onToast }) {
                 {/* Score + expand */}
                 <div className="flex items-start gap-2 flex-shrink-0">
                     <div className="text-right">
-                        <div className="text-lg font-bold text-dark-200">{result.relevancePercent}%</div>
-                        <div className="w-16 h-1.5 bg-dark-800 rounded-full mt-1 overflow-hidden">
+                        <div className="text-lg font-extrabold text-slate-700 dark:text-dark-200">{result.relevancePercent}%</div>
+                        <div className="w-16 h-1.5 bg-slate-200 dark:bg-dark-800 rounded-full mt-1 overflow-hidden shadow-inner">
                             <div
                                 className={`score-bar ${scoreColor}`}
                                 style={{ width: `${result.relevancePercent}%` }}
-                        />
+                            />
                         </div>
                     </div>
                     <button
                         onClick={() => setIsExpanded((v) => !v)}
-                        className="mt-1.5 w-5 h-5 flex items-center justify-center text-dark-500 hover:text-dark-200 transition-all duration-200"
+                        className="mt-1.5 w-5 h-5 flex items-center justify-center text-slate-400 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-200 bg-slate-50 dark:bg-dark-800/50 hover:bg-slate-100 dark:hover:bg-dark-700 rounded transition-all duration-200"
                         title="Explain why this matched"
                     >
                         <svg
-                            width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            width="14" height="14" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                             style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
                         >
@@ -113,41 +113,41 @@ export default function ResultCard({ result, index, onToast }) {
             </div>
 
             {/* Content preview */}
-            <p className="text-xs text-dark-400 leading-relaxed mt-2 line-clamp-3">
+            <p className="text-xs text-slate-600 dark:text-dark-300 font-medium leading-relaxed mt-2 line-clamp-3">
                 {result.content}
             </p>
 
             {/* Expand: why this matched */}
             {isExpanded && (
-                <div className="mt-3 p-3 bg-dark-800/40 rounded-lg border border-dark-700/30 animate-slide-down">
+                <div className="mt-3 p-3 bg-synapse-50/50 dark:bg-synapse-900/10 rounded-lg border border-synapse-200/50 dark:border-synapse-800/30 animate-slide-down shadow-sm">
                     <div className="flex items-center gap-1.5 mb-1.5">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-synapse-400">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-synapse-600 dark:text-synapse-500">
                             <circle cx="12" cy="12" r="10" />
                             <line x1="12" y1="8" x2="12" y2="12" />
                             <line x1="12" y1="16" x2="12.01" y2="16" />
                         </svg>
-                        <span className="text-[10px] font-semibold text-synapse-400 uppercase tracking-wider">Why this matched</span>
+                        <span className="text-[10px] font-bold text-synapse-700 dark:text-synapse-400 uppercase tracking-wider">Why this matched</span>
                     </div>
-                    <p className="text-[11px] text-dark-400 leading-relaxed">
+                    <p className="text-[11px] text-slate-600 dark:text-dark-300 font-medium leading-relaxed">
                         {generateExplanation(result)}
                     </p>
                 </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-dark-800/50">
-                <div className="text-[10px] text-dark-600 font-mono">
+            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-dark-800">
+                <div className="text-[10px] text-slate-400 dark:text-dark-500 font-mono font-medium">
                     Score: {result.score.toFixed(3)}
                 </div>
 
                 <button
                     onClick={handleShare}
                     disabled={sharing}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${shared
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : sharing
-                                ? 'bg-synapse-500/10 text-synapse-300 border border-synapse-500/20'
-                                : 'text-dark-400 hover:text-synapse-300 hover:bg-synapse-500/10 border border-transparent hover:border-synapse-500/20'
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 ${shared
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        : sharing
+                            ? 'bg-synapse-50 dark:bg-synapse-900/20 text-synapse-500 dark:text-synapse-400 border border-synapse-200 dark:border-synapse-800'
+                            : 'text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 bg-slate-50 dark:bg-dark-900 hover:bg-synapse-50 dark:hover:bg-synapse-900/30 border border-slate-200 dark:border-dark-700 hover:border-synapse-200 dark:hover:border-synapse-800'
                         }`}
                 >
                     {sharing ? (

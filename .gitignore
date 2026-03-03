@@ -1,3 +1,7 @@
+# ──────────────────────────────────────────────────────────────
+# Cortex — .gitignore
+# ──────────────────────────────────────────────────────────────
+
 # Dependencies
 node_modules/
 
@@ -15,19 +19,24 @@ release/
 *.AppImage
 *.snap
 
-# Database and models
+# Runtime data (generated at startup)
 data/
 models/
+
+# Database files
 *.db
 *.sqlite
 *.sqlite3
 *-shm
 *-wal
 
-# Environment
+# Environment — never commit real secrets
 .env
 .env.local
-.env.*
+.env.development
+.env.production
+# Keep the example template:
+!.env.example
 
 # Logs
 logs/
@@ -35,6 +44,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
 # Cache
 .cache/
@@ -42,17 +52,22 @@ yarn-error.log*
 .webpack/
 *.tsbuildinfo
 
-# OS
+# OS artifacts
 .DS_Store
 Thumbs.db
 desktop.ini
 
 # Editor
 .idea/
+.vscode/settings.json
+.vscode/launch.json
 *.sw?
 *.sublime-workspace
 
 # Testing
 coverage/
 .nyc_output/
-node_modules
+
+# Misc
+Mockframes/
+*.local

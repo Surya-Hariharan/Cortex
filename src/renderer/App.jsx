@@ -4,12 +4,28 @@ import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
 import NotesTab from './components/NotesTab';
 import Toast from './components/Toast';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor } from 'lucide-react';
 
 const TABS = [
-    { id: 'search', label: 'Search', icon: '🔍' },
-    { id: 'notes', label: 'Notes', icon: '📝' },
-    { id: 'network', label: 'Network', icon: '🌐' },
-    { id: 'performance', label: 'Performance', icon: '⚡' },
+    { id: 'search', label: 'Search', icon: <Search size={18} /> },
+    { id: 'notes', label: 'Notes', icon: <FileText size={18} /> },
+    { id: 'network', label: 'Network', icon: <Globe size={18} /> },
+    { id: 'performance', label: 'Performance', icon: <Zap size={18} /> },
+];
+
+const MOCK_WORKSPACES = [
+    {
+        id: 'w1', title: 'AI Research', chats: [
+            { id: 'c1', title: 'RAG Pipeline' },
+            { id: 'c2', title: 'OCR Integration' }
+        ]
+    },
+    {
+        id: 'w2', title: 'AMD Hackathon', chats: [
+            { id: 'c3', title: 'UI System Fix' },
+            { id: 'c4', title: 'Mesh Protocol' }
+        ]
+    }
 ];
 
 export default function App() {
@@ -17,22 +33,52 @@ export default function App() {
     const [stats, setStats] = useState({ documents: 0, embeddings: 0, subjects: [] });
     const [toast, setToast] = useState(null);
     const [perfProvider, setPerfProvider] = useState('cpu');
+    const [wsExpanded, setWsExpanded] = useState({ w1: true, w2: true });
+
+    // New UI states
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const [theme, setTheme] = useState(() => {
+        return localStorage.getItem('cortex-theme') || 'system';
+    });
+    const [activeChatId, setActiveChatId] = useState('c1');
+    const [username, setUsername] = useState('Surya Hariharan');
+
     const perfPollRef = useRef(null);
 
     useEffect(() => {
-        // Load stats on mount
         if (window.electronAPI) {
             window.electronAPI.getStats().then(setStats).catch(() => { });
         }
     }, []);
 
+    // Theme toggling logic
     useEffect(() => {
-        // Poll provider status for header badge
+        const root = window.document.documentElement;
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+        const updateTheme = () => {
+            if (theme === 'dark' || (theme === 'system' && mediaQuery.matches)) {
+                root.classList.add('dark');
+            } else {
+                root.classList.remove('dark');
+            }
+        };
+
+        updateTheme();
+        localStorage.setItem('cortex-theme', theme);
+
+        const handleChange = () => { if (theme === 'system') updateTheme(); };
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, [theme]);
+
+    useEffect(() => {
         const poll = () => {
             if (window.electronAPI) {
                 window.electronAPI.getPerfStats()
                     .then((p) => { if (p) setPerfProvider(p.provider); })
-                    .catch(() => {});
+                    .catch(() => { });
             }
         };
         poll();
@@ -44,110 +90,269 @@ export default function App() {
         setToast({ message, type, id: Date.now() });
     };
 
+    const toggleWs = (id) => {
+        setWsExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const uploadPdf = async () => {
+        if (window.electronAPI) {
+            const result = await window.electronAPI.uploadPdf();
+            if (result && result.success) {
+                showToast(`Indexed "${result.title}" (${result.chunks} chunks)`);
+                const newStats = await window.electronAPI.getStats();
+                setStats(newStats);
+            } else if (result && result.error) {
+                showToast(result.error, 'error');
+            }
+        }
+    };
+
     return (
-        <div className="h-screen flex flex-col bg-dark-950 overflow-hidden">
-            {/* ── Title Bar / Header ───────────────────────────────────────────── */}
-            <header
-                className="flex items-center justify-between px-5 h-14 border-b border-dark-800/60 bg-dark-950/80 backdrop-blur-xl"
-                style={{ WebkitAppRegion: 'drag' }}
-            >
-                <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' }}>
-                    {/* Logo */}
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-synapse-500 to-synapse-700 flex items-center justify-center shadow-lg">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="3" />
-                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 className="text-sm font-bold tracking-wide">
-                                <span className="gradient-text">Cortex</span>
-                            </h1>
-                            <p className="text-[10px] text-dark-500 font-medium tracking-wider uppercase">Offline AI for Students</p>
-                        </div>
-                    </div>
-
-                    {/* Tab Navigation */}
-                    <nav className="flex items-center gap-1 ml-8 bg-dark-900/50 rounded-xl p-1">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`tab-btn flex items-center gap-2 ${activeTab === tab.id ? 'tab-btn-active' : 'tab-btn-inactive'
-                                    }`}
-                            >
-                                <span className="text-base">{tab.icon}</span>
-                                <span>{tab.label}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </div>
-
-                {/* Right side: stats */}
-                <div className="flex items-center gap-4" style={{ WebkitAppRegion: 'no-drag' }}>
-                    {/* Provider badge - always visible */}
-                    <span className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold rounded-full border ${
-                        perfProvider === 'dml'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-synapse-500/10 text-synapse-400 border-synapse-500/20'
-                    }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${perfProvider === 'dml' ? 'bg-emerald-400 status-online' : 'bg-synapse-400 animate-pulse-slow'}`} />
-                        {perfProvider === 'dml' ? '⚡ DirectML' : '⚡ ONNX Runtime'}
-                    </span>
-                    {stats.documents > 0 && (
-                        <div className="flex items-center gap-3 text-xs text-dark-400">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />
-                                <span>{stats.documents} docs</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-synapse-400 shadow-sm" />
-                                <span>{stats.embeddings} vectors</span>
+        <div className="h-screen flex bg-white dark:bg-dark-950 text-slate-800 dark:text-slate-200 overflow-hidden font-sans pt-0">
+            {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+            <div className={`bg-slate-50 dark:bg-dark-900 flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-in-out relative ${isSidebarCollapsed ? 'w-[68px]' : 'w-[260px] border-r border-slate-200 dark:border-dark-800'}`}>
+                {/* Drag Handle & Collapse Button */}
+                <div className={`flex items-center p-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ WebkitAppRegion: 'drag' }}>
+                    {!isSidebarCollapsed && (
+                        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' }}>
+                            <div className="w-6 h-6 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center">
+                                <span className="text-synapse-600 dark:text-synapse-500 font-bold text-xs" style={{ fontFamily: 'monospace' }}>cX</span>
                             </div>
                         </div>
                     )}
                     <button
-                        onClick={async () => {
-                            if (window.electronAPI) {
-                                const result = await window.electronAPI.uploadPdf();
-                                if (result && result.success) {
-                                    showToast(`Indexed "${result.title}" (${result.chunks} chunks)`);
-                                    const newStats = await window.electronAPI.getStats();
-                                    setStats(newStats);
-                                } else if (result && result.error) {
-                                    showToast(result.error, 'error');
-                                }
-                            }
-                        }}
-                        className="btn-ghost flex items-center gap-1.5"
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:text-dark-400 dark:hover:text-dark-200 hover:bg-slate-200/50 dark:hover:bg-dark-800/50 transition-colors"
+                        style={{ WebkitAppRegion: 'no-drag' }}
+                        title={isSidebarCollapsed ? "Expand sidebar" : "Close sidebar"}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                        Upload PDF
+                        {isSidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
                     </button>
                 </div>
-            </header>
 
-            {/* ── Main Content ─────────────────────────────────────────────────── */}
-            <main className="flex-1 overflow-hidden">
-                {activeTab === 'search' && <SearchTab onToast={showToast} />}
-                {activeTab === 'notes' && <NotesTab onToast={showToast} />}
-                {activeTab === 'network' && <NetworkTab />}
-                {activeTab === 'performance' && <PerformanceTab />}
-            </main>
+                {/* Primary Actions */}
+                <div className="px-3 pb-3" style={{ WebkitAppRegion: 'no-drag' }}>
+                    {isSidebarCollapsed ? (
+                        <button
+                            onClick={() => setActiveTab('search')}
+                            className="w-full flex justify-center items-center py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white rounded-xl transition-all duration-200 shadow-sm border border-synapse-700 dark:border-synapse-500 mt-1"
+                            title="New Chat"
+                        >
+                            <Plus size={20} />
+                        </button>
+                    ) : (
+                        <div className="flex gap-2.5 mt-1">
+                            <button
+                                onClick={() => setActiveTab('search')}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-700 dark:text-dark-100 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700 text-[13px]"
+                            >
+                                <span className="text-synapse-600 dark:text-synapse-500"><Plus size={18} /></span>
+                                New Chat
+                            </button>
+                            <button
+                                className="px-3 py-2 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-400 dark:text-dark-400 hover:text-slate-600 dark:hover:text-dark-200 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700"
+                                title="New Workspace"
+                            >
+                                <Monitor size={18} />
+                            </button>
+                        </div>
+                    )}
+                </div>
 
-            {/* ── Toast ────────────────────────────────────────────────────────── */}
-            {toast && (
-                <Toast
-                    key={toast.id}
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(null)}
-                />
+                <div className="flex-1 overflow-y-auto px-3 space-y-6 mt-2 pb-4" style={{ WebkitAppRegion: 'no-drag' }}>
+                    {/* Tools Section (Moved up) */}
+                    <div>
+                        {!isSidebarCollapsed && (
+                            <div className="px-2 pt-2 pb-1.5">
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500 tracking-wide uppercase">Pages</span>
+                            </div>
+                        )}
+                        <div className="space-y-0.5">
+                            {TABS.slice(1).map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center w-full py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
+                                        ? 'bg-slate-200/60 dark:bg-dark-800 text-slate-900 dark:text-dark-50 border border-slate-200/50 dark:border-dark-700/50 shadow-sm'
+                                        : 'text-slate-600 dark:text-dark-400 hover:bg-slate-200/40 dark:hover:bg-dark-800/40 border border-transparent'
+                                        } ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-2.5'}`}
+                                    title={isSidebarCollapsed ? tab.label : ''}
+                                >
+                                    <span className={`${activeTab === tab.id ? 'text-slate-900 dark:text-dark-50' : 'text-slate-400 dark:text-dark-500'}`}>
+                                        {tab.icon}
+                                    </span>
+                                    {!isSidebarCollapsed && tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Workspaces List */}
+                    <div>
+                        {!isSidebarCollapsed && (
+                            <div className="px-2 pb-2">
+                                <span className="text-[10px] font-semibold text-slate-400 tracking-wide uppercase">Workspaces</span>
+                            </div>
+                        )}
+
+                        {isSidebarCollapsed ? (
+                            <div className="flex flex-col gap-2.5 items-center mt-4">
+                                {MOCK_WORKSPACES.map((ws, i) => (
+                                    <div key={ws.id} className="w-8 h-8 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center text-[10px] uppercase font-bold text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 hover:border-synapse-200 dark:hover:border-synapse-500 cursor-pointer transition-colors" title={ws.title}>
+                                        {ws.title.substring(0, 2)}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {MOCK_WORKSPACES.map(ws => (
+                                    <div key={ws.id} className="space-y-0.5">
+                                        <button onClick={() => toggleWs(ws.id)} className="flex items-center justify-between w-full px-2 py-1.5 text-[11px] font-bold text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-100 group transition-colors">
+                                            <span className="truncate pr-2 uppercase pb-0.5 border-b border-transparent group-hover:border-slate-300 dark:group-hover:border-dark-600">{ws.title}</span>
+                                        </button>
+                                        {wsExpanded[ws.id] && (
+                                            <div className="space-y-1 mt-1.5 relative">
+                                                {ws.chats.map((chat) => {
+                                                    const isActive = activeTab === 'search' && activeChatId === chat.id;
+                                                    return (
+                                                        <button
+                                                            key={chat.id}
+                                                            onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
+                                                            className={`flex items-center w-full px-2 pl-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors truncate relative overflow-hidden ${isActive
+                                                                ? 'bg-slate-200/60 dark:bg-dark-800/80 text-slate-900 dark:text-dark-50 shadow-sm border border-slate-200/50 dark:border-dark-700/50'
+                                                                : 'text-slate-600 dark:text-dark-400 hover:bg-slate-200/40 dark:hover:bg-dark-800/40 border border-transparent'
+                                                                }`}
+                                                        >
+                                                            {isActive && (
+                                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-synapse-500 rounded-r-full" />
+                                                            )}
+                                                            <span className="truncate">{chat.title}</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Profile Panel (Footer) */}
+                <div className="p-3 mt-auto" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <button
+                        onClick={() => setShowProfileModal(true)}
+                        className={`w-full flex items-center p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-dark-800/60 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-dark-700 hover:shadow-sm ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}
+                    >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-synapse-500 to-indigo-400 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm border border-synapse-200 dark:border-synapse-800">
+                            SH
+                        </div>
+                        {!isSidebarCollapsed && (
+                            <div className="flex-1 text-left min-w-0 flex flex-col justify-center">
+                                <span className="text-sm font-semibold text-slate-800 dark:text-dark-50 truncate leading-tight">{username}</span>
+                                <span className="text-[10px] text-slate-500 dark:text-dark-400 font-medium capitalize mt-0.5">Free Plan</span>
+                            </div>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Main Content Area ────────────────────────────────────────────── */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-dark-950 relative">
+                <div className="h-4 w-full absolute top-0 left-0 bg-transparent z-50 pointer-events-none" style={{ WebkitAppRegion: 'drag' }} />
+
+                <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+                    {activeTab === 'search' && <SearchTab onToast={showToast} onUploadPdf={uploadPdf} />}
+                    {activeTab === 'notes' && <NotesTab onToast={showToast} />}
+                    {activeTab === 'network' && <NetworkTab />}
+                    {activeTab === 'performance' && <PerformanceTab />}
+                </main>
+
+                {/* ── Toast ────────────────────────────────────────────────────────── */}
+                {toast && (
+                    <Toast
+                        key={toast.id}
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() => setToast(null)}
+                    />
+                )}
+            </div>
+
+            {/* ── Profile Modal ────────────────────────────────────────────────── */}
+            {showProfileModal && (
+                <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <div className="bg-white dark:bg-dark-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200/60 dark:border-dark-700/60 animate-scale-in">
+                        <div className="p-6 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-dark-50">Settings</h2>
+                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 dark:text-dark-400 dark:hover:text-dark-200 transition-colors">
+                                <Plus size={20} className="rotate-45" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Account Section */}
+                            <div className="flex items-center gap-4">
+                                <div className="relative group w-16 h-16 rounded-full bg-gradient-to-tr from-synapse-500 to-indigo-400 flex items-center justify-center text-white font-bold text-xl shadow-inner cursor-pointer">
+                                    SH
+                                    <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <User size={20} />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-semibold text-slate-500 dark:text-dark-400 mb-1">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-synapse-500/30 focus:border-synapse-400 transition-all text-slate-800 dark:text-dark-50"
+                                    />
+                                </div>
+                            </div>
+
+                            <hr className="border-slate-100 dark:border-dark-800" />
+
+                            {/* Preferences Section */}
+                            <div className="space-y-3">
+                                <label className="block text-xs font-semibold text-slate-500 dark:text-dark-400 mb-1">App Theme</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button onClick={() => setTheme('light')} className={`flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${theme === 'light' ? 'border-synapse-500 bg-synapse-50/50 dark:bg-synapse-900/20' : 'border-slate-100 dark:border-dark-800 hover:border-slate-200 dark:hover:border-dark-700 bg-white dark:bg-dark-950'}`}>
+                                        <div className="w-4 h-4 rounded-full bg-slate-100 border border-slate-300" />
+                                        <span className={`text-xs font-semibold ${theme === 'light' ? 'text-synapse-700 dark:text-synapse-400' : 'text-slate-600 dark:text-dark-400'}`}>Light</span>
+                                    </button>
+                                    <button onClick={() => setTheme('dark')} className={`flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${theme === 'dark' ? 'border-synapse-500 bg-synapse-50/50 dark:bg-synapse-900/20' : 'border-slate-100 dark:border-dark-800 hover:border-slate-200 dark:hover:border-dark-700 bg-white dark:bg-dark-950'}`}>
+                                        <div className="w-4 h-4 rounded-full bg-slate-800 border border-slate-700" />
+                                        <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-synapse-700 dark:text-synapse-400' : 'text-slate-600 dark:text-dark-400'}`}>Dark</span>
+                                    </button>
+                                    <button onClick={() => setTheme('system')} className={`flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${theme === 'system' ? 'border-synapse-500 bg-synapse-50/50 dark:bg-synapse-900/20' : 'border-slate-100 dark:border-dark-800 hover:border-slate-200 dark:hover:border-dark-700 bg-white dark:bg-dark-950'}`}>
+                                        <Monitor size={16} className={theme === 'system' ? 'text-synapse-600 dark:text-synapse-400' : 'text-slate-400 dark:text-dark-500'} />
+                                        <span className={`text-xs font-semibold ${theme === 'system' ? 'text-synapse-700 dark:text-synapse-400' : 'text-slate-600 dark:text-dark-400'}`}>System</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Engine Section */}
+                            <div className="bg-slate-50 dark:bg-dark-950/50 rounded-xl p-3 border border-slate-100 dark:border-dark-800/60 flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-dark-50">Hardware Acceleration</p>
+                                    <p className="text-xs text-slate-500 dark:text-dark-400 mt-0.5">Currently running on <span className="font-bold text-slate-700 dark:text-dark-200">{perfProvider.toUpperCase()}</span></p>
+                                </div>
+                                <Settings size={18} className="text-slate-400 dark:text-dark-500" />
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                            <button className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg text-sm font-semibold transition-colors">
+                                <LogOut size={16} />
+                                Log Out
+                            </button>
+                            <button onClick={() => setShowProfileModal(false)} className="px-5 py-2 bg-slate-800 dark:bg-dark-100 hover:bg-slate-900 dark:hover:bg-white text-white dark:text-dark-900 rounded-lg text-sm font-bold transition-colors shadow-sm">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

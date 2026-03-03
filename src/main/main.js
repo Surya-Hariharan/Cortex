@@ -1,3 +1,11 @@
+/**
+ * Cortex — Electron Main Process
+ *
+ * Initializes services (SQLite, BGE embeddings, peer discovery) and
+ * exposes them to the React renderer via IPC handlers.
+ * Loads the locally built renderer bundle from dist/renderer/index.html.
+ */
+
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -5,7 +13,6 @@ const fs = require('fs');
 // Services
 const { initializeDatabase, getDatabase } = require('../services/database');
 const { EmbeddingsEngine } = require('../services/embeddings');
-const { searchVectors } = require('../services/vectorSearch');
 const { extractPdfText } = require('../services/pdfHandler');
 const { ragSearch } = require('../services/ragPipeline');
 const { PeerDiscovery } = require('../services/peerDiscovery');
@@ -14,18 +21,19 @@ let mainWindow;
 let embeddingsEngine;
 let peerDiscovery;
 
+// ── Window ───────────────────────────────────────────────────────────────────
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 820,
         minWidth: 900,
         minHeight: 600,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#FFFFFF',
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-            color: '#0f172a',
-            symbolColor: '#94a3b8',
-            height: 36,
+            color: '#FFFFFF',
+            symbolColor: '#475569',
+            height: 56,
         },
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -35,54 +43,73 @@ function createWindow() {
         },
     });
 
-    // Load renderer
+    // Load the built React bundle
     const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
     if (fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
     } else {
-        // Fallback: show a message if renderer hasn't been built
+        // Tell the user to run npm run build first
         mainWindow.loadURL(`data:text/html,
-      <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-        <div style="text-align:center">
-          <h1>Cortex</h1>
-          <p>Run <code>npm run build:renderer</code> first, then <code>npm start</code></p>
-        </div>
-      </body></html>
-    `);
+            <html><body style="font-family:system-ui;display:flex;align-items:center;
+                     justify-content:center;height:100vh;margin:0;background:#fff;">
+                <div style="text-align:center;color:#374151;">
+                    <h2 style="margin:0 0 8px">Build not found</h2>
+                    <p style="margin:0;color:#6B7280;font-size:14px">
+                        Run <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px">
+                        npm run build</code> first, then restart.
+                    </p>
+                </div>
+            </body></html>
+        `);
     }
 
-    mainWindow.on('closed', () => {
-        mainWindow = null;
+    mainWindow.on('closed', () => { mainWindow = null; });
+
+    // Keyboard zoom: Ctrl +/-/0 and Ctrl+scroll
+    const ZOOM_STEP = 0.1;
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 2.0;
+
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (!input.control && !input.meta) return;
+        const k = input.key;
+        if ((k === '=' || k === '+') && input.type === 'keyDown') {
+            const cur = mainWindow.webContents.getZoomFactor();
+            mainWindow.webContents.setZoomFactor(Math.min(+(cur + ZOOM_STEP).toFixed(1), ZOOM_MAX));
+            event.preventDefault();
+        } else if (k === '-' && input.type === 'keyDown') {
+            const cur = mainWindow.webContents.getZoomFactor();
+            mainWindow.webContents.setZoomFactor(Math.max(+(cur - ZOOM_STEP).toFixed(1), ZOOM_MIN));
+            event.preventDefault();
+        } else if ((k === '0' || k === 'num0') && input.type === 'keyDown') {
+            mainWindow.webContents.setZoomFactor(1.0);
+            event.preventDefault();
+        }
     });
 }
 
+// ── Service Initialization ───────────────────────────────────────────────────
 async function initializeServices() {
     try {
-        // Initialize database
         const dbPath = path.join(__dirname, '../../data/cortex.db');
         initializeDatabase(dbPath);
         console.log('[Cortex] Database initialized');
 
-        // Initialize embeddings engine
         const modelDir = path.join(__dirname, '../../models/bge-small-en-v1.5');
         embeddingsEngine = new EmbeddingsEngine(modelDir);
         await embeddingsEngine.initialize();
         console.log('[Cortex] Embeddings engine initialized');
 
-        // Start LAN peer discovery
         peerDiscovery = new PeerDiscovery();
         peerDiscovery.start();
-        // Update doc count for broadcasting
         try {
             const stats = getDatabase()?.getStats();
             if (stats) peerDiscovery.setDocCount(stats.documents);
-        } catch (_) {}
-        console.log('[Cortex] Mesh peer discovery started');
+        } catch (_) { }
+        console.log('[Cortex] Peer discovery started');
     } catch (error) {
-        console.error('[Cortex] Service initialization error:', error.message);
-        console.log('[Cortex] App will run with limited functionality. Run "npm run setup-demo" first.');
-
-        // Still start peer discovery even without embeddings
+        console.error('[Cortex] Service init error:', error.message);
+        console.log('[Cortex] Running with limited functionality — ensure native modules are rebuilt (npm run rebuild).');
         if (!peerDiscovery) {
             peerDiscovery = new PeerDiscovery();
             peerDiscovery.start();
@@ -90,34 +117,33 @@ async function initializeServices() {
     }
 }
 
-// ── IPC Handlers ──────────────────────────────────────────────────────────────
-
+// ── IPC Handlers ─────────────────────────────────────────────────────────────
 function registerIpcHandlers() {
-    // Search
-    ipcMain.handle('search', async (event, query) => {
+    // Zoom (triggered by preload scroll handler)
+    const ZOOM_STEP = 0.1;
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 2.0;
+    ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); mainWindow.webContents.setZoomFactor(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
+    ipcMain.on('zoom-out', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); mainWindow.webContents.setZoomFactor(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
+    ipcMain.on('zoom-reset', () => { if (!mainWindow) return; mainWindow.webContents.setZoomFactor(1.0); });
+
+    // ── Search ──────────────────────────────────────────────────────────────
+    ipcMain.handle('search', async (_event, query) => {
         try {
-            if (!embeddingsEngine || !embeddingsEngine.isReady()) {
-                return { error: 'Embeddings engine not initialized. Run "npm run setup-demo" first.' };
-            }
+            if (!embeddingsEngine?.isReady()) return { error: 'AI engine not ready. Run npm run rebuild, then restart.' };
             const results = await ragSearch(query, embeddingsEngine, getDatabase());
             return { results };
-        } catch (error) {
-            console.error('[Cortex] Search error:', error);
-            return { error: error.message };
-        }
+        } catch (e) { return { error: e.message }; }
     });
 
-    // Upload PDF
-    ipcMain.handle('upload-pdf', async (event) => {
+    // ── Upload PDF ──────────────────────────────────────────────────────────
+    ipcMain.handle('upload-pdf', async () => {
         try {
             const result = await dialog.showOpenDialog(mainWindow, {
                 properties: ['openFile'],
                 filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
             });
-
-            if (result.canceled || result.filePaths.length === 0) {
-                return { canceled: true };
-            }
+            if (result.canceled || result.filePaths.length === 0) return { canceled: true };
 
             const filePath = result.filePaths[0];
             const chunks = await extractPdfText(filePath);
@@ -126,113 +152,66 @@ function registerIpcHandlers() {
 
             for (const chunk of chunks) {
                 const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
-
-                if (embeddingsEngine && embeddingsEngine.isReady()) {
+                if (embeddingsEngine?.isReady()) {
                     const vector = await embeddingsEngine.embed(chunk.content);
                     db.insertEmbedding(docId, vector);
                 }
             }
-
             return { success: true, title, chunks: chunks.length };
-        } catch (error) {
-            console.error('[Cortex] PDF upload error:', error);
-            return { error: error.message };
-        }
+        } catch (e) { return { error: e.message }; }
     });
 
-    // Get stats
-    ipcMain.handle('get-stats', async () => {
-        try {
-            const db = getDatabase();
-            if (!db) return { documents: 0, embeddings: 0 };
-            const stats = db.getStats();
-            return stats;
-        } catch (error) {
-            return { documents: 0, embeddings: 0 };
-        }
+    // ── Stats ───────────────────────────────────────────────────────────────
+    ipcMain.handle('get-stats', () => {
+        try { return getDatabase()?.getStats() ?? { documents: 0, embeddings: 0 }; }
+        catch { return { documents: 0, embeddings: 0 }; }
     });
 
-    // Performance stats (provider, embed timing)
-    ipcMain.handle('get-perf-stats', async () => {
-        if (!embeddingsEngine || !embeddingsEngine.isReady()) {
-            return { provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], cpuBaselineMs: 41, speedupX: null, ready: false };
-        }
+    // ── Performance ─────────────────────────────────────────────────────────
+    ipcMain.handle('get-perf-stats', () => {
+        if (!embeddingsEngine?.isReady()) return { provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], ready: false };
         return { ...embeddingsEngine.getPerfStats(), ready: true };
     });
 
-    // Share to network — broadcast to real discovered peers
-    ipcMain.handle('share-to-network', async (event, docId) => {
-        // Small delay for UX feedback, then report real peer count
-        await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400));
-        const peers = peerDiscovery ? peerDiscovery.getPeers().filter(p => p.status === 'online') : [];
+    // ── Network ─────────────────────────────────────────────────────────────
+    ipcMain.handle('share-to-network', async (_event, _docId) => {
+        await new Promise((r) => setTimeout(r, 800));
+        const peers = peerDiscovery?.getPeers().filter((p) => p.status === 'online') ?? [];
         return { success: true, peersReached: peers.length };
     });
 
-    // Get real discovered peers (with mock fallback when no LAN peers found)
-    ipcMain.handle('get-peers', async () => {
-        let realPeers = peerDiscovery ? peerDiscovery.getPeers() : [];
-
-        // If no real peers found yet, show demo peers so the UI isn't empty for judges
-        if (realPeers.length === 0) {
-            realPeers = [
-                { id: 'demo-1', name: 'Arjun\'s Laptop', status: 'online', docs: 47, lastSeen: 'now', os: 'Windows 11', ip: '192.168.1.14' },
-                { id: 'demo-2', name: 'Priya\'s Desktop', status: 'online', docs: 32, lastSeen: '2m ago', os: 'Windows 11', ip: '192.168.1.22' },
-                { id: 'demo-3', name: 'Lab PC - Room 204', status: 'online', docs: 89, lastSeen: '1m ago', os: 'Ubuntu 22.04', ip: '192.168.1.105' },
-                { id: 'demo-4', name: 'Rahul\'s MacBook', status: 'idle', docs: 15, lastSeen: '12m ago', os: 'macOS Sonoma', ip: '192.168.1.8' },
-                { id: 'demo-5', name: 'Study Group Hub', status: 'online', docs: 156, lastSeen: 'now', os: 'Windows 10', ip: '192.168.1.50' },
-                { id: 'demo-6', name: 'Library Terminal 3', status: 'offline', docs: 203, lastSeen: '2h ago', os: 'Windows 10', ip: '192.168.1.201' },
-            ];
-        }
-
-        return { peers: realPeers };
+    ipcMain.handle('get-peers', () => {
+        const real = peerDiscovery?.getPeers() ?? [];
+        return { peers: real };
     });
 
-    // ── Notes & Deadlines ─────────────────────────────────────────────────
-
-    ipcMain.handle('add-note', async (event, note) => {
+    // ── Notes ────────────────────────────────────────────────────────────────
+    ipcMain.handle('add-note', (_event, note) => {
         try {
             const db = getDatabase();
-            if (!db) return { error: 'Database not initialized' };
+            if (!db) return { error: 'Database not ready' };
             const id = db.addNote(note.title, note.content || '', note.type || 'note', note.dueDate || null);
             return { success: true, id };
-        } catch (error) {
-            return { error: error.message };
-        }
+        } catch (e) { return { error: e.message }; }
     });
 
-    ipcMain.handle('get-notes', async () => {
-        try {
-            const db = getDatabase();
-            if (!db) return { notes: [] };
-            return { notes: db.getNotes() };
-        } catch (error) {
-            return { notes: [] };
-        }
+    ipcMain.handle('get-notes', () => {
+        try { return { notes: getDatabase()?.getNotes() ?? [] }; }
+        catch { return { notes: [] }; }
     });
 
-    ipcMain.handle('delete-note', async (event, id) => {
-        try {
-            const db = getDatabase();
-            if (db) db.deleteNote(id);
-            return { success: true };
-        } catch (error) {
-            return { error: error.message };
-        }
+    ipcMain.handle('delete-note', (_event, id) => {
+        try { getDatabase()?.deleteNote(id); return { success: true }; }
+        catch (e) { return { error: e.message }; }
     });
 
-    ipcMain.handle('toggle-note-complete', async (event, id) => {
-        try {
-            const db = getDatabase();
-            if (db) db.toggleNoteComplete(id);
-            return { success: true };
-        } catch (error) {
-            return { error: error.message };
-        }
+    ipcMain.handle('toggle-note-complete', (_event, id) => {
+        try { getDatabase()?.toggleNoteComplete(id); return { success: true }; }
+        catch (e) { return { error: e.message }; }
     });
 }
 
-// ── App Lifecycle ─────────────────────────────────────────────────────────────
-
+// ── App Lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
     registerIpcHandlers();
     await initializeServices();

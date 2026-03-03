@@ -8,7 +8,7 @@ import MyContributions from './components/MyContributions';
 import DocumentStatus from './components/DocumentStatus';
 import StreamSelectorModal from './components/StreamSelectorModal';
 import Toast from './components/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, GraduationCap, BarChart3 } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, GraduationCap, BarChart3, Database } from 'lucide-react';
 
 const TABS = [
     { id: 'search', label: 'Search', icon: <Search size={18} /> },
@@ -63,10 +63,14 @@ export default function App() {
 
     // Close context menu on outside click
     useEffect(() => {
-        const handleClick = () => setContextMenu({ ...contextMenu, visible: false });
+        const handleClick = () => {
+            if (contextMenu.visible) {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+            }
+        };
         window.addEventListener('click', handleClick);
         return () => window.removeEventListener('click', handleClick);
-    }, [contextMenu]);
+    }, [contextMenu.visible]);
 
     const perfPollRef = useRef(null);
 

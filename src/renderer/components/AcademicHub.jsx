@@ -15,7 +15,8 @@ import {
     Database,
     Type as TypeIcon,
     Layers,
-    User
+    User,
+    Plus
 } from 'lucide-react';
 import UploadNoteModal from './UploadNoteModal';
 

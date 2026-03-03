@@ -56,42 +56,42 @@
 
 :root {
   /* ── 3-layer surface system ── */
-  --surface-app: #F4F6FB;
+  --surface-app: #FFFFFF;
   /* Level 0 – app shell background */
-  --surface-sidebar: #EDF0F7;
+  --surface-sidebar: #F9F9F9;
   /* Level 1 – sidebars, secondary panels */
   --surface-card: #FFFFFF;
   /* Level 2 – content cards */
-  --surface-recessed: #E8EDF5;
+  --surface-recessed: #F4F4F5;
   /* Sunken inputs, inset areas */
-  --surface-hover: #E2E8F4;
+  --surface-hover: #F4F4F5;
   /* Hover state fill */
 
   /* ── Borders ── */
-  --border-subtle: rgba(148, 163, 184, 0.20);
-  --border-medium: rgba(100, 116, 139, 0.28);
-  --border-strong: rgba(100, 116, 139, 0.45);
-  --border-focus: rgba(99, 102, 241, 0.40);
+  --border-subtle: #E5E7EB;
+  --border-medium: #D1D5DB;
+  --border-strong: #9CA3AF;
+  --border-focus: rgba(17, 24, 39, 0.2);
 
   /* ── Text hierarchy (4 levels) ── */
-  --text-hero: #0F172A;
+  --text-hero: #111827;
   /* Hero headings */
-  --text-primary: #1E293B;
+  --text-primary: #111827;
   /* Section titles, key labels */
-  --text-secondary: #475569;
+  --text-secondary: #374151;
   /* Body text */
-  --text-muted: #94A3B8;
+  --text-muted: #6B7280;
   /* Captions, metadata */
-  --text-placeholder: #B0BEC9;
+  --text-placeholder: #9CA3AF;
   /* Input placeholder */
 
-  /* ── Accent (Indigo) ── */
-  --accent: #4F46E5;
-  --accent-hover: #4338CA;
-  --accent-pressed: #3730A3;
-  --accent-light: #EEF2FF;
-  --accent-muted: rgba(99, 102, 241, 0.07);
-  --accent-border: rgba(99, 102, 241, 0.22);
+  /* ── Accent (Neutral 900) ── */
+  --accent: #111827;
+  --accent-hover: #374151;
+  --accent-pressed: #000000;
+  --accent-light: #F3F4F6;
+  --accent-muted: rgba(17, 24, 39, 0.05);
+  --accent-border: rgba(17, 24, 39, 0.1);
 
   /* ── Semantic ── */
   --success: #10B981;
@@ -99,11 +99,11 @@
   --danger: #EF4444;
 
   /* ── Elevation (shadows) ── */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.10), 0 4px 10px rgba(0, 0, 0, 0.06);
-  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.16);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.04), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  --shadow-focus: 0 0 0 2px #FFFFFF, 0 0 0 4px rgba(17, 24, 39, 0.15);
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -153,32 +153,31 @@ body {
     background: var(--surface-card);
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    box-shadow: var(--shadow-md);
-    transition: box-shadow 0.18s ease, border-color 0.18s ease;
+    box-shadow: none;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
   .card:hover {
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-sm);
     border-color: var(--border-medium);
   }
 
   .card-flat {
     background: var(--surface-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 10px;
-    /* no shadow – for dense list items */
+    border-radius: 12px;
   }
 
   .card-recessed {
     background: var(--surface-recessed);
     border: 1px solid var(--border-subtle);
-    border-radius: 8px;
+    border-radius: 12px;
   }
 
   .card-accent {
-    background: var(--accent-muted);
+    background: var(--accent-light);
     border: 1px solid var(--accent-border);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   /* Legacy aliases */
@@ -186,27 +185,26 @@ body {
     background: var(--surface-card);
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
   }
 
   .glass-panel-light {
     background: var(--surface-recessed);
     border: 1px solid var(--border-subtle);
-    border-radius: 8px;
+    border-radius: 12px;
   }
 
   /* ── Buttons ── */
 
   .btn-primary {
-    @apply px-4 py-2 text-sm font-semibold rounded-lg text-white transition-all duration-150 select-none disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-[14px] font-medium rounded-lg text-white transition-all duration-150 select-none disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--accent);
-    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
-    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
-    transform: translateY(-0.5px);
+    box-shadow: var(--shadow-md);
   }
 
   .btn-primary:active:not(:disabled) {
@@ -217,7 +215,7 @@ body {
   }
 
   .btn-ghost {
-    @apply px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 select-none;
+    @apply px-3 py-1.5 text-[14px] font-medium rounded-lg transition-all duration-150 select-none;
     color: var(--text-secondary);
   }
 
@@ -227,7 +225,7 @@ body {
   }
 
   .btn-ghost:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
     transition-duration: 80ms;
   }
 
@@ -258,7 +256,7 @@ body {
 
   .input-base {
     @apply w-full rounded-lg px-3 py-2 outline-none transition-all duration-150;
-    background: var(--surface-recessed);
+    background: var(--surface-card);
     border: 1px solid var(--border-medium);
     color: var(--text-primary);
     font-size: 14px;
@@ -271,7 +269,7 @@ body {
 
   .input-base:focus {
     background: var(--surface-card);
-    border-color: rgba(99, 102, 241, 0.50);
+    border-color: var(--accent);
     box-shadow: var(--shadow-focus);
   }
 
@@ -315,7 +313,7 @@ body {
 
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background-image: linear-gradient(135deg, #111827 0%, #374151 100%);
   }
 
   /* ── Focus ring helpers ── */

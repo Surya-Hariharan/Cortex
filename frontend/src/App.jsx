@@ -85,7 +85,6 @@ export default function App() {
     const handleDocumentUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        // Reset the input so the same file can be re-uploaded
         e.target.value = '';
 
         try {
@@ -113,167 +112,96 @@ export default function App() {
     };
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--surface-app)' }}>
-
-            {/* ── Header ──────────────────────────────────────────────────────── */}
-            <header
-                className="flex items-center justify-between flex-shrink-0"
-                style={{
-                    height: '64px',
-                    minHeight: '64px',
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%)',
-                    borderBottom: '1px solid rgba(0,0,0,0.07)',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 3px 12px rgba(0,0,0,0.06)',
-                    paddingLeft: 0,
-                    paddingRight: 0,
-                }}
+        <div className="h-screen flex bg-[#FFFFFF] text-[#111827] overflow-hidden font-sans">
+            {/* ── Global Left Sidebar ────────────────────────────────────────────────── */}
+            <aside
+                className="w-[260px] flex-shrink-0 flex flex-col border-r border-[#E5E7EB]"
+                style={{ background: '#F9F9F9' }}
             >
-                {/* ── Left group: Logo + Tab nav + Upload PDF ─────────────────── */}
-                <div className="flex items-stretch h-full">
-
-                    {/* Logo */}
-                    <div
-                        className="flex items-center gap-3"
-                        style={{
-                            padding: '0 22px 0 28px',
-                            borderRight: '1px solid rgba(0,0,0,0.06)',
-                            flexShrink: 0,
-                        }}
-                    >
+                {/* Logo & Upload Area */}
+                <div className="p-4 flex flex-col gap-4 border-b border-[#E5E7EB]">
+                    <div className="flex items-center gap-3 px-2">
                         <div
-                            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                            style={{
-                                background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-                                boxShadow: '0 3px 10px rgba(99,102,241,0.35)',
-                            }}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#111827] text-white"
                         >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="3" />
                                 <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
                             </svg>
                         </div>
                         <div>
-                            <div
-                                className="text-[14px] font-bold tracking-tight leading-none"
-                                style={{ color: '#1e293b', letterSpacing: '-0.025em' }}
-                            >Cortex</div>
-                            <div
-                                className="text-[9px] font-semibold uppercase tracking-[0.12em] mt-[3px]"
-                                style={{ color: '#94a3b8' }}
-                            >Offline AI</div>
+                            <div className="text-[15px] font-bold tracking-tight leading-none text-[#111827]">Cortex</div>
+                            <div className="text-[10px] font-semibold uppercase tracking-widest mt-1 text-[#6B7280]">Offline AI</div>
                         </div>
                     </div>
 
-                    {/* Tab nav — underline style, full navbar height */}
-                    <nav className="flex items-stretch h-full" style={{ padding: '0 8px' }}>
-                        {TABS.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className="relative flex items-center gap-1.5 transition-all duration-150 select-none flex-shrink-0"
-                                    style={{
-                                        padding: '0 16px',
-                                        fontSize: '12.5px',
-                                        fontWeight: isActive ? 600 : 500,
-                                        color: isActive ? '#6366f1' : '#64748b',
-                                        borderBottom: isActive ? '2px solid #6366f1' : '2px solid transparent',
-                                        borderTop: '2px solid transparent',
-                                        background: 'transparent',
-                                        outline: 'none',
-                                        cursor: 'pointer',
-                                        borderRadius: 0,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isActive) {
-                                            e.currentTarget.style.color = '#334155';
-                                            e.currentTarget.style.background = 'rgba(99,102,241,0.05)';
-                                        }
-                                        const icon = e.currentTarget.querySelector('svg');
-                                        if (icon) icon.style.transform = 'scale(1.08)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isActive) {
-                                            e.currentTarget.style.color = '#64748b';
-                                            e.currentTarget.style.background = 'transparent';
-                                        }
-                                        const icon = e.currentTarget.querySelector('svg');
-                                        if (icon) icon.style.transform = 'scale(1)';
-                                    }}
-                                >
-                                    <Icon />
-                                    <span>{tab.label}</span>
-                                </button>
-                            );
-                        })}
-                    </nav>
-
-                    {/* Upload Document — using file input instead of Electron dialog */}
-                    <div className="flex items-center" style={{ padding: '0 8px 0 4px', borderLeft: '1px solid rgba(0,0,0,0.06)' }}>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".pdf,.docx,.png,.jpg,.jpeg"
-                            onChange={handleDocumentUpload}
-                            style={{ display: 'none' }}
-                        />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="btn-ghost flex items-center gap-1.5 text-[11.5px]"
-                            style={{ padding: '5px 12px' }}
-                        >
-                            <UploadIcon />
-                            Upload Doc
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── Right group: ONNX status + doc count ────────────────────── */}
-                <div
-                    className="flex items-center gap-2"
-                    style={{
-                        paddingLeft: '16px',
-                        paddingRight: '24px',
-                    }}
-                >
-                    {/* ONNX provider badge */}
-                    <span
-                        className="flex items-center gap-1.5 text-[10.5px] font-semibold rounded-full border"
-                        style={{
-                            padding: '4px 12px',
-                            ...(perfProvider === 'dml'
-                                ? { background: '#ecfdf5', color: '#065f46', borderColor: '#6ee7b7' }
-                                : { background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' }),
-                        }}
+                    {/* Quick Action: Upload */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.docx,.png,.jpg,.jpeg"
+                        onChange={handleDocumentUpload}
+                        style={{ display: 'none' }}
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-[14px] font-medium rounded-lg text-[#111827] bg-white border border-[#E5E7EB] hover:bg-[#F4F4F5] transition-colors"
                     >
-                        <div className="w-[5px] h-[5px] rounded-full flex-shrink-0"
-                            style={{ background: perfProvider === 'dml' ? '#10b981' : '#6366f1' }} />
-                        {perfProvider === 'dml' ? 'DirectML' : 'ONNX Runtime'}
-                    </span>
+                        <UploadIcon />
+                        Upload Document
+                    </button>
 
-                    {/* Doc count — shown only when > 0 */}
+                    {/* Tiny stats */}
                     {stats.documents > 0 && (
-                        <>
-                            <div className="w-px h-3.5 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.08)' }} />
-                            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: '#94a3b8' }}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
-                                <span>{stats.documents} docs</span>
-                                <span style={{ color: '#e2e8f0' }}>·</span>
-                                <span>{stats.embeddings} vectors</span>
-                            </div>
-                        </>
+                        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6B7280]">
+                            <span>{stats.documents} docs</span>
+                            <span>·</span>
+                            <span>{stats.embeddings} vectors</span>
+                        </div>
                     )}
                 </div>
-            </header>
 
-            {/* ── Body: full-width; sidebar is owned by SearchTab ──────────────── */}
-            <main key={activeTab} className="flex-1 overflow-hidden page-fade" style={{ display: 'flex', flexDirection: 'column' }}>
+                {/* Navigation Tabs */}
+                <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
+                    <div className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] px-3 mb-2 mt-2">
+                        Menu
+                    </div>
+                    {TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-all duration-150 ${
+                                    isActive
+                                        ? 'bg-[#E5E7EB] text-[#111827]'
+                                        : 'text-[#374151] hover:bg-[#F4F4F5]'
+                                }`}
+                            >
+                                <Icon />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </nav>
+
+                {/* Footer status */}
+                <div className="p-4 border-t border-[#E5E7EB] flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-[#10B981]" />
+                        <span className="text-[12px] font-medium text-[#374151]">
+                            {perfProvider === 'dml' ? 'DirectML Active' : 'ONNX Engine'}
+                        </span>
+                    </div>
+                </div>
+            </aside>
+
+            {/* ── Main Content Area ──────────────────────────────────────────────────── */}
+            <main className="flex-1 overflow-hidden relative page-fade">
                 {renderTab()}
             </main>
 
-            {/* ── Toast ─────────────────────────────────────────────────────── */}
             {toast && (
                 <Toast
                     key={toast.id}

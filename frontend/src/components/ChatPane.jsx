@@ -22,31 +22,26 @@ function Bubble({ msg }) {
             style={{
                 display: 'flex',
                 justifyContent: isUser ? 'flex-end' : 'flex-start',
-                marginBottom: '12px',
+                marginBottom: '24px',
             }}
         >
             {!isUser && (
                 <div style={{
-                    width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, marginRight: '8px', marginTop: '2px',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+                    width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, marginRight: '16px', marginTop: '2px',
+                    background: 'var(--accent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-                    boxShadow: '0 2px 6px rgba(99,102,241,0.25)',
                 }}>
                     <IconBot />
                 </div>
             )}
             <div style={{
-                maxWidth: '72%',
-                padding: '10px 14px',
-                borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                background: isUser
-                    ? 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)'
-                    : 'var(--surface-card)',
-                color: isUser ? '#fff' : 'var(--text-primary)',
-                fontSize: '13.5px',
-                lineHeight: 1.55,
-                border: isUser ? 'none' : '1px solid var(--border-subtle)',
-                boxShadow: isUser ? '0 2px 8px rgba(99,102,241,0.22)' : 'var(--shadow-sm)',
+                maxWidth: '75%',
+                padding: isUser ? '10px 16px' : '6px 0',
+                borderRadius: isUser ? '16px' : '0',
+                background: isUser ? 'var(--surface-recessed)' : 'transparent',
+                color: 'var(--text-primary)',
+                fontSize: '15px',
+                lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
             }}>
@@ -59,23 +54,22 @@ function Bubble({ msg }) {
 /* ── Typing indicator ────────────────────────────────────────────────────── */
 function TypingIndicator() {
     return (
-        <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '24px' }}>
             <div style={{
-                width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, marginRight: '8px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+                width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, marginRight: '16px',
+                background: 'var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
             }}>
                 <IconBot />
             </div>
             <div style={{
-                padding: '12px 14px', borderRadius: '16px 16px 16px 4px',
-                background: 'var(--surface-card)', border: '1px solid var(--border-subtle)',
-                boxShadow: 'var(--shadow-sm)', display: 'flex', gap: '4px', alignItems: 'center',
+                padding: '12px 0',
+                display: 'flex', gap: '4px', alignItems: 'center',
             }}>
                 {[0, 1, 2].map((i) => (
                     <div key={i} style={{
                         width: '6px', height: '6px', borderRadius: '50%',
-                        background: 'var(--accent)', opacity: 0.7,
+                        background: 'var(--text-muted)',
                         animation: `bounce 1.2s ease ${i * 0.2}s infinite`,
                     }} />
                 ))}
@@ -90,17 +84,17 @@ function EmptyState() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', textAlign: 'center' }}>
             <div style={{
                 width: '56px', height: '56px', borderRadius: '18px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-                boxShadow: '0 4px 16px rgba(99,102,241,0.30)', marginBottom: '20px',
+                background: 'var(--surface-recessed)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)',
+                marginBottom: '20px',
             }}>
                 <IconBot />
             </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-hero)', letterSpacing: '-0.02em', marginBottom: '8px' }}>
-                Cortex AI
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '8px' }}>
+                Offline AI Ready
             </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: '280px' }}>
-                Select a chat from the sidebar or click <strong>New Chat</strong> to start a conversation.
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: '280px' }}>
+                Select a chat from the sidebar or click <strong>New Chat</strong> to begin.
             </p>
         </div>
     );
@@ -218,56 +212,58 @@ export default function ChatPane({ chatId, onTitleUpdate }) {
             {/* Input bar */}
             <div style={{
                 flexShrink: 0,
-                padding: '12px 20px 16px',
-                borderTop: '1px solid var(--border-subtle)',
-                background: 'var(--surface-card)',
+                padding: '12px 0 24px',
+                background: 'var(--surface-app)',
+                display: 'flex',
+                justifyContent: 'center',
+                width: '100%'
             }}>
                 <div style={{
                     display: 'flex', gap: '10px', alignItems: 'flex-end',
-                    background: 'var(--surface-app)',
+                    background: 'var(--surface-card)',
                     border: '1px solid var(--border-subtle)',
-                    borderRadius: '14px',
-                    padding: '8px 10px 8px 14px',
-                    boxShadow: 'var(--shadow-sm)',
+                    borderRadius: '24px',
+                    padding: '8px 8px 8px 16px',
+                    boxShadow: 'var(--shadow-md)',
                     transition: 'border-color 150ms, box-shadow 150ms',
+                    width: '100%',
+                    maxWidth: '800px'
                 }}
-                    onFocusCapture={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'; }}
-                    onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; } }}
+                    onFocusCapture={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+                    onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { e.currentTarget.style.borderColor = 'var(--border-subtle)'; } }}
                 >
                     <textarea
                         ref={textareaRef}
                         value={input}
-                        onChange={(e) => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
+                        onChange={(e) => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask anything… (Enter to send, Shift+Enter for new line)"
+                        placeholder="Message Assistant…"
                         rows={1}
                         style={{
                             flex: 1, resize: 'none', border: 'none', outline: 'none',
-                            background: 'transparent', fontSize: '13.5px',
+                            background: 'transparent', fontSize: '15.5px',
                             color: 'var(--text-primary)', lineHeight: 1.5,
-                            minHeight: '22px', maxHeight: '120px', overflow: 'auto',
+                            minHeight: '24px', maxHeight: '200px', overflow: 'auto',
                             fontFamily: 'inherit',
+                            paddingTop: '2px',
+                            paddingBottom: '2px'
                         }}
                     />
                     <button
                         onClick={handleSend}
                         disabled={!input.trim() || typing}
                         style={{
-                            width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                            background: input.trim() && !typing ? 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)' : 'var(--surface-recessed)',
-                            color: input.trim() && !typing ? '#fff' : 'var(--text-muted)',
+                            width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                            background: input.trim() && !typing ? 'var(--accent)' : 'var(--surface-recessed)',
+                            color: input.trim() && !typing ? '#fff' : 'var(--text-placeholder)',
                             border: 'none', cursor: input.trim() && !typing ? 'pointer' : 'default',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             transition: 'all 150ms ease',
-                            boxShadow: input.trim() && !typing ? '0 2px 6px rgba(99,102,241,0.25)' : 'none',
                         }}
                     >
                         <IconSend />
                     </button>
                 </div>
-                <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' }}>
-                    Offline AI · answers draw from your uploaded PDFs
-                </p>
             </div>
         </div>
     );

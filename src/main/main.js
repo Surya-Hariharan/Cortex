@@ -33,7 +33,7 @@ function createWindow() {
         titleBarOverlay: {
             color: '#FFFFFF',
             symbolColor: '#475569',
-            height: 56,
+            height: 32,
         },
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -42,7 +42,7 @@ function createWindow() {
             sandbox: false,
         },
     });
-    
+
     // Open DevTools immediately for debugging
     mainWindow.webContents.openDevTools();
 
@@ -211,6 +211,13 @@ function registerIpcHandlers() {
     ipcMain.handle('toggle-note-complete', (_event, id) => {
         try { getDatabase()?.toggleNoteComplete(id); return { success: true }; }
         catch (e) { return { error: e.message }; }
+    });
+
+    // ── Window Controls ──────────────────────────────────────────────────────
+    ipcMain.on('update-titlebar-overlay', (_event, settings) => {
+        if (mainWindow && mainWindow.setTitleBarOverlay) {
+            mainWindow.setTitleBarOverlay(settings);
+        }
     });
 }
 

@@ -13,7 +13,7 @@ const TABS = [
     { id: 'performance', label: 'Performance', icon: <Zap size={18} /> },
 ];
 
-const MOCK_WORKSPACES = [
+const MOCK_PROJECTS = [
     {
         id: 'w1', title: 'AI Research', chats: [
             { id: 'c1', title: 'RAG Pipeline' },
@@ -26,6 +26,11 @@ const MOCK_WORKSPACES = [
             { id: 'c4', title: 'Mesh Protocol' }
         ]
     }
+];
+
+const MOCK_INDEPENDENT_CHATS = [
+    { id: 'ic1', title: 'General Inquiry' },
+    { id: 'ic2', title: 'Bug Report Log' },
 ];
 
 export default function App() {
@@ -67,10 +72,25 @@ export default function App() {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
         const updateTheme = () => {
-            if (theme === 'dark' || (theme === 'system' && mediaQuery.matches)) {
+            const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches);
+            if (isDark) {
                 root.classList.add('dark');
+                if (window.electronAPI?.updateTitleBarOverlay) {
+                    window.electronAPI.updateTitleBarOverlay({
+                        color: '#171717',
+                        symbolColor: '#ececec',
+                        height: 32
+                    });
+                }
             } else {
                 root.classList.remove('dark');
+                if (window.electronAPI?.updateTitleBarOverlay) {
+                    window.electronAPI.updateTitleBarOverlay({
+                        color: '#FFFFFF',
+                        symbolColor: '#475569',
+                        height: 32
+                    });
+                }
             }
         };
 
@@ -123,10 +143,10 @@ export default function App() {
                 {/* Drag Handle & Collapse Button */}
                 <div className={`flex items-center p-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ WebkitAppRegion: 'drag' }}>
                     {!isSidebarCollapsed && (
-                        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' }}>
-                            <div className="w-6 h-6 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center">
-                                <span className="text-synapse-600 dark:text-synapse-500 font-bold text-xs" style={{ fontFamily: 'monospace' }}>cX</span>
-                            </div>
+                        <div className="flex items-center gap-2 px-1" style={{ WebkitAppRegion: 'no-drag' }}>
+                            <span className="text-lg font-black tracking-tight text-dark-800 dark:text-dark-50">
+                                Cor<span className="text-synapse-600 dark:text-synapse-500">tex</span>
+                            </span>
                         </div>
                     )}
                     <button
@@ -160,7 +180,7 @@ export default function App() {
                             </button>
                             <button
                                 className="px-3 py-2 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-400 dark:text-dark-400 hover:text-slate-600 dark:hover:text-dark-200 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700"
-                                title="New Workspace"
+                                title="New Project"
                             >
                                 <Monitor size={18} />
                             </button>
@@ -173,26 +193,37 @@ export default function App() {
                     <div>
                         {!isSidebarCollapsed && (
                             <div className="px-2 pt-2 pb-1.5">
-                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500 tracking-wide uppercase">Pages</span>
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500/50 tracking-wide uppercase">Pages</span>
                             </div>
                         )}
-                        <div className="space-y-0.5">
-                            {TABS.slice(1).map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center w-full py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
-                                        ? 'bg-slate-200/60 dark:bg-dark-800 text-slate-900 dark:text-dark-50 border border-slate-200/50 dark:border-dark-700/50 shadow-sm'
-                                        : 'text-slate-600 dark:text-dark-400 hover:bg-slate-200/40 dark:hover:bg-dark-800/40 border border-transparent'
-                                        } ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-2.5'}`}
-                                    title={isSidebarCollapsed ? tab.label : ''}
-                                >
-                                    <span className={`${activeTab === tab.id ? 'text-slate-900 dark:text-dark-50' : 'text-slate-400 dark:text-dark-500'}`}>
-                                        {tab.icon}
-                                    </span>
-                                    {!isSidebarCollapsed && tab.label}
-                                </button>
-                            ))}
+                        <div className="space-y-0.5 relative">
+                            {TABS.slice(1).map((tab) => {
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`${isActive ? 'sidebar-nav-item-active' : 'sidebar-nav-item text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                                        title={isSidebarCollapsed ? tab.label : ''}
+                                    >
+                                        {!isSidebarCollapsed && (
+                                            <div className="sidebar-accent-container">
+                                                <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                            </div>
+                                        )}
+                                        <div className="sidebar-icon-container">
+                                            <span className={`${isActive ? 'text-synapse-600 dark:text-synapse-400' : 'text-slate-400 dark:text-dark-500'}`}>
+                                                {tab.icon}
+                                            </span>
+                                        </div>
+                                        {!isSidebarCollapsed && (
+                                            <span className="truncate flex-1 text-left">
+                                                {tab.label}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -200,21 +231,21 @@ export default function App() {
                     <div>
                         {!isSidebarCollapsed && (
                             <div className="px-2 pb-2">
-                                <span className="text-[10px] font-semibold text-slate-400 tracking-wide uppercase">Workspaces</span>
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500/50 tracking-wide uppercase">Projects</span>
                             </div>
                         )}
 
                         {isSidebarCollapsed ? (
-                            <div className="flex flex-col gap-2.5 items-center mt-4">
-                                {MOCK_WORKSPACES.map((ws, i) => (
+                            <div className="flex flex-col gap-2.5 items-center mt-4 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
+                                {MOCK_PROJECTS.map((ws, i) => (
                                     <div key={ws.id} className="w-8 h-8 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center text-[10px] uppercase font-bold text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 hover:border-synapse-200 dark:hover:border-synapse-500 cursor-pointer transition-colors" title={ws.title}>
                                         {ws.title.substring(0, 2)}
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {MOCK_WORKSPACES.map(ws => (
+                            <div className="space-y-4 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
+                                {MOCK_PROJECTS.map(ws => (
                                     <div key={ws.id} className="space-y-0.5">
                                         <button onClick={() => toggleWs(ws.id)} className="flex items-center justify-between w-full px-2 py-1.5 text-[11px] font-bold text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-100 group transition-colors">
                                             <span className="truncate pr-2 uppercase pb-0.5 border-b border-transparent group-hover:border-slate-300 dark:group-hover:border-dark-600">{ws.title}</span>
@@ -227,15 +258,15 @@ export default function App() {
                                                         <button
                                                             key={chat.id}
                                                             onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
-                                                            className={`flex items-center w-full px-2 pl-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors truncate relative overflow-hidden ${isActive
-                                                                ? 'bg-slate-200/60 dark:bg-dark-800/80 text-slate-900 dark:text-dark-50 shadow-sm border border-slate-200/50 dark:border-dark-700/50'
-                                                                : 'text-slate-600 dark:text-dark-400 hover:bg-slate-200/40 dark:hover:bg-dark-800/40 border border-transparent'
-                                                                }`}
+                                                            className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'}`}
                                                         >
-                                                            {isActive && (
-                                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-synapse-500 rounded-r-full" />
-                                                            )}
-                                                            <span className="truncate">{chat.title}</span>
+                                                            <div className="sidebar-accent-container">
+                                                                <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                                            </div>
+                                                            <div className="sidebar-icon-container opacity-40">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                                            </div>
+                                                            <span className="truncate flex-1 text-left">{chat.title}</span>
                                                         </button>
                                                     )
                                                 })}
@@ -245,11 +276,40 @@ export default function App() {
                                 ))}
                             </div>
                         )}
+
+                        {/* Independent Chats Section */}
+                        {!isSidebarCollapsed && (
+                            <div className="px-2 pt-6 pb-2">
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-dark-500/50 tracking-wide uppercase">Independent Chats</span>
+                            </div>
+                        )}
+                        <div className={`space-y-1 ${isSidebarCollapsed ? 'mt-4' : ''}`}>
+                            {MOCK_INDEPENDENT_CHATS.map((chat) => {
+                                const isActive = activeTab === 'search' && activeChatId === chat.id;
+                                return (
+                                    <button
+                                        key={chat.id}
+                                        onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
+                                        className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center px-0 pl-0 hover:pl-0' : 'pl-3.5'}`}
+                                        title={isSidebarCollapsed ? chat.title : ''}
+                                    >
+                                        {isActive && !isSidebarCollapsed && (
+                                            <div className="sidebar-active-accent" />
+                                        )}
+                                        {isSidebarCollapsed ? (
+                                            <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-synapse-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-300 dark:bg-dark-700'}`} />
+                                        ) : (
+                                            <span className="truncate">{chat.title}</span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
                 {/* Profile Panel (Footer) */}
-                <div className="p-3 mt-auto" style={{ WebkitAppRegion: 'no-drag' }}>
+                <div className="p-3 mt-auto border-t border-dark-200/50 dark:border-dark-800/50 bg-dark-50/50 dark:bg-dark-900/50" style={{ WebkitAppRegion: 'no-drag' }}>
                     <button
                         onClick={() => setShowProfileModal(true)}
                         className={`w-full flex items-center p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-dark-800/60 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-dark-700 hover:shadow-sm ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}

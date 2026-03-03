@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getNotes: () => ipcRenderer.invoke('get-notes'),
     deleteNote: (id) => ipcRenderer.invoke('delete-note', id),
     toggleNoteComplete: (id) => ipcRenderer.invoke('toggle-note-complete', id),
+    updateTitleBarOverlay: (settings) => ipcRenderer.send('update-titlebar-overlay', settings),
 });

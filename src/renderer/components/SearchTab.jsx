@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Search } from 'lucide-react';
 import ResultCard from './ResultCard';
 
 const SEARCH_STAGES = [
@@ -225,7 +226,6 @@ export default function SearchTab({ onToast, onUploadPdf }) {
                                 key={result.docId + '-' + result.rank}
                                 result={result}
                                 index={idx}
-                                onShare={() => handleShare(result)}
                                 onToast={onToast}
                             />
                         ))}

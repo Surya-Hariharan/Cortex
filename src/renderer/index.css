@@ -163,9 +163,132 @@ body {
   .status-offline {
     @apply bg-slate-300;
   }
+
+  /* ── Sidebar Nav ─────────────────────────────────────────── */
+  .sidebar-nav-item {
+    @apply flex items-center w-full h-10 rounded-xl text-[13px] font-bold transition-all duration-200 relative overflow-hidden;
+    /* Fixed base padding, no dynamic shifts */
+    padding-left: 0;
+  }
+
+  .sidebar-nav-item:hover {
+    @apply bg-slate-200/50 dark:bg-dark-800/80 text-slate-900 dark:text-dark-50;
+  }
+
+  .sidebar-nav-item-active {
+    @apply bg-slate-200/80 dark:bg-dark-800 text-slate-900 dark:text-dark-50 shadow-sm;
+  }
+
+  /* Reserved space for the accent line to prevent layout shift */
+  .sidebar-accent-container {
+    @apply w-1.5 h-full flex items-center justify-start flex-shrink-0;
+  }
+
+  .sidebar-active-accent {
+    @apply w-[3px] h-5 bg-synapse-500 rounded-r-full transition-opacity duration-200;
+  }
+
+  .sidebar-icon-container {
+    @apply w-10 flex-shrink-0 flex items-center justify-center;
+  }
+
+  /* ── Segmented Control ───────────────────────────────────── */
+  .segmented-control {
+    @apply flex p-1 bg-dark-100/50 dark:bg-dark-900 rounded-xl border border-dark-200/50 dark:border-dark-800/50;
+  }
+
+  .segmented-item {
+    @apply flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200;
+  }
+
+  .segmented-item-active {
+    @apply bg-white dark:bg-dark-800 text-synapse-600 dark:text-synapse-400 shadow-sm border border-dark-200/20 dark:border-dark-700/50;
+  }
+
+  .segmented-item-inactive {
+    @apply text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-50 hover:bg-dark-200/30 dark:hover:bg-dark-800/30;
+  }
+
+  /* ── Network Specific ────────────────────────────────────── */
+  .radar-ripple {
+    @apply absolute rounded-full border border-synapse-500/20 dark:border-synapse-400/20;
+    animation: radar-ping 4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .network-node {
+    @apply relative flex items-center justify-center transition-all duration-500 cursor-pointer;
+  }
+
+  .network-node:hover {
+    @apply scale-110;
+  }
+
+  .network-line {
+    @apply absolute bg-gradient-to-r from-synapse-500/40 to-synapse-500/10 origin-left transition-all duration-700;
+  }
+
+  /* ── Performance Specific ────────────────────────────────── */
+  .glow-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
 }
 
 /* ── Animations ────────────────────────────────────────────────────────────── */
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(99, 102, 241, 0.2));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6));
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes radar-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 20px 4px rgba(99, 102, 241, 0.4);
+  }
+}
 
 @keyframes fadeIn {
   from {

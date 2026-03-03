@@ -31,6 +31,9 @@ export default function NotesTab({ onToast }) {
     const [dueDate, setDueDate] = useState('');
     const titleRef = useRef(null);
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState('newest'); // newest | oldest | deadline
+
     const loadNotes = async () => {
         if (window.electronAPI) {
             const res = await window.electronAPI.getNotes();
@@ -45,6 +48,18 @@ export default function NotesTab({ onToast }) {
     useEffect(() => {
         if (showForm && titleRef.current) titleRef.current.focus();
     }, [showForm]);
+
+    // Keyboard shortcut 'n'
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key.toLowerCase() === 'n' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                e.preventDefault();
+                setShowForm(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const handleAdd = async (e) => {
         e.preventDefault();
@@ -83,38 +98,65 @@ export default function NotesTab({ onToast }) {
         }
     };
 
-    const filtered = notes.filter((n) => filter === 'all' || n.type === filter);
+    let filtered = notes.filter((n) => filter === 'all' || n.type === filter);
+    if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+    }
+
+    filtered.sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+        if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+        if (sortBy === 'deadline') {
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        return 0;
+    });
+
     const pendingDeadlines = notes.filter((n) => n.type === 'deadline' && !n.completed && n.dueDate).length;
     const completedCount = notes.filter((n) => n.completed).length;
 
     return (
-        <div className="h-full flex flex-col">
-            {/* ── Header ────────────────────────────────────────────── */}
-            <div className="px-6 pt-5 pb-3">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 className="text-lg font-bold text-dark-800 dark:text-dark-50">Notes & Deadlines</h2>
-                        <p className="text-xs text-dark-500 dark:text-dark-400 mt-0.5 font-medium">
-                            {notes.length} items · {completedCount} completed
+        <div className="h-full flex flex-col bg-white dark:bg-dark-950 overflow-hidden">
+            {/* ── Redesigned Header (3 Layers) ───────────────────────── */}
+            <div className="w-full max-w-[1100px] mx-auto px-8 pt-8 pb-4 space-y-6">
+
+                {/* Layer 1: Title & Primary CTA */}
+                <div className="flex items-end justify-between">
+                    <div className="space-y-1">
+                        <h1 className="text-2xl font-black tracking-tight text-dark-800 dark:text-dark-50">Notes & Deadlines</h1>
+                        <p className="text-[13px] text-dark-500/80 dark:text-dark-400/60 font-medium flex items-center gap-2">
+                            <span>{notes.length} items</span>
+                            <span className="w-1 h-1 rounded-full bg-dark-300 dark:bg-dark-700" />
+                            <span>{completedCount} completed</span>
                             {pendingDeadlines > 0 && (
-                                <span className="text-amber-600 dark:text-amber-500 ml-2 font-bold">· {pendingDeadlines} upcoming deadline{pendingDeadlines > 1 ? 's' : ''}</span>
+                                <>
+                                    <span className="w-1 h-1 rounded-full bg-dark-300 dark:bg-dark-700" />
+                                    <span className="text-amber-600 dark:text-amber-500/80 font-bold">
+                                        {pendingDeadlines} upcoming
+                                    </span>
+                                </>
                             )}
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowForm((v) => !v)}
-                        className="btn-primary flex items-center gap-1.5 text-sm"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                        Add
-                    </button>
+                    {!showForm && (
+                        <button
+                            onClick={() => setShowForm(true)}
+                            className="btn-primary group flex items-center gap-2 pr-5 pl-4 py-2.5 rounded-xl transition-all duration-300 transform active:scale-95"
+                        >
+                            <svg className="transition-transform group-hover:rotate-90" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span className="text-sm font-bold">Add Note</span>
+                        </button>
+                    )}
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex items-center gap-2">
+                {/* Layer 2: Segmented Filter Control */}
+                <div className="segmented-control w-fit">
                     {[
                         { id: 'all', label: 'All', icon: '📋' },
                         ...Object.entries(TYPE_CONFIG).map(([id, c]) => ({ id, label: c.label, icon: c.icon })),
@@ -122,64 +164,99 @@ export default function NotesTab({ onToast }) {
                         <button
                             key={f.id}
                             onClick={() => setFilter(f.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 border ${filter === f.id
-                                ? 'bg-synapse-50 dark:bg-synapse-900/20 text-synapse-700 dark:text-synapse-400 border-synapse-300 dark:border-synapse-700 shadow-sm'
-                                : 'bg-white dark:bg-dark-950 text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-50 hover:bg-dark-50 dark:hover:bg-dark-900 border-dark-200 dark:border-dark-800'
-                                }`}
+                            className={`segmented-item ${filter === f.id ? 'segmented-item-active' : 'segmented-item-inactive'}`}
                         >
-                            <span>{f.icon}</span>
+                            <span className="text-sm">{f.icon}</span>
                             <span>{f.label}</span>
                         </button>
                     ))}
                 </div>
+
+                {/* Layer 3: Search & Sorting */}
+                <div className="flex items-center gap-4">
+                    <div className="flex-1 relative group">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400 dark:text-dark-500 pointer-events-none group-focus-within:text-synapse-500 transition-colors">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search through notes..."
+                            className="w-full bg-dark-50/50 dark:bg-dark-900 border border-dark-200/50 dark:border-dark-800/50 rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-800 dark:text-dark-50 font-medium placeholder-dark-400 dark:placeholder-dark-600 outline-none focus:ring-2 focus:ring-synapse-500/10 focus:border-synapse-500/40 focus:bg-white dark:focus:bg-dark-900 transition-all"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 bg-dark-50/50 dark:bg-dark-900 border border-dark-200/50 dark:border-dark-800/50 px-3 py-1.5 rounded-xl shadow-sm">
+                        <span className="text-[10px] font-bold text-dark-400 dark:text-dark-500 uppercase tracking-widest pl-1">Sort</span>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="bg-transparent border-none text-[13px] font-bold text-dark-700 dark:text-dark-200 outline-none focus:ring-0 cursor-pointer pr-1"
+                        >
+                            <option value="newest">Recent</option>
+                            <option value="oldest">Oldest</option>
+                            <option value="deadline">By Date</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            {/* ── Add Form ──────────────────────────────────────────── */}
+            {/* ── Dynamic Form (Integrated) ────────────────────────── */}
             {showForm && (
-                <div className="px-6 pb-3 animate-slide-down">
-                    <form onSubmit={handleAdd} className="glass-panel dark:bg-dark-900/80 p-4 space-y-3 shadow-md border-synapse-200 dark:border-synapse-800 bg-white dark:bg-dark-900">
-                        <div className="flex gap-3">
+                <div className="w-full max-w-[1100px] mx-auto px-8 pb-6 animate-slide-down">
+                    <form onSubmit={handleAdd} className="glass-panel dark:bg-dark-900/40 p-6 space-y-4 shadow-xl border-synapse-200/40 dark:border-synapse-800/40 bg-white/50 dark:bg-dark-900/20 backdrop-blur-md">
+                        <div className="flex gap-4">
                             <input
                                 ref={titleRef}
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Title..."
-                                className="flex-1 bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-dark-800 dark:text-dark-50 font-medium placeholder-dark-400 dark:placeholder-dark-500 outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all"
+                                placeholder="What's the topic?"
+                                className="flex-1 bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-800 shadow-sm rounded-xl px-4 py-3 text-sm text-dark-800 dark:text-dark-50 font-bold placeholder-dark-400 focus:ring-2 focus:ring-synapse-500/10 focus:border-synapse-500 transition-all outline-none"
                             />
-                            <select
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                                className="bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-dark-700 dark:text-dark-200 font-medium outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all cursor-pointer"
-                            >
+                            <div className="flex items-center gap-2 p-1 bg-dark-100/50 dark:bg-dark-950 rounded-xl border border-dark-200 dark:border-dark-800">
                                 {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
-                                    <option key={key} value={key}>{cfg.icon} {cfg.label}</option>
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setType(key)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${type === key
+                                            ? 'bg-white dark:bg-dark-800 shadow-sm border border-dark-200 dark:border-dark-700 text-dark-800 dark:text-dark-50'
+                                            : 'text-dark-400 hover:text-dark-600 dark:hover:text-dark-200'}`}
+                                    >
+                                        <span>{cfg.icon}</span>
+                                        <span className="hidden lg:inline">{cfg.label}</span>
+                                    </button>
                                 ))}
-                            </select>
+                            </div>
                         </div>
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            placeholder="Details (optional)..."
-                            rows={2}
-                            className="w-full bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-dark-700 dark:text-dark-200 font-medium placeholder-dark-400 dark:placeholder-dark-500 outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all resize-none"
+                            placeholder="Add more context or details here..."
+                            rows={3}
+                            className="w-full bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-800 shadow-sm rounded-xl px-4 py-3 text-sm text-dark-700 dark:text-dark-200 font-medium placeholder-dark-400 focus:ring-2 focus:ring-synapse-500/10 focus:border-synapse-500 transition-all outline-none resize-none"
                         />
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-dark-500 dark:text-dark-400 font-semibold">Due date:</label>
-                                <input
-                                    type="date"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    className="bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-2 py-1.5 text-xs font-medium text-dark-700 dark:text-dark-200 outline-none focus:border-synapse-400 focus:ring-1 focus:ring-synapse-100 dark:focus:ring-synapse-900/20"
-                                />
+                        <div className="flex items-center justify-between pt-2">
+                            <div className="flex items-center gap-4">
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] font-black text-dark-400 dark:text-dark-500 uppercase tracking-widest ml-1 mb-1">Due Date</label>
+                                    <input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => setDueDate(e.target.value)}
+                                        className="bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-800 shadow-sm rounded-xl px-3 py-2 text-xs font-bold text-dark-700 dark:text-dark-200 outline-none focus:border-synapse-500 transition-all"
+                                    />
+                                </div>
                             </div>
-                            <div className="flex gap-2">
-                                <button type="button" onClick={() => setShowForm(false)} className="btn-ghost text-xs">
+                            <div className="flex gap-3">
+                                <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-dark-500 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={!title.trim()} className="btn-primary text-xs py-1.5 px-4">
-                                    Save
+                                <button type="submit" disabled={!title.trim()} className="btn-primary px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-synapse-500/20 active:scale-95 transition-transform">
+                                    Create Note
                                 </button>
                             </div>
                         </div>
@@ -187,94 +264,112 @@ export default function NotesTab({ onToast }) {
                 </div>
             )}
 
-            {/* ── Notes List ────────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-2">
-                {filtered.length === 0 && (
-                    <div className="text-center py-16 animate-fade-in">
-                        <div className="text-4xl mb-3">{filter === 'all' ? '📝' : TYPE_CONFIG[filter]?.icon || '📝'}</div>
-                        <p className="text-dark-500 dark:text-dark-400 font-medium text-sm">
+            {/* ── Redesigned List ───────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto w-full max-w-[1100px] mx-auto px-8 pb-12 space-y-4">
+                {filtered.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center py-24 text-center animate-fade-in group">
+                        <div className="relative mb-8 transform transition-transform group-hover:scale-110 duration-500">
+                            <div className="text-8xl filter drop-shadow-2xl">
+                                {filter === 'all' ? '✨' : TYPE_CONFIG[filter]?.icon || '📝'}
+                            </div>
+                            <div className="absolute -bottom-2 -right-2 bg-synapse-500 text-white rounded-full p-2 shadow-lg animate-pulse-slow">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                            </div>
+                        </div>
+                        <h3 className="text-xl font-black text-dark-800 dark:text-dark-50 mb-2">
+                            {notes.length === 0 ? "Your mind is a blank canvas" : `No ${filter} found`}
+                        </h3>
+                        <p className="text-dark-500 dark:text-dark-400 font-medium text-sm max-w-[320px] leading-relaxed mb-8">
                             {notes.length === 0
-                                ? 'No notes yet. Click "Add" to create your first note or deadline.'
-                                : `No ${filter} items.`}
+                                ? "Cortex is ready to capture your brilliance. Start by adding your first note, deadline, or task."
+                                : `Try adjusting your search query or filter to find what you're looking for.`}
                         </p>
+                        {notes.length === 0 && !showForm && (
+                            <button
+                                onClick={() => setShowForm(true)}
+                                className="px-8 py-3 bg-dark-50 dark:bg-dark-900 hover:bg-synapse-500 hover:text-white dark:hover:bg-synapse-600 border-2 border-dashed border-dark-200 dark:border-dark-800 hover:border-synapse-400 text-dark-600 dark:text-dark-200 font-black rounded-2xl transition-all duration-300 transform active:scale-95 shadow-sm"
+                            >
+                                Create First Note
+                            </button>
+                        )}
                     </div>
-                )}
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filtered.map((note, idx) => {
+                            const cfg = TYPE_CONFIG[note.type] || TYPE_CONFIG.note;
+                            const due = getDueStatus(note.dueDate);
+                            const delay = `stagger-${Math.min(idx + 1, 5)}`;
 
-                {filtered.map((note, idx) => {
-                    const cfg = TYPE_CONFIG[note.type] || TYPE_CONFIG.note;
-                    const due = getDueStatus(note.dueDate);
-                    const delay = `stagger-${Math.min(idx + 1, 5)}`;
-
-                    return (
-                        <div
-                            key={note.id}
-                            className={`glass-panel dark:bg-dark-900/80 dark:border-dark-700 p-4 animate-slide-up ${delay} transition-all duration-200 ${note.completed ? 'opacity-50' : ''
-                                }`}
-                        >
-                            <div className="flex items-start gap-3">
-                                {/* Checkbox */}
-                                <button
-                                    onClick={() => handleToggle(note.id)}
-                                    className={`mt-0.5 w-5 h-5 rounded-md border-2 shadow-sm flex items-center justify-center flex-shrink-0 transition-all duration-200 ${note.completed
-                                        ? 'bg-emerald-500 border-emerald-600 dark:border-emerald-400'
-                                        : 'bg-white dark:bg-dark-950 border-dark-300 dark:border-dark-600 hover:border-synapse-400 dark:hover:border-synapse-500'
-                                        }`}
+                            return (
+                                <div
+                                    key={note.id}
+                                    className={`group flex flex-col bg-white dark:bg-dark-900 border border-dark-200/50 dark:border-dark-800/50 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-synapse-300 dark:hover:border-synapse-800 transition-all duration-300 animate-slide-up ${delay} relative overflow-hidden ${note.completed ? 'opacity-60' : ''}`}
                                 >
-                                    {note.completed && (
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                    )}
-                                </button>
+                                    {/* Sidebar Status Line */}
+                                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${note.completed ? 'bg-emerald-500/40' : (due?.urgent ? 'bg-red-500' : (note.dueDate ? 'bg-amber-500/50' : 'bg-synapse-500/30'))}`} />
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className={`text-sm font-bold ${note.completed ? 'line-through text-dark-400 dark:text-dark-500' : 'text-dark-800 dark:text-dark-50'}`}>
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleToggle(note.id)}
+                                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${note.completed
+                                                    ? 'bg-emerald-500 border-emerald-500 shadow-sm shadow-emerald-500/20'
+                                                    : 'bg-transparent border-dark-200 dark:border-dark-700 hover:border-synapse-500'}`}
+                                            >
+                                                {note.completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                                            </button>
+                                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border flex items-center gap-1.5 ${cfg.color}`}>
+                                                <span>{cfg.icon}</span>
+                                                <span>{cfg.label}</span>
+                                            </span>
+                                        </div>
+
+                                        {/* Hover Actions */}
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                                            <button
+                                                onClick={() => handleDelete(note.id)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg text-dark-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                                                title="Delete"
+                                            >
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <h3 className={`text-base font-black leading-tight mb-2 ${note.completed ? 'line-through text-dark-400 dark:text-dark-500' : 'text-dark-800 dark:text-dark-50'}`}>
                                             {note.title}
                                         </h3>
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md border ${cfg.color}`}>
-                                            {cfg.icon} {cfg.label}
-                                        </span>
-                                    </div>
-                                    {note.content && (
-                                        <p className="text-xs text-dark-600 dark:text-dark-300 font-medium leading-relaxed mb-1.5 line-clamp-2">
-                                            {note.content}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center gap-3 text-[10px]">
-                                        {due && (
-                                            <span className={`font-medium ${due.cls}`}>
-                                                {due.urgent && '⚠ '}{due.label}
-                                            </span>
+                                        {note.content && (
+                                            <p className="text-sm text-dark-600 dark:text-dark-300 font-medium leading-relaxed line-clamp-3">
+                                                {note.content}
+                                            </p>
                                         )}
-                                        <span className="text-dark-400 dark:text-dark-500 font-medium">
-                                            {new Date(note.createdAt).toLocaleDateString()}
+                                    </div>
+
+                                    <div className="mt-auto flex items-center justify-between border-t border-dark-100 dark:border-dark-800 pt-3">
+                                        <div className="flex items-center gap-3">
+                                            {due && (
+                                                <div className={`flex items-center gap-1.5 text-[11px] font-bold ${due.cls}`}>
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                                                    <span>{due.label}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-[11px] font-bold text-dark-400 dark:text-dark-600">
+                                            {new Date(note.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                         </span>
                                     </div>
                                 </div>
-
-                                {/* Delete */}
-                                <button
-                                    onClick={() => handleDelete(note.id)}
-                                    className="text-dark-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
-                                    title="Delete"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="3 6 5 6 21 6" />
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* ── Footer: encrypted badge ────────────────────────── */}
-            <div className="px-6 pb-3">
-                <div className="glass-panel-light dark:bg-dark-900/50 p-2.5 flex items-center justify-center gap-2 border border-dark-200 dark:border-dark-800 rounded-lg">
-                    <span className="text-[10px] text-dark-500 dark:text-dark-400 font-semibold uppercase tracking-wider">🔒 All notes encrypted at rest with AES-256-GCM</span>
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );

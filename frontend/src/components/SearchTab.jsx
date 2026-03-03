@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ResultCard from './ResultCard';
-import ChatSidebar from './ChatSidebar';
 import ChatPane from './ChatPane';
 
 const SEARCH_STAGES = [
@@ -116,15 +115,8 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
     const hasResults = results !== null;
 
     return (
-        /* ── Search-specific layout: sidebar + content ──────────────────────── */
+        /* ── Search-specific layout: content only ──────────────────────── */
         <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
-
-            {/* Sidebar — owned exclusively by SearchTab, always expanded */}
-            <ChatSidebar
-                activeChatId={activeChatId}
-                onSelectChat={setActiveChatId}
-                onNewChat={(chat) => setActiveChatId?.(chat?.id ?? null)}
-            />
 
             {/* Content area */}
             <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--surface-app)' }}>

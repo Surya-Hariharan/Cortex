@@ -1,6 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+    // Window Settings
+    zoomIn: () => ipcRenderer.send('zoom-in'),
+    zoomOut: () => ipcRenderer.send('zoom-out'),
+    zoomReset: () => ipcRenderer.send('zoom-reset'),
+
     // Search & Documents
     search: (query) => ipcRenderer.invoke('search', query),
     onSearchToken: (callback) => ipcRenderer.on('search-token', (event, tokenText) => callback(tokenText)),

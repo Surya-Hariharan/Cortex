@@ -4,87 +4,55 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 function relativeTime(iso) {
     if (!iso) return '';
     const diff = (Date.now() - new Date(iso)) / 1000;
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 60) return 'now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
 }
 
 /* ── icons ───────────────────────────────────────────────────────────────── */
-const IconPlus = ({ size = 13 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+const IconPlus = ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
     </svg>
 );
 const IconSearch = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
 );
 const IconChevron = ({ open }) => (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
         style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}>
         <polyline points="9 18 15 12 9 6" />
     </svg>
 );
 const IconFolder = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
 );
 const IconChat = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
 );
 const IconTrash = () => (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" />
     </svg>
 );
 const IconEdit = () => (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
 );
-const IconMenuOpen = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+const IconUser = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
     </svg>
 );
-const IconMenuClose = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="15 18 9 12 15 6" />
-    </svg>
-);
-
-/* ── Tooltip wrapper ─────────────────────────────────────────────────────── */
-function Tip({ label, children, show }) {
-    if (!show) return children;
-    return (
-        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}
-            onMouseEnter={(e) => {
-                const tip = e.currentTarget.querySelector('[data-tip]');
-                if (tip) tip.style.opacity = '1';
-            }}
-            onMouseLeave={(e) => {
-                const tip = e.currentTarget.querySelector('[data-tip]');
-                if (tip) tip.style.opacity = '0';
-            }}
-        >
-            {children}
-            <div data-tip style={{
-                position: 'absolute', left: 'calc(100% + 10px)', top: '50%', transform: 'translateY(-50%)',
-                background: '#1e293b', color: '#fff', fontSize: '11.5px', fontWeight: 500,
-                padding: '4px 10px', borderRadius: '7px', whiteSpace: 'nowrap',
-                pointerEvents: 'none', opacity: 0, transition: 'opacity 120ms', zIndex: 999,
-            }}>
-                {label}
-            </div>
-        </div>
-    );
-}
 
 /* ── Context menu ────────────────────────────────────────────────────────── */
 function CtxMenu({ x, y, items, onClose }) {
@@ -95,20 +63,13 @@ function CtxMenu({ x, y, items, onClose }) {
         return () => document.removeEventListener('mousedown', close);
     }, [onClose]);
     return (
-        <div ref={ref} style={{
-            position: 'fixed', left: x, top: y, zIndex: 9999,
-            background: '#fff', border: '1px solid var(--border-subtle)',
-            borderRadius: '10px', boxShadow: 'var(--shadow-lg)',
-            padding: '4px', minWidth: '160px',
-        }}>
+        <div ref={ref} className="fixed z-50 bg-white border border-[#E5E7EB] rounded-xl p-1.5 shadow-lg min-w-[160px]" style={{ left: x, top: y }}>
             {items.map((item) => (
                 <button key={item.label}
                     onClick={() => { item.action(); onClose(); }}
-                    className="flex items-center gap-2 w-full px-3 py-1.5 rounded-lg"
+                    className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium transition-colors"
                     style={{
                         color: item.danger ? '#dc2626' : 'var(--text-secondary)',
-                        background: 'transparent', border: 'none', cursor: 'pointer',
-                        fontSize: '12px', textAlign: 'left', transition: 'background 100ms',
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = item.danger ? '#fef2f2' : 'var(--surface-recessed)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -120,27 +81,74 @@ function CtxMenu({ x, y, items, onClose }) {
     );
 }
 
-/* ── Main component ──────────────────────────────────────────────────────── */
-export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat, collapsed: collapsedProp, onCollapsedChange }) {
-    // Support both controlled (prop-driven) and uncontrolled collapse state
-    const [collapsedInternal, setCollapsedInternal] = useState(false);
-    const isControlled = collapsedProp !== undefined;
-    const collapsed = isControlled ? collapsedProp : collapsedInternal;
-    const setCollapsed = isControlled
-        ? (v) => onCollapsedChange?.(typeof v === 'function' ? v(collapsed) : v)
-        : setCollapsedInternal;
+/* ── Profile Modal ───────────────────────────────────────────────────────── */
+function ProfileModal({ onClose }) {
+    const [username, setUsername] = useState('Local User');
 
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-black/10 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-xl border border-[#E5E7EB] w-[420px] max-w-[90vw] overflow-hidden flex flex-col relative">
+
+                {/* Close Button top-right */}
+                <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F3F4F6] transition-colors text-[#9CA3AF]">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+
+                <div className="p-8 flex flex-col items-center">
+                    {/* Large Avatar */}
+                    <div className="w-[88px] h-[88px] rounded-full bg-[#111827] text-white flex items-center justify-center mb-6 shadow-sm relative group cursor-pointer">
+                        <span className="text-[32px] font-medium">L</span>
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <IconEdit />
+                        </div>
+                    </div>
+
+                    <div className="w-full space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">Display Name</label>
+                            <input
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
+                                className="w-full border border-[#D1D5DB] rounded-lg px-3.5 py-2.5 text-[14px] text-[#111827] focus:border-[#111827] focus:ring-1 focus:ring-[#111827] outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="pt-2">
+                            <button className="w-full flex items-center justify-between px-3.5 py-3 rounded-lg border border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors text-[14px] text-[#374151] font-medium">
+                                <span>Theme Preference</span>
+                                <span className="text-[#6B7280]">System</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="px-6 py-4 bg-[#F9FAFB] border-t border-[#E5E7EB] flex justify-between items-center">
+                    <button className="text-[14px] font-medium text-[#DC2626] hover:text-[#B91C1C] transition-colors px-2 py-1">
+                        Sign Out
+                    </button>
+                    <button onClick={onClose} className="px-5 py-2.5 bg-[#111827] text-white text-[14px] font-medium rounded-lg hover:bg-[#1F2937] transition-colors shadow-sm">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+/* ── Main component ──────────────────────────────────────────────────────── */
+export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }) {
     const [projects, setProjects] = useState([]);
     const [chats, setChats] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState(null);
-    const [projectsOpen, setProjectsOpen] = useState(true);
+    const [expandedProjects, setExpandedProjects] = useState({});
+
+    // UI State
     const [ctx, setCtx] = useState(null);
     const [editingProject, setEditingProject] = useState(null);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const editRef = useRef(null);
-
-    const EXPANDED_W = 268;
-    const COLLAPSED_W = 72;
 
     const load = useCallback(async () => {
         if (!window.electronAPI) return;
@@ -150,7 +158,15 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat, col
         ]);
         setProjects(pr.projects || []);
         setChats(ch.chats || []);
-    }, []);
+
+        // Auto-expand projects that contain the active chat
+        if (activeChatId && ch.chats) {
+            const activeChat = ch.chats.find(c => c.id === activeChatId);
+            if (activeChat?.projectId) {
+                setExpandedProjects(prev => ({ ...prev, [activeChat.projectId]: true }));
+            }
+        }
+    }, [activeChatId]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -176,7 +192,14 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat, col
             return;
         }
         const res = await window.electronAPI.createChat(projectId);
-        if (res.success) { await load(); onNewChat?.(res.chat); onSelectChat?.(res.chat.id); }
+        if (res.success) {
+            if (projectId) {
+                setExpandedProjects(prev => ({ ...prev, [projectId]: true }));
+            }
+            await load();
+            onNewChat?.(res.chat);
+            onSelectChat?.(res.chat.id);
+        }
     };
     const handleDeleteChat = async (id) => {
         if (window.electronAPI) await window.electronAPI.deleteChat(id);
@@ -184,13 +207,13 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat, col
         if (activeChatId === id) onSelectChat?.(null);
     };
     const handleCreateProject = async () => {
-        const name = prompt('Project name:');
+        const name = prompt('Workspace Name:');
         if (!name?.trim()) return;
         if (window.electronAPI) await window.electronAPI.createProject(name.trim());
         load();
     };
     const handleDeleteProject = async (id) => {
-        if (!window.confirm('Delete project and all its chats?')) return;
+        if (!window.confirm('Delete workspace and all its chats?')) return;
         if (window.electronAPI) await window.electronAPI.deleteProject(id);
         load();
     };
@@ -205,263 +228,208 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat, col
         setCtx({ x: e.clientX, y: e.clientY, items });
     };
 
-    const displayChats = searchResults !== null ? searchResults : chats;
+    const toggleProject = (id, e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        setExpandedProjects(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
-    /* ── Icon-only button (collapsed mode) ── */
-    const IconBtn = ({ icon, label, onClick, active }) => (
-        <Tip label={label} show={collapsed}>
-            <button onClick={onClick} style={{
-                width: '44px', height: '44px', borderRadius: '12px', border: 'none',
-                background: active ? 'var(--accent-light)' : 'transparent',
-                color: active ? 'var(--accent)' : 'var(--text-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', transition: 'all 120ms ease', flexShrink: 0,
-            }}
-                onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--surface-recessed)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
-                onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
-            >
-                {icon}
-            </button>
-        </Tip>
-    );
+    /* ── Render Chat Item ── */
+    const ChatItem = ({ chat, isNested = false }) => {
+        const isActive = activeChatId === chat.id;
 
-    /* ── Chat row (expanded mode) ── */
-    const ChatRow = ({ chat }) => {
-        const isActive = chat.id === activeChatId;
         return (
-            <button onClick={() => onSelectChat?.(chat.id)}
+            <button
+                onClick={() => onSelectChat?.(chat.id)}
                 onContextMenu={(e) => openCtx(e, [
-                    { label: 'Delete', icon: <IconTrash />, action: () => handleDeleteChat(chat.id), danger: true },
+                    { label: 'Delete chat', icon: <IconTrash />, action: () => handleDeleteChat(chat.id), danger: true },
                 ])}
+                className="w-full flex items-center justify-between text-left group transition-all duration-150"
                 style={{
-                    display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
-                    padding: '7px 10px', borderRadius: '10px', textAlign: 'left',
-                    background: isActive ? 'var(--accent-light)' : 'transparent',
-                    border: isActive ? '1px solid var(--accent-border)' : '1px solid transparent',
-                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                    fontSize: '12.5px', cursor: 'pointer', transition: 'all 120ms ease',
+                    padding: '8px 12px',
+                    paddingLeft: isNested ? '32px' : '12px',
+                    borderRadius: '8px',
+                    background: isActive ? 'var(--surface-recessed)' : 'transparent',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 }}
-                onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'var(--surface-recessed)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
-                onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                onMouseEnter={(e) => {
+                    if (!isActive) {
+                        e.currentTarget.style.background = 'rgba(0,0,0,0.03)';
+                        e.currentTarget.style.color = 'var(--text-primary)';
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    if (!isActive) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-secondary)';
+                    }
+                }}
             >
-                <span style={{ flexShrink: 0, opacity: 0.55 }}><IconChat /></span>
-                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: isActive ? 600 : 400 }}>{chat.title}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0 }}>{relativeTime(chat.lastUpdated)}</span>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1 relative">
+                    {/* Active Indicator Bar */}
+                    {isActive && (
+                        <div className="absolute -left-[12px] top-0 bottom-0 w-[3px] bg-black rounded-r-sm" />
+                    )}
+
+                    <span className="flex-shrink-0" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        <IconChat />
+                    </span>
+                    <span className="text-[14px] truncate font-medium relative top-[1px]">
+                        {chat.title}
+                    </span>
+                </div>
             </button>
         );
     };
 
     return (
-        <aside style={{
-            width: `${collapsed ? COLLAPSED_W : EXPANDED_W}px`,
-            minWidth: `${collapsed ? COLLAPSED_W : EXPANDED_W}px`,
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'var(--surface-sidebar)',
-            borderRight: '1px solid var(--border-subtle)',
-            overflow: 'hidden',
-            transition: 'width 0.25s ease, min-width 0.25s ease',
-            flexShrink: 0,
-        }}>
+        <aside className="w-[280px] h-full flex flex-col flex-shrink-0 relative bg-[#F9F9F9] border-r border-[#E5E7EB]">
 
-            {/* ── Toggle + header ── */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: collapsed ? 'center' : 'space-between',
-                padding: collapsed ? '14px 0' : '14px 12px 10px',
-                flexShrink: 0,
-                gap: '8px',
-            }}>
-                {/* Collapse toggle */}
+            {/* 1. Header (Primary Actions) */}
+            <div className="p-4 flex flex-col gap-2 flex-shrink-0">
                 <button
-                    onClick={() => setCollapsed((v) => !v)}
-                    title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        background: 'transparent', border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'var(--text-muted)', transition: 'all 120ms',
-                        flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-recessed)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                    onClick={() => handleNewChat(null)}
+                    className="w-full h-[44px] bg-white border border-[#E5E7EB] shadow-sm flex items-center gap-3 px-4 rounded-[12px] text-[#111827] text-[14px] font-medium hover:bg-[#F3F4F6] transition-colors"
                 >
-                    {collapsed ? <IconMenuOpen /> : <IconMenuClose />}
+                    <IconPlus />
+                    <span>New Chat</span>
                 </button>
+                <button
+                    onClick={handleCreateProject}
+                    className="w-full h-[40px] bg-transparent border-none flex items-center gap-3 px-4 rounded-[12px] text-[#4B5563] text-[14px] font-medium hover:bg-[#E5E7EB] transition-colors"
+                >
+                    <IconPlus size={14} />
+                    <span>New Workspace</span>
+                </button>
+            </div>
 
-                {/* New Chat button — only expanded */}
-                {!collapsed && (
-                    <button
-                        onClick={() => handleNewChat(null)}
-                        style={{
-                            flex: 1,
-                            padding: '7px 14px',
-                            background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-                            color: '#fff', fontWeight: 600, fontSize: '12.5px',
-                            border: 'none', borderRadius: '10px', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                            boxShadow: '0 2px 8px rgba(99,102,241,0.28)',
-                            transition: 'opacity 150ms ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.90'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                        <IconPlus /> New Chat
-                    </button>
+            {/* 2. Scrollable Library */}
+            <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-6 align-start pb-4">
+
+                {/* Search / Filter (optional cleanup based on preference, but good to have) */}
+                <div className="px-2 pb-2">
+                    <div className="flex items-center gap-2 bg-white border border-[#E5E7EB] rounded-[10px] px-3 py-2 shadow-sm focus-within:border-[#111827] focus-within:ring-1 focus-within:ring-[#111827] transition-all">
+                        <span className="text-[#9CA3AF]"><IconSearch /></span>
+                        <input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search library..."
+                            className="bg-transparent border-none outline-none text-[13px] text-[#111827] w-full placeholder-[#9CA3AF]"
+                        />
+                    </div>
+                </div>
+
+                {searchResults !== null ? (
+                    /* Render Search Results */
+                    <div className="flex flex-col gap-0.5 px-2">
+                        <div className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider px-2 mb-2">Results</div>
+                        {searchResults.length === 0 ? (
+                            <div className="text-[13px] text-[#6B7280] px-3">No matches found.</div>
+                        ) : (
+                            searchResults.map(c => <ChatItem key={c.id} chat={c} />)
+                        )}
+                    </div>
+                ) : (
+                    /* Default Library View */
+                    <div className="flex flex-col gap-6 px-1">
+
+                        {/* Independent Chats */}
+                        {chats.filter(c => !c.projectId).length > 0 && (
+                            <div className="flex flex-col gap-0.5">
+                                <div className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider px-3 mb-1.5 mt-2">
+                                    Recent Chats
+                                </div>
+                                {chats.filter(c => !c.projectId).map(c => (
+                                    <ChatItem key={c.id} chat={c} />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Workspaces (Projects) */}
+                        {projects.length > 0 && (
+                            <div className="flex flex-col gap-1">
+                                <div className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider px-3 mb-1.5">
+                                    Workspaces
+                                </div>
+
+                                {projects.map((p) => {
+                                    const pChats = chats.filter(c => c.projectId === p.id);
+                                    const isOpen = expandedProjects[p.id];
+
+                                    return (
+                                        <div key={p.id} className="flex flex-col mb-1">
+                                            {editingProject?.id === p.id ? (
+                                                <input
+                                                    ref={editRef}
+                                                    defaultValue={p.name}
+                                                    className="w-full bg-white border border-[#111827] rounded-lg px-3 py-2 text-[14px] font-medium outline-none mx-2 w-[calc(100%-16px)]"
+                                                    onBlur={(e) => handleRenameProject(p.id, e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleRenameProject(p.id, e.target.value);
+                                                        if (e.key === 'Escape') setEditingProject(null);
+                                                    }}
+                                                />
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => toggleProject(p.id, e)}
+                                                    onContextMenu={(e) => openCtx(e, [
+                                                        { label: 'New chat in workspace', icon: <IconPlus size={14} />, action: () => handleNewChat(p.id) },
+                                                        { label: 'Rename workspace', icon: <IconEdit />, action: () => setEditingProject(p) },
+                                                        { label: 'Delete workspace', icon: <IconTrash />, action: () => handleDeleteProject(p.id), danger: true },
+                                                    ])}
+                                                    className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-[14px] font-semibold text-[#374151] hover:bg-[#E5E7EB] transition-colors"
+                                                >
+                                                    <span className="text-[#9CA3AF]">
+                                                        <IconChevron open={isOpen} />
+                                                    </span>
+                                                    <span className="truncate flex-1 text-left relative top-[1px]">{p.name}</span>
+                                                </button>
+                                            )}
+
+                                            {/* Child Chats */}
+                                            {isOpen && pChats.length > 0 && (
+                                                <div className="flex flex-col mt-0.5 mb-1 pb-1">
+                                                    {pChats.map(c => <ChatItem key={c.id} chat={c} isNested={true} />)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                    </div>
                 )}
             </div>
 
-            {/* ── COLLAPSED VIEW ── icon-only strip */}
-            {collapsed && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '0 0 12px', flex: 1 }}>
-                    <IconBtn icon={<IconPlus size={16} />} label="New Chat" onClick={() => handleNewChat(null)} />
-                    <IconBtn icon={<IconSearch />} label="Search Chats" onClick={() => { setCollapsed(false); }} />
-                    <IconBtn icon={<IconFolder />} label="Projects" onClick={() => { setCollapsed(false); }} />
-                    <IconBtn icon={<IconChat />} label="Your Chats" onClick={() => { setCollapsed(false); }} />
-                    {/* divider */}
-                    <div style={{ width: '32px', height: '1px', background: 'var(--border-subtle)', margin: '8px 0' }} />
-                    {/* Recent chats as icon dots */}
-                    {chats.slice(0, 6).map((c) => (
-                        <Tip key={c.id} label={c.title} show>
-                            <button
-                                onClick={() => onSelectChat?.(c.id)}
-                                style={{
-                                    width: '36px', height: '36px', borderRadius: '10px',
-                                    background: activeChatId === c.id ? 'var(--accent-light)' : 'transparent',
-                                    border: activeChatId === c.id ? '1px solid var(--accent-border)' : '1px solid transparent',
-                                    color: activeChatId === c.id ? 'var(--accent)' : 'var(--text-secondary)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer', transition: 'all 120ms',
-                                    fontSize: '11px', fontWeight: 700,
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-recessed)'; }}
-                                onMouseLeave={(e) => { if (activeChatId !== c.id) e.currentTarget.style.background = 'transparent'; }}
-                            >
-                                {c.title.charAt(0).toUpperCase()}
-                            </button>
-                        </Tip>
-                    ))}
-                </div>
-            )}
-
-            {/* ── EXPANDED VIEW ── */}
-            {!collapsed && (
-                <>
-                    {/* Search */}
-                    <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            background: 'var(--surface-card)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: '10px', padding: '7px 10px',
-                        }}>
-                            <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}><IconSearch /></span>
-                            <input
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search chats…"
-                                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '12.5px', color: 'var(--text-primary)' }}
-                            />
-                            {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1, padding: 0 }}>✕</button>
-                            )}
+            {/* 3. Bottom Account Profile */}
+            <div className="mt-auto border-t border-[#E5E7EB] flex-shrink-0">
+                <button
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="w-full h-[64px] px-4 flex items-center justify-between hover:bg-[#E5E7EB] transition-colors cursor-pointer text-left"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#111827] flex items-center justify-center text-white flex-shrink-0 shadow-sm border border-[#374151]">
+                            <span className="text-[14px] font-medium">L</span>
+                        </div>
+                        <div className="flex flex-col text-left max-w-[160px]">
+                            <span className="text-[14px] font-semibold text-[#111827] truncate">Local User</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                                <span className="text-[12px] text-[#6B7280] font-medium">Online</span>
+                            </div>
                         </div>
                     </div>
+                </button>
+            </div>
 
-                    {/* Scrollable body */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '0 6px 16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Context Menu Portals */}
+            {ctx && <CtxMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} />}
 
-                        {searchResults !== null ? (
-                            <div>
-                                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.10em', color: 'var(--text-muted)', textTransform: 'uppercase', padding: '0 6px 4px' }}>
-                                    Results ({searchResults.length})
-                                </div>
-                                {searchResults.length === 0
-                                    ? <p style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '8px 10px' }}>No matches.</p>
-                                    : searchResults.map((c) => <ChatRow key={c.id} chat={c} />)
-                                }
-                            </div>
-                        ) : (
-                            <>
-                                {/* Projects */}
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 6px 4px', cursor: 'pointer', userSelect: 'none' }}
-                                        onClick={() => setProjectsOpen((v) => !v)}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <IconChevron open={projectsOpen} />
-                                            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.10em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projects</span>
-                                        </div>
-                                        <button onClick={(e) => { e.stopPropagation(); handleCreateProject(); }}
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: '2px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--accent-light)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                                        >
-                                            <IconPlus /> New
-                                        </button>
-                                    </div>
-                                    {projectsOpen && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                                            {projects.length === 0 && <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', padding: '4px 10px' }}>No projects yet.</p>}
-                                            {projects.map((p) => (
-                                                <div key={p.id}>
-                                                    {editingProject?.id === p.id ? (
-                                                        <input ref={editRef} defaultValue={p.name}
-                                                            style={{ width: '100%', padding: '5px 10px', fontSize: '12.5px', border: '1px solid var(--accent-border)', background: 'var(--accent-light)', outline: 'none', color: 'var(--accent)', borderRadius: '8px', boxSizing: 'border-box' }}
-                                                            onBlur={(e) => handleRenameProject(p.id, e.target.value)}
-                                                            onKeyDown={(e) => { if (e.key === 'Enter') handleRenameProject(p.id, e.target.value); if (e.key === 'Escape') setEditingProject(null); }}
-                                                        />
-                                                    ) : (
-                                                        <button
-                                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '10px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-secondary)', fontSize: '12.5px', cursor: 'pointer', textAlign: 'left', transition: 'all 120ms' }}
-                                                            onContextMenu={(e) => openCtx(e, [
-                                                                { label: 'New chat here', icon: <IconPlus />, action: () => handleNewChat(p.id) },
-                                                                { label: 'Rename', icon: <IconEdit />, action: () => setEditingProject(p) },
-                                                                { label: 'Delete', icon: <IconTrash />, action: () => handleDeleteProject(p.id), danger: true },
-                                                            ])}
-                                                            onClick={() => handleNewChat(p.id)}
-                                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-recessed)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                                                        >
-                                                            <span style={{ color: 'var(--accent)', flexShrink: 0 }}><IconFolder /></span>
-                                                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{p.chatCount}</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Your Chats */}
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.10em', color: 'var(--text-muted)', textTransform: 'uppercase', padding: '0 6px 4px' }}>
-                                        Your Chats
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                                        {chats.length === 0 && <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', padding: '4px 10px' }}>No chats yet.</p>}
-                                        {chats.filter((c) => !c.projectId).map((c) => <ChatRow key={c.id} chat={c} />)}
-                                        {projects.map((p) => {
-                                            const pChats = chats.filter((c) => c.projectId === p.id);
-                                            if (!pChats.length) return null;
-                                            return (
-                                                <div key={p.id}>
-                                                    <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', padding: '6px 10px 2px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{p.name}</div>
-                                                    {pChats.map((c) => <ChatRow key={c.id} chat={c} />)}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </>
+            {/* Profile Modal */}
+            {isProfileModalOpen && (
+                <ProfileModal onClose={() => setIsProfileModalOpen(false)} />
             )}
 
-            {ctx && <CtxMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} />}
         </aside>
     );
 }

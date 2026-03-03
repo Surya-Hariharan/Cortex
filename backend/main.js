@@ -156,6 +156,28 @@ async function initializeServices() {
 // ── IPC Handlers ──────────────────────────────────────────────────────────────
 
 function registerIpcHandlers() {
+    // Zoom Context
+    const ZOOM_STEP = 0.1;
+    const ZOOM_MIN  = 0.5;
+    const ZOOM_MAX  = 2.0;
+
+    ipcMain.on('zoom-in', () => {
+        if (!mainWindow) return;
+        const current = mainWindow.webContents.getZoomFactor();
+        mainWindow.webContents.setZoomFactor(Math.min(+(current + ZOOM_STEP).toFixed(1), ZOOM_MAX));
+    });
+
+    ipcMain.on('zoom-out', () => {
+        if (!mainWindow) return;
+        const current = mainWindow.webContents.getZoomFactor();
+        mainWindow.webContents.setZoomFactor(Math.max(+(current - ZOOM_STEP).toFixed(1), ZOOM_MIN));
+    });
+
+    ipcMain.on('zoom-reset', () => {
+        if (!mainWindow) return;
+        mainWindow.webContents.setZoomFactor(1.0);
+    });
+
     // Search
     ipcMain.handle('search', async (event, query) => {
         try {

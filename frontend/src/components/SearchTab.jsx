@@ -133,218 +133,193 @@ export default function SearchTab({ onToast, activeChatId, setActiveChatId }) {
                     <ChatPane chatId={activeChatId} onTitleUpdate={() => { }} />
                 ) : (
                     /* ── Search content ── */
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
-                        <div
-                            style={{ width: '100%', maxWidth: '860px', paddingLeft: '32px', paddingRight: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-                            className={`transition-all duration-500 ease-in-out ${hasResults ? 'pt-4 pb-3' : 'mt-[80px] pb-5'}`}
-                        >
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface-app)' }}>
+                        {/* ── Scrollable Results Area ─────────────────────────────────────────────────── */}
+                        <div className="flex-1 overflow-y-auto" style={{ padding: '24px 28px' }}>
+                            <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', minHeight: '100%', justifyContent: !hasResults && !isSearching ? 'center' : 'flex-start' }}>
 
-                            {/* Hero text – only before first search */}
-                            {!hasResults && (
-                                <div className="text-center mb-6 animate-fade-in px-6">
-                                    <h2
-                                        className="text-[26px] font-bold tracking-tight mb-1.5"
-                                        style={{ color: 'var(--text-hero)', letterSpacing: '-0.025em', lineHeight: 1.2 }}
-                                    >
-                                        Search your knowledge
-                                    </h2>
-                                    <p className="text-[14px] leading-relaxed max-w-sm" style={{ color: 'var(--text-muted)' }}>
-                                        Semantic AI search across all your uploaded documents — fully offline.
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Search bar */}
-                            <form onSubmit={handleSubmit} className="w-full max-w-[680px] px-5">
-                                <div
-                                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200"
-                                    style={{
-                                        background: 'var(--surface-card)',
-                                        border: isFocused || isSearching
-                                            ? '1.5px solid rgba(99,102,241,0.45)'
-                                            : '1.5px solid var(--border-subtle)',
-                                        boxShadow: isFocused || isSearching
-                                            ? '0 0 0 3px rgba(99,102,241,0.13), 0 4px 16px rgba(0,0,0,0.07)'
-                                            : '0 4px 14px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
-                                    }}
-                                >
-                                    {/* Icon */}
-                                    {isSearching ? (
-                                        <div
-                                            className="w-[17px] h-[17px] rounded-full border-2 animate-spin-slow flex-shrink-0"
-                                            style={{ borderColor: 'rgba(99,102,241,0.2)', borderTopColor: 'var(--accent)' }}
-                                        />
-                                    ) : (
-                                        <svg className="flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                                            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                                        </svg>
-                                    )}
-
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        value={query}
-                                        onChange={(e) => setQuery(e.target.value)}
-                                        onFocus={() => setIsFocused(true)}
-                                        onBlur={() => setIsFocused(false)}
-                                        placeholder="Ask anything — e.g. second law of thermodynamics"
-                                        className="flex-1 bg-transparent outline-none text-[14.5px] font-medium"
-                                        style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
-                                        disabled={isSearching}
-                                    />
-
-                                    {query && !isSearching && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setQuery('')}
-                                            className="flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full transition-colors duration-100"
-                                            style={{ color: 'var(--text-muted)', background: 'var(--surface-recessed)' }}
-                                            tabIndex={-1}
-                                        >
-                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                {/* Empty state – only before first search */}
+                                {!hasResults && !isSearching && (
+                                    <div className="text-center animate-fade-in pb-20">
+                                        <div style={{
+                                            width: '56px', height: '56px', borderRadius: '18px',
+                                            background: 'var(--surface-recessed)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)',
+                                            marginBottom: '20px', margin: '0 auto 20px'
+                                        }}>
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                                             </svg>
-                                        </button>
-                                    )}
-
-                                    <div className="w-px h-4 flex-shrink-0" style={{ background: 'var(--border-subtle)' }} />
-
-                                    <button
-                                        type="submit"
-                                        disabled={!query.trim() || isSearching}
-                                        className="btn-primary flex-shrink-0 text-[12.5px] py-[5px] px-3.5"
-                                    >
-                                        Search
-                                    </button>
-                                </div>
-                            </form>
-
-                            {/* Meta row / stage indicator */}
-                            <div className="h-6 flex items-center mt-2">
-                                {isSearching && searchStage >= 0 && (
-                                    <div className="flex items-center gap-1.5 text-[11.5px] animate-fade-in" style={{ color: 'var(--accent)' }}>
-                                        <div
-                                            className="w-[10px] h-[10px] rounded-full border-[1.5px] animate-spin-slow flex-shrink-0"
-                                            style={{ borderColor: 'rgba(99,102,241,0.2)', borderTopColor: 'var(--accent)' }}
-                                        />
-                                        {SEARCH_STAGES[Math.min(searchStage, SEARCH_STAGES.length - 1)]}
+                                        </div>
+                                        <h2
+                                            className="text-[24px] font-semibold tracking-tight mb-2"
+                                            style={{ color: 'var(--text-hero)', letterSpacing: '-0.02em' }}
+                                        >
+                                            What do you want to know?
+                                        </h2>
+                                        <p className="text-[14.5px]" style={{ color: 'var(--text-muted)' }}>
+                                            Semantic search across your offline knowledge base.
+                                        </p>
                                     </div>
                                 )}
-                                {!isSearching && searchMeta && (
-                                    <div className="flex items-center gap-3 text-[11.5px] animate-fade-in" style={{ color: 'var(--text-muted)' }}>
-                                        <span><strong style={{ color: 'var(--text-secondary)' }}>{results?.length || 0}</strong> results</span>
-                                        <span>·</span>
-                                        <span className="metric-mono" style={{ color: 'var(--accent)' }}>{searchMeta.time}ms</span>
-                                        <span>·</span>
-                                        <span><strong style={{ color: 'var(--text-secondary)' }}>{searchMeta.total}</strong> vectors</span>
+
+                                {/* User query message bubble */}
+                                {hasResults && searchMeta && (
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                                        <div style={{
+                                            maxWidth: '75%',
+                                            padding: '10px 16px',
+                                            borderRadius: '16px',
+                                            background: 'var(--surface-recessed)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '15px',
+                                            lineHeight: 1.6,
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word',
+                                        }}>
+                                            {searchMeta.query || query}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Searching Indicator */}
+                                {isSearching && (
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, marginRight: '16px',
+                                            background: 'var(--accent)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                                        }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="12" cy="12" r="3" />
+                                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                                            </svg>
+                                        </div>
+                                        <div style={{ padding: '6px 0', color: 'var(--text-secondary)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div
+                                                className="w-4 h-4 rounded-full border-2 animate-spin-slow flex-shrink-0"
+                                                style={{ borderColor: 'var(--border-subtle)', borderTopColor: 'var(--accent)' }}
+                                            />
+                                            {SEARCH_STAGES[Math.min(Math.max(searchStage, 0), SEARCH_STAGES.length - 1)]}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* AI Synthesis (Assistant message) */}
+                                {synthesized !== null && results?.length > 0 && !isSearching && (
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '16px', animation: 'fadeIn 0.3s ease' }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, marginRight: '16px', marginTop: '2px',
+                                            background: 'var(--accent)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                                        }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="12" cy="12" r="3" />
+                                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                                            </svg>
+                                        </div>
+                                        <div style={{ maxWidth: '100%' }}>
+                                            <p
+                                                className="text-[15px] leading-relaxed whitespace-pre-wrap"
+                                                style={{ color: 'var(--text-primary)', paddingTop: '6px' }}
+                                            >
+                                                {synthesized || 'Synthesizing...'}
+                                            </p>
+
+                                            {/* Results citations grid */}
+                                            {results?.length > 0 && (
+                                                <div className="mt-6 flex gap-2 overflow-x-auto pb-2" style={{ maxWidth: '100%' }}>
+                                                    {results.map((result, idx) => (
+                                                        <ResultCard key={result.docId + '-' + result.rank} result={result} index={idx} onToast={onToast} />
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Search Meta */}
+                                            {searchMeta && (
+                                                <div className="flex items-center gap-3 text-[11px] mt-4" style={{ color: 'var(--text-muted)' }}>
+                                                    <span>{searchMeta.time}ms search time</span>
+                                                    <span>·</span>
+                                                    <span>{searchMeta.total} vectors deep</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* No results */}
+                                {results !== null && results.length === 0 && !isSearching && (
+                                    <div className="text-center py-16 animate-fade-in">
+                                        <p className="text-[15px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>No relevant documents found</p>
+                                        <p className="text-[14px]" style={{ color: 'var(--text-muted)' }}>Try adjusting your keywords.</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* ── Results Area ─────────────────────────────────────────────────── */}
-                        <div className="flex-1 overflow-y-auto px-5 pb-6">
-
-                            {/* AI Synthesis card */}
-                            {synthesized !== null && results?.length > 0 && (
-                                <div className="max-w-[680px] mx-auto mb-3 animate-scale-in">
-                                    <div
-                                        className="p-4 rounded-xl"
+                        {/* ── Input bar (Fixed Bottom) ─────────────────────────────────────────────────── */}
+                        <div style={{
+                            flexShrink: 0,
+                            padding: '12px 0 24px',
+                            background: 'var(--surface-app)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            width: '100%'
+                        }}>
+                            <form onSubmit={handleSubmit} className="w-full max-w-[800px] px-6">
+                                <div style={{
+                                    display: 'flex', gap: '10px', alignItems: 'flex-end',
+                                    background: 'var(--surface-card)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: '24px',
+                                    padding: '8px 8px 8px 16px',
+                                    boxShadow: 'var(--shadow-md)',
+                                    transition: 'border-color 150ms, box-shadow 150ms',
+                                    width: '100%',
+                                }}
+                                    onFocusCapture={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+                                    onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { e.currentTarget.style.borderColor = 'var(--border-subtle)'; } }}
+                                >
+                                    <textarea
+                                        ref={inputRef}
+                                        value={query}
+                                        onChange={(e) => { setQuery(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSearch(query); } }}
+                                        placeholder="Search your knowledge base..."
+                                        rows={1}
+                                        disabled={isSearching}
                                         style={{
-                                            background: 'rgba(99,102,241,0.05)',
-                                            border: '1px solid rgba(99,102,241,0.18)',
+                                            flex: 1, resize: 'none', border: 'none', outline: 'none',
+                                            background: 'transparent', fontSize: '15.5px',
+                                            color: 'var(--text-primary)', lineHeight: 1.5,
+                                            minHeight: '24px', maxHeight: '200px', overflow: 'auto',
+                                            fontFamily: 'inherit',
+                                            paddingTop: '2px',
+                                            paddingBottom: '2px'
+                                        }}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!query.trim() || isSearching}
+                                        style={{
+                                            width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                                            background: query.trim() && !isSearching ? 'var(--accent)' : 'var(--surface-recessed)',
+                                            color: query.trim() && !isSearching ? '#fff' : 'var(--text-placeholder)',
+                                            border: 'none', cursor: query.trim() && !isSearching ? 'pointer' : 'default',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'all 150ms ease',
                                         }}
                                     >
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div
-                                                className="w-5 h-5 rounded-md flex items-center justify-center text-[11px] flex-shrink-0"
-                                                style={{ background: 'var(--accent-light)' }}
-                                            >
-                                                ✦
-                                            </div>
-                                            <span className="text-[10.5px] font-bold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
-                                                AI Synthesis
-                                            </span>
-                                            <span className="text-[10px] ml-auto" style={{ color: 'var(--text-muted)' }}>
-                                                from top {Math.min(results.length, 3)} passages
-                                            </span>
-                                        </div>
-                                        <p
-                                            className="text-[13.5px] leading-relaxed typewriter-cursor whitespace-pre-wrap"
-                                            style={{ color: 'var(--text-secondary)' }}
-                                        >
-                                            {synthesized || 'Synthesizing...'}
-                                        </p>
-                                        {genStats && (
-                                            <div className="mt-3 pt-2 text-[10px] flex flex-wrap gap-4 border-t" style={{ borderColor: 'rgba(99,102,241,0.15)', color: 'var(--text-muted)' }}>
-                                                <span><span className="font-semibold">Load:</span> {genStats.loadTime}ms</span>
-                                                <span><span className="font-semibold">TTFT:</span> {genStats.ttft}ms</span>
-                                                <span><span className="font-semibold">Speed:</span> {genStats.tokensPerSec} t/s</span>
-                                                <span><span className="font-semibold">Total:</span> {(genStats.totalTime / 1000).toFixed(1)}s</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                        </svg>
+                                    </button>
                                 </div>
-                            )}
-
-                            {/* No results */}
-                            {results !== null && results.length === 0 && (
-                                <div className="text-center py-16 animate-fade-in">
-                                    <div className="text-4xl mb-3">🔎</div>
-                                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No results found</p>
-                                    <p className="text-[12.5px]" style={{ color: 'var(--text-muted)' }}>Try a different query or upload more documents.</p>
-                                </div>
-                            )}
-
-                            {/* Result list */}
-                            {results?.length > 0 && (
-                                <div className="max-w-[680px] mx-auto space-y-2.5">
-                                    {results.map((result, idx) => (
-                                        <ResultCard key={result.docId + '-' + result.rank} result={result} index={idx} onToast={onToast} />
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Suggestion chips – before first search */}
-                            {!hasResults && (
-                                <div className="max-w-[680px] mx-auto pt-2 animate-fade-in">
-                                    <p className="text-[10.5px] font-semibold uppercase tracking-widest text-center mb-3" style={{ color: 'var(--text-muted)' }}>
-                                        Try asking
-                                    </p>
-                                    <div className="flex flex-wrap justify-center gap-1.5">
-                                        {ALL_SUGGESTIONS.map((s) => (
-                                            <button
-                                                key={s}
-                                                onClick={() => { setQuery(s); setTimeout(() => doSearch(s), 60); }}
-                                                className="px-3 py-1.5 text-[12.5px] font-medium rounded-lg select-none
-                                               transition-all duration-150"
-                                                style={{
-                                                    background: 'var(--surface-card)',
-                                                    border: '1px solid var(--border-subtle)',
-                                                    color: 'var(--text-secondary)',
-                                                    boxShadow: 'var(--shadow-sm)',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = 'var(--accent-light)';
-                                                    e.currentTarget.style.borderColor = 'var(--accent-border)';
-                                                    e.currentTarget.style.color = 'var(--accent)';
-                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(99,102,241,0.10)';
-                                                    e.currentTarget.style.transform = 'translateY(-1px)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.background = 'var(--surface-card)';
-                                                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                                                    e.currentTarget.style.color = 'var(--text-secondary)';
-                                                    e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                                                    e.currentTarget.style.transform = 'translateY(0)';
-                                                }}
-                                            >
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            </form>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
+                                Cortex provides offline intelligent search over your documents.
+                            </p>
                         </div>
                     </div>
                 )}

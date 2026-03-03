@@ -1,12 +1,12 @@
-const { aiManager } = require('./ai/runtime/aiManager');
-const { buildPrompt } = require('./ai/rag/promptBuilder');
-const { getStorageManager } = require('./database');
+const { aiManager } = require('../runtime/aiManager');
+const { buildPrompt } = require('./promptBuilder');
+const { storageManager } = require('../../storage/storageManager');
 
 /**
  * RAG Pipeline: query → embed → vector search → prompt construction → generative AI
- * 
+ *
  * Phase 2D: Uses new storage architecture with LanceDB for scalable vector search
- * 
+ *
  * @param {string} query
  * @param {import('./database').DatabaseWrapper} db - Legacy parameter (for compatibility)
  * @param {function} onTokenCallback Streaming callback
@@ -14,9 +14,6 @@ const { getStorageManager } = require('./database');
  */
 async function ragSearch(query, db, onTokenCallback, topK = 5) {
     const startTime = Date.now();
-
-    // Phase 2D: Use new storage manager for vector search
-    const storageManager = getStorageManager();
 
     if (!storageManager.isReady()) {
         // Fallback to legacy mode if storage not initialized

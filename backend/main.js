@@ -29,16 +29,17 @@ if (typeof globalThis.CustomEvent === 'undefined') {
     globalThis.CustomEvent = NodeCustomEvent;
 }
 
-// Services
-const { initializeDatabase, getDatabase, getStorageManager } = require('./services/database');
-const { aiManager } = require('./services/ai/runtime/aiManager');
-const { searchVectors } = require('./services/vectorSearch');
-const { extractPdfText } = require('./services/pdfHandler');
-const { ragSearch } = require('./services/ragPipeline');
-const { createMeshManager, getMeshManager } = require('./services/mesh/meshManager');
+// Services — correct paths within src/
+const { initializeDatabase } = require('./src/storage/dbInit');
+const { storageManager } = require('./src/storage/storageManager');
+const { aiManager } = require('./src/ai/runtime/aiManager');
+const { ragSearch } = require('./src/ai/rag/ragPipeline');
+const { createMeshManager, getMeshManager } = require('./src/mesh/meshManager');
 
 let mainWindow;
 let meshManager;
+let db; // database wrapper instance, set during initializeServices
+
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -108,44 +109,32 @@ function createWindow() {
 
 async function initializeServices() {
     try {
-        // Initialize AI components first (needed for embeddings)
+        const dataDir = path.join(__dirname, '../data');
+
+        // Step 1: Storage architecture (SQLite + LanceDB)
+        db = await initializeDatabase(dataDir);
+        console.log('[Cortex] ✓ Storage initialized (SQLite + LanceDB)');
+
+        if (storageManager.isReady()) {
+            try {
+                const stats = await storageManager.getStats();
+                console.log(`[Cortex]   → ${stats.documents} documents, ${stats.chunks} chunks, ${stats.vectors} vectors`);
+            } catch (_) { /* stats not critical */ }
+        }
+
+        // Step 2: AI engines
         await aiManager.initialize();
         console.log('[Cortex] ✓ AI engines initialized');
 
-        // Initialize new storage architecture (Phase 2D: SQLite + LanceDB)
-        const dataDir = path.join(__dirname, '../data');
-        const dbPath = path.join(dataDir, 'cortex.db');
-
-        await initializeDatabase(dbPath);
-        console.log('[Cortex] ✓ Storage architecture initialized (Phase 2D)');
-
-        const storageManager = getStorageManager();
-        if (storageManager.isReady()) {
-            const stats = await storageManager.getStats();
-            console.log(`[Cortex]   → ${stats.documents} documents, ${stats.chunks} chunks, ${stats.vectors} vectors`);
-            console.log(`[Cortex]   → Embedding version: ${stats.embeddingVersion}`);
-
-            // Check if migration needed
-            const migrationInfo = storageManager.checkMigration();
-            if (migrationInfo) {
-                console.warn('[Cortex] ⚠ Embedding version migration required!');
-                console.warn(`[Cortex]   → Run migration via Performance tab or call storageManager.migrateAll()`);
-            }
-        }
-
-        // Start mesh networking (libp2p-based P2P)
-        meshManager = createMeshManager(getDatabase());
-
-        // Setup peer change callback to notify UI
+        // Step 3: Mesh networking
+        meshManager = createMeshManager(db);
         meshManager.onPeersChanged = (peers) => {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('peers-updated', peers);
             }
         };
-
-        // Start mesh networking
         await meshManager.start();
-        console.log('[Cortex] ✓ Mesh networking started (libp2p)');
+        console.log('[Cortex] ✓ Mesh networking started');
 
     } catch (error) {
         console.error('[Cortex] Service initialization error:', error);
@@ -190,7 +179,7 @@ function registerIpcHandlers() {
                 event.sender.send('search-token', text);
             };
 
-            const results = await ragSearch(query, getDatabase(), onToken);
+            const results = await ragSearch(query, db, onToken);
             return { results };
         } catch (error) {
             console.error('[Cortex] Search error:', error);
@@ -213,9 +202,7 @@ function registerIpcHandlers() {
             const filePath = result.filePaths[0];
             const title = path.basename(filePath, '.pdf');
 
-            // Phase 2D: Use new storage manager
-            const storageManager = getStorageManager();
-
+            // Phase 2D: Use new storage manager (module-level singleton)
             if (!storageManager.isReady()) {
                 return { error: 'Storage not initialized' };
             }

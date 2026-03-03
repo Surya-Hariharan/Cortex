@@ -47,8 +47,17 @@ export default function App() {
     const perfPollRef = useRef(null);
 
     useEffect(() => {
+        console.log('[App] Mounting...');
         if (window.electronAPI) {
-            window.electronAPI.getStats().then(setStats).catch(() => { });
+            console.log('[App] electronAPI found, fetching stats...');
+            window.electronAPI.getStats().then((res) => {
+                console.log('[App] Stats received:', res);
+                setStats(res);
+            }).catch((err) => {
+                console.error('[App] Failed to fetch stats:', err);
+            });
+        } else {
+            console.error('[App] window.electronAPI is undefined!');
         }
     }, []);
 
@@ -108,9 +117,9 @@ export default function App() {
     };
 
     return (
-        <div className="h-screen flex bg-white dark:bg-dark-950 text-slate-800 dark:text-slate-200 overflow-hidden font-sans pt-0">
+        <div className="h-screen flex bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
             {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-            <div className={`bg-slate-50 dark:bg-dark-900 flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-in-out relative ${isSidebarCollapsed ? 'w-[68px]' : 'w-[260px] border-r border-slate-200 dark:border-dark-800'}`}>
+            <div className={`bg-dark-50 dark:bg-dark-900 flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-in-out relative ${isSidebarCollapsed ? 'w-[68px]' : 'w-[260px] border-r border-dark-200 dark:border-dark-800'}`}>
                 {/* Drag Handle & Collapse Button */}
                 <div className={`flex items-center p-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ WebkitAppRegion: 'drag' }}>
                     {!isSidebarCollapsed && (

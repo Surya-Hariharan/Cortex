@@ -42,6 +42,9 @@ function createWindow() {
             sandbox: false,
         },
     });
+    
+    // Open DevTools immediately for debugging
+    mainWindow.webContents.openDevTools();
 
     // Load the built React bundle
     const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');

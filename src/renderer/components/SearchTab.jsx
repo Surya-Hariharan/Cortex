@@ -111,10 +111,10 @@ export default function SearchTab({ onToast, onUploadPdf }) {
                 {/* Hero text - shows only before first search */}
                 {results === null && (
                     <div className="text-center mb-8 animate-fade-in">
-                        <h2 className="text-3xl font-bold mb-2 text-slate-800 dark:text-dark-50">
+                        <h2 className="text-3xl font-bold mb-2 text-dark-800 dark:text-dark-50">
                             <span className="gradient-text">Search your knowledge</span>
                         </h2>
-                        <p className="text-slate-500 dark:text-dark-400 text-sm max-w-md font-medium">
+                        <p className="text-dark-500 dark:text-dark-400 text-sm max-w-md font-medium">
                             Ask anything — Cortex searches your entire document library using AI-powered semantic understanding
                         </p>
                     </div>
@@ -122,13 +122,13 @@ export default function SearchTab({ onToast, onUploadPdf }) {
 
                 {/* Search Bar */}
                 <form onSubmit={handleSearch} className="w-full max-w-2xl px-6 relative z-10">
-                    <div className={`bg-white dark:bg-dark-900 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] flex items-center gap-3 pl-2 pr-2 py-2 rounded-2xl transition-all duration-300 border ${isSearching ? 'border-synapse-300 dark:border-synapse-500/50 shadow-[0_4px_24px_rgba(99,102,241,0.15)] glow-border-active' : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] glow-border dark:glow-border-none'
+                    <div className={`bg-white dark:bg-dark-900 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] flex items-center gap-3 pl-2 pr-2 py-2 rounded-2xl transition-all duration-300 border ${isSearching ? 'border-synapse-300 dark:border-synapse-500/50 shadow-[0_4px_24px_rgba(99,102,241,0.15)] glow-border-active' : 'border-dark-200 dark:border-dark-700 hover:border-dark-300 dark:hover:border-dark-600 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] glow-border dark:glow-border-none'
                         }`}>
 
                         <button
                             type="button"
                             onClick={onUploadPdf}
-                            className="bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-100 transition-colors rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0"
+                            className="bg-dark-100 dark:bg-dark-800 hover:bg-dark-200 dark:hover:bg-dark-700 text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0"
                             title="Upload Context (PDF)"
                         >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -143,7 +143,7 @@ export default function SearchTab({ onToast, onUploadPdf }) {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="What is the second law of thermodynamics?"
-                            className="flex-1 bg-transparent text-slate-800 dark:text-dark-50 placeholder-slate-400 dark:placeholder-dark-500 text-[15px] font-medium outline-none px-2"
+                            className="flex-1 bg-transparent text-dark-800 dark:text-dark-50 placeholder-dark-400 dark:placeholder-dark-500 text-[15px] font-medium outline-none px-2"
                             disabled={isSearching}
                         />
 
@@ -152,7 +152,7 @@ export default function SearchTab({ onToast, onUploadPdf }) {
                             disabled={!query.trim() || isSearching}
                             className={`w-9 h-9 flex flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${query.trim() && !isSearching
                                 ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-sm'
-                                : 'bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-dark-500 cursor-not-allowed'
+                                : 'bg-dark-100 dark:bg-dark-800 text-dark-400 dark:text-dark-500 cursor-not-allowed'
                                 }`}
                             title="Send Message"
                         >
@@ -170,9 +170,9 @@ export default function SearchTab({ onToast, onUploadPdf }) {
 
                 {/* Search metadata + stage indicator */}
                 {searchMeta && !isSearching && (
-                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 dark:text-dark-400 font-medium animate-fade-in">
+                    <div className="flex items-center gap-4 mt-3 text-xs text-dark-500 dark:text-dark-400 font-medium animate-fade-in">
                         <span>
-                            Found <strong className="text-slate-800 dark:text-dark-100">{results?.length || 0}</strong> results
+                            Found <strong className="text-dark-800 dark:text-dark-100">{results?.length || 0}</strong> results
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1">

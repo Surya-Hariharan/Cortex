@@ -18,7 +18,7 @@ function getDueStatus(dueDate) {
     if (diffDays === 0) return { label: 'Due today', cls: 'text-amber-600 font-bold', urgent: true };
     if (diffDays === 1) return { label: 'Due tomorrow', cls: 'text-amber-600 font-bold', urgent: false };
     if (diffDays <= 7) return { label: `Due in ${diffDays}d`, cls: 'text-synapse-600', urgent: false };
-    return { label: `Due in ${diffDays}d`, cls: 'text-slate-500', urgent: false };
+    return { label: `Due in ${diffDays}d`, cls: 'text-dark-500', urgent: false };
 }
 
 export default function NotesTab({ onToast }) {
@@ -93,8 +93,8 @@ export default function NotesTab({ onToast }) {
             <div className="px-6 pt-5 pb-3">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-dark-50">Notes & Deadlines</h2>
-                        <p className="text-xs text-slate-500 dark:text-dark-400 mt-0.5 font-medium">
+                        <h2 className="text-lg font-bold text-dark-800 dark:text-dark-50">Notes & Deadlines</h2>
+                        <p className="text-xs text-dark-500 dark:text-dark-400 mt-0.5 font-medium">
                             {notes.length} items · {completedCount} completed
                             {pendingDeadlines > 0 && (
                                 <span className="text-amber-600 dark:text-amber-500 ml-2 font-bold">· {pendingDeadlines} upcoming deadline{pendingDeadlines > 1 ? 's' : ''}</span>
@@ -124,7 +124,7 @@ export default function NotesTab({ onToast }) {
                             onClick={() => setFilter(f.id)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 border ${filter === f.id
                                 ? 'bg-synapse-50 dark:bg-synapse-900/20 text-synapse-700 dark:text-synapse-400 border-synapse-300 dark:border-synapse-700 shadow-sm'
-                                : 'bg-white dark:bg-dark-950 text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-50 hover:bg-slate-50 dark:hover:bg-dark-900 border-slate-200 dark:border-dark-800'
+                                : 'bg-white dark:bg-dark-950 text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-50 hover:bg-dark-50 dark:hover:bg-dark-900 border-dark-200 dark:border-dark-800'
                                 }`}
                         >
                             <span>{f.icon}</span>
@@ -145,12 +145,12 @@ export default function NotesTab({ onToast }) {
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="Title..."
-                                className="flex-1 bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-dark-50 font-medium placeholder-slate-400 dark:placeholder-dark-500 outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all"
+                                className="flex-1 bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-dark-800 dark:text-dark-50 font-medium placeholder-dark-400 dark:placeholder-dark-500 outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all"
                             />
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value)}
-                                className="bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-dark-200 font-medium outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all cursor-pointer"
+                                className="bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-dark-700 dark:text-dark-200 font-medium outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all cursor-pointer"
                             >
                                 {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
                                     <option key={key} value={key}>{cfg.icon} {cfg.label}</option>
@@ -162,16 +162,16 @@ export default function NotesTab({ onToast }) {
                             onChange={(e) => setContent(e.target.value)}
                             placeholder="Details (optional)..."
                             rows={2}
-                            className="w-full bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-dark-200 font-medium placeholder-slate-400 dark:placeholder-dark-500 outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all resize-none"
+                            className="w-full bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-3 py-2 text-sm text-dark-700 dark:text-dark-200 font-medium placeholder-dark-400 dark:placeholder-dark-500 outline-none focus:border-synapse-400 focus:ring-2 focus:ring-synapse-100 dark:focus:ring-synapse-900/20 transition-all resize-none"
                         />
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <label className="text-xs text-slate-500 dark:text-dark-400 font-semibold">Due date:</label>
+                                <label className="text-xs text-dark-500 dark:text-dark-400 font-semibold">Due date:</label>
                                 <input
                                     type="date"
                                     value={dueDate}
                                     onChange={(e) => setDueDate(e.target.value)}
-                                    className="bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 shadow-sm rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 dark:text-dark-200 outline-none focus:border-synapse-400 focus:ring-1 focus:ring-synapse-100 dark:focus:ring-synapse-900/20"
+                                    className="bg-white dark:bg-dark-950 border border-dark-200 dark:border-dark-700 shadow-sm rounded-lg px-2 py-1.5 text-xs font-medium text-dark-700 dark:text-dark-200 outline-none focus:border-synapse-400 focus:ring-1 focus:ring-synapse-100 dark:focus:ring-synapse-900/20"
                                 />
                             </div>
                             <div className="flex gap-2">
@@ -192,7 +192,7 @@ export default function NotesTab({ onToast }) {
                 {filtered.length === 0 && (
                     <div className="text-center py-16 animate-fade-in">
                         <div className="text-4xl mb-3">{filter === 'all' ? '📝' : TYPE_CONFIG[filter]?.icon || '📝'}</div>
-                        <p className="text-slate-500 dark:text-dark-400 font-medium text-sm">
+                        <p className="text-dark-500 dark:text-dark-400 font-medium text-sm">
                             {notes.length === 0
                                 ? 'No notes yet. Click "Add" to create your first note or deadline.'
                                 : `No ${filter} items.`}
@@ -217,7 +217,7 @@ export default function NotesTab({ onToast }) {
                                     onClick={() => handleToggle(note.id)}
                                     className={`mt-0.5 w-5 h-5 rounded-md border-2 shadow-sm flex items-center justify-center flex-shrink-0 transition-all duration-200 ${note.completed
                                         ? 'bg-emerald-500 border-emerald-600 dark:border-emerald-400'
-                                        : 'bg-white dark:bg-dark-950 border-slate-300 dark:border-dark-600 hover:border-synapse-400 dark:hover:border-synapse-500'
+                                        : 'bg-white dark:bg-dark-950 border-dark-300 dark:border-dark-600 hover:border-synapse-400 dark:hover:border-synapse-500'
                                         }`}
                                 >
                                     {note.completed && (
@@ -229,7 +229,7 @@ export default function NotesTab({ onToast }) {
 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <h3 className={`text-sm font-bold ${note.completed ? 'line-through text-slate-400 dark:text-dark-500' : 'text-slate-800 dark:text-dark-50'}`}>
+                                        <h3 className={`text-sm font-bold ${note.completed ? 'line-through text-dark-400 dark:text-dark-500' : 'text-dark-800 dark:text-dark-50'}`}>
                                             {note.title}
                                         </h3>
                                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md border ${cfg.color}`}>
@@ -237,7 +237,7 @@ export default function NotesTab({ onToast }) {
                                         </span>
                                     </div>
                                     {note.content && (
-                                        <p className="text-xs text-slate-600 dark:text-dark-300 font-medium leading-relaxed mb-1.5 line-clamp-2">
+                                        <p className="text-xs text-dark-600 dark:text-dark-300 font-medium leading-relaxed mb-1.5 line-clamp-2">
                                             {note.content}
                                         </p>
                                     )}
@@ -247,7 +247,7 @@ export default function NotesTab({ onToast }) {
                                                 {due.urgent && '⚠ '}{due.label}
                                             </span>
                                         )}
-                                        <span className="text-slate-400 dark:text-dark-500 font-medium">
+                                        <span className="text-dark-400 dark:text-dark-500 font-medium">
                                             {new Date(note.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
@@ -256,7 +256,7 @@ export default function NotesTab({ onToast }) {
                                 {/* Delete */}
                                 <button
                                     onClick={() => handleDelete(note.id)}
-                                    className="text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
+                                    className="text-dark-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
                                     title="Delete"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -272,8 +272,8 @@ export default function NotesTab({ onToast }) {
 
             {/* ── Footer: encrypted badge ────────────────────────── */}
             <div className="px-6 pb-3">
-                <div className="glass-panel-light dark:bg-dark-900/50 p-2.5 flex items-center justify-center gap-2 border border-slate-200 dark:border-dark-800 rounded-lg">
-                    <span className="text-[10px] text-slate-500 dark:text-dark-400 font-semibold uppercase tracking-wider">🔒 All notes encrypted at rest with AES-256-GCM</span>
+                <div className="glass-panel-light dark:bg-dark-900/50 p-2.5 flex items-center justify-center gap-2 border border-dark-200 dark:border-dark-800 rounded-lg">
+                    <span className="text-[10px] text-dark-500 dark:text-dark-400 font-semibold uppercase tracking-wider">🔒 All notes encrypted at rest with AES-256-GCM</span>
                 </div>
             </div>
         </div>

@@ -13,7 +13,7 @@ const SUBJECT_COLORS = {
     'Probability & Statistics': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
 };
 
-const DEFAULT_COLOR = { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200' };
+const DEFAULT_COLOR = { bg: 'bg-dark-100 dark:bg-dark-800', text: 'text-dark-600 dark:text-dark-300', border: 'border-dark-200 dark:border-dark-700' };
 
 function generateExplanation(result) {
     const pct = result.relevancePercent;
@@ -32,7 +32,7 @@ function getScoreColor(score) {
     if (score >= 0.8) return 'from-emerald-400 to-emerald-500';
     if (score >= 0.6) return 'from-synapse-500 to-synapse-600';
     if (score >= 0.4) return 'from-amber-400 to-amber-500';
-    return 'from-slate-300 to-slate-400';
+    return 'from-dark-300 to-dark-400';
 }
 
 export default function ResultCard({ result, index, onToast }) {
@@ -65,22 +65,22 @@ export default function ResultCard({ result, index, onToast }) {
     };
 
     return (
-        <div className={`glass-panel dark:bg-dark-900/80 dark:border-dark-700/60 p-4 animate-slide-up ${delay} hover:border-slate-300 dark:hover:border-dark-500 hover:shadow-md transition-all duration-200 group`}>
+        <div className={`glass-panel dark:bg-dark-900/80 dark:border-dark-700/60 p-4 animate-slide-up ${delay} hover:border-dark-300 dark:hover:border-dark-500 hover:shadow-md transition-all duration-200 group`}>
             {/* Top row: rank, title, subject, score */}
             <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Rank badge */}
-                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-dark-400 border border-slate-200 dark:border-dark-700">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-dark-100 dark:bg-dark-800 flex items-center justify-center text-xs font-bold text-dark-500 dark:text-dark-400 border border-dark-200 dark:border-dark-700">
                         {result.rank}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-dark-50 truncate">{result.title}</h3>
+                        <h3 className="text-sm font-bold text-dark-800 dark:text-dark-50 truncate">{result.title}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-md border ${colors.bg} ${colors.text} ${colors.border}`}>
                                 {result.subject}
                             </span>
-                            <span className="text-[10px] text-slate-400 dark:text-dark-500 font-medium">Chunk {result.chunkIndex + 1}</span>
+                            <span className="text-[10px] text-dark-400 dark:text-dark-500 font-medium">Chunk {result.chunkIndex + 1}</span>
                         </div>
                     </div>
                 </div>
@@ -88,8 +88,8 @@ export default function ResultCard({ result, index, onToast }) {
                 {/* Score + expand */}
                 <div className="flex items-start gap-2 flex-shrink-0">
                     <div className="text-right">
-                        <div className="text-lg font-extrabold text-slate-700 dark:text-dark-200">{result.relevancePercent}%</div>
-                        <div className="w-16 h-1.5 bg-slate-200 dark:bg-dark-800 rounded-full mt-1 overflow-hidden shadow-inner">
+                        <div className="text-lg font-extrabold text-dark-700 dark:text-dark-200">{result.relevancePercent}%</div>
+                        <div className="w-16 h-1.5 bg-dark-200 dark:bg-dark-800 rounded-full mt-1 overflow-hidden shadow-inner">
                             <div
                                 className={`score-bar ${scoreColor}`}
                                 style={{ width: `${result.relevancePercent}%` }}
@@ -98,7 +98,7 @@ export default function ResultCard({ result, index, onToast }) {
                     </div>
                     <button
                         onClick={() => setIsExpanded((v) => !v)}
-                        className="mt-1.5 w-5 h-5 flex items-center justify-center text-slate-400 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-200 bg-slate-50 dark:bg-dark-800/50 hover:bg-slate-100 dark:hover:bg-dark-700 rounded transition-all duration-200"
+                        className="mt-1.5 w-5 h-5 flex items-center justify-center text-dark-400 dark:text-dark-500 hover:text-dark-700 dark:hover:text-dark-200 bg-dark-50 dark:bg-dark-800/50 hover:bg-dark-100 dark:hover:bg-dark-700 rounded transition-all duration-200"
                         title="Explain why this matched"
                     >
                         <svg
@@ -113,7 +113,7 @@ export default function ResultCard({ result, index, onToast }) {
             </div>
 
             {/* Content preview */}
-            <p className="text-xs text-slate-600 dark:text-dark-300 font-medium leading-relaxed mt-2 line-clamp-3">
+            <p className="text-xs text-dark-600 dark:text-dark-300 font-medium leading-relaxed mt-2 line-clamp-3">
                 {result.content}
             </p>
 
@@ -128,15 +128,15 @@ export default function ResultCard({ result, index, onToast }) {
                         </svg>
                         <span className="text-[10px] font-bold text-synapse-700 dark:text-synapse-400 uppercase tracking-wider">Why this matched</span>
                     </div>
-                    <p className="text-[11px] text-slate-600 dark:text-dark-300 font-medium leading-relaxed">
+                    <p className="text-[11px] text-dark-600 dark:text-dark-300 font-medium leading-relaxed">
                         {generateExplanation(result)}
                     </p>
                 </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-dark-800">
-                <div className="text-[10px] text-slate-400 dark:text-dark-500 font-mono font-medium">
+            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-dark-100 dark:border-dark-800">
+                <div className="text-[10px] text-dark-400 dark:text-dark-500 font-mono font-medium">
                     Score: {result.score.toFixed(3)}
                 </div>
 
@@ -147,7 +147,7 @@ export default function ResultCard({ result, index, onToast }) {
                         ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                         : sharing
                             ? 'bg-synapse-50 dark:bg-synapse-900/20 text-synapse-500 dark:text-synapse-400 border border-synapse-200 dark:border-synapse-800'
-                            : 'text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 bg-slate-50 dark:bg-dark-900 hover:bg-synapse-50 dark:hover:bg-synapse-900/30 border border-slate-200 dark:border-dark-700 hover:border-synapse-200 dark:hover:border-synapse-800'
+                            : 'text-dark-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 bg-dark-50 dark:bg-dark-900 hover:bg-synapse-50 dark:hover:bg-synapse-900/30 border border-dark-200 dark:border-dark-700 hover:border-synapse-200 dark:hover:border-synapse-800'
                         }`}
                 >
                     {sharing ? (

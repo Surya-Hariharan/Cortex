@@ -4,7 +4,7 @@ import NetworkTab from './components/NetworkTab';
 import PerformanceTab from './components/PerformanceTab';
 import NotesTab from './components/NotesTab';
 import Toast from './components/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 
 const TABS = [
     { id: 'search', label: 'Search', icon: <Search size={18} /> },
@@ -206,28 +206,26 @@ export default function App() {
                                 <span>Pages</span>
                             </div>
                         )}
-                        <div className="space-y-0.5 relative">
+                        <div className="relative">
                             {TABS.slice(1).map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 return (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={`${isActive ? 'sidebar-nav-item-active' : 'sidebar-nav-item text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                                        className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
                                         title={isSidebarCollapsed ? tab.label : ''}
                                     >
-                                        {!isSidebarCollapsed && (
-                                            <div className="sidebar-accent-container">
-                                                <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-                                            </div>
-                                        )}
+                                        <div className="sidebar-accent-container">
+                                            {!isSidebarCollapsed && <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />}
+                                        </div>
                                         <div className="sidebar-icon-container">
                                             <span className={`${isActive ? 'text-synapse-600 dark:text-synapse-400' : 'text-slate-400 dark:text-dark-500'}`}>
                                                 {tab.icon}
                                             </span>
                                         </div>
                                         {!isSidebarCollapsed && (
-                                            <span className="truncate flex-1 text-left">
+                                            <span className="sidebar-label">
                                                 {tab.label}
                                             </span>
                                         )}
@@ -246,7 +244,7 @@ export default function App() {
                             </div>
                         )}
                         {isSidebarCollapsed ? (
-                            <div className="flex flex-col gap-2.5 items-center mt-4 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
+                            <div className="flex flex-col gap-1 items-center mt-2 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
                                 {MOCK_PROJECTS.map((ws) => (
                                     <div key={ws.id} className="w-8 h-8 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center text-[10px] uppercase font-bold text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 hover:border-synapse-200 dark:hover:border-synapse-500 cursor-pointer transition-colors" title={ws.title}>
                                         {ws.title.substring(0, 2)}
@@ -254,82 +252,87 @@ export default function App() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="space-y-0.5 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
-                                {MOCK_PROJECTS.map(ws => (
-                                    <div key={ws.id} className="space-y-0.5">
-                                        <button
-                                            onClick={() => toggleWs(ws.id)}
-                                            onContextMenu={(e) => {
-                                                e.preventDefault();
-                                                setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
-                                            }}
-                                            className="sidebar-nav-item text-slate-600 dark:text-dark-400 group"
-                                        >
-                                            <div className="sidebar-accent-container" />
-                                            <div className="sidebar-icon-container opacity-40">
-                                                <Monitor size={16} />
-                                            </div>
-                                            <span className="truncate flex-1 text-left font-bold text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100 transition-colors uppercase text-[11px] tracking-wide">
-                                                {ws.title}
-                                            </span>
-                                            <div
-                                                className="sidebar-menu-trigger"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
+                            <div className="border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
+                                {MOCK_PROJECTS.map(ws => {
+                                    const isExpanded = wsExpanded[ws.id];
+                                    return (
+                                        <div key={ws.id}>
+                                            <button
+                                                onClick={() => toggleWs(ws.id)}
+                                                onContextMenu={(e) => {
+                                                    e.preventDefault();
                                                     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
                                                 }}
+                                                className="sidebar-nav-item text-slate-600 dark:text-dark-400 group"
                                             >
-                                                <MoreHorizontal size={14} />
-                                            </div>
-                                        </button>
+                                                <div className="sidebar-accent-container">
+                                                    <ChevronRight size={14} className={`sidebar-chevron ${isExpanded ? 'sidebar-chevron-expanded' : ''}`} />
+                                                </div>
+                                                <div className="sidebar-icon-container">
+                                                    {isExpanded ? <FolderOpen size={18} className="text-synapse-500" /> : <Folder size={18} className="text-slate-400 dark:text-dark-500" />}
+                                                </div>
+                                                <span className="sidebar-label font-bold text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100 transition-colors uppercase text-[11px] tracking-wide">
+                                                    {ws.title}
+                                                </span>
+                                                <div
+                                                    className="sidebar-menu-trigger"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
+                                                    }}
+                                                >
+                                                    <MoreHorizontal size={14} />
+                                                </div>
+                                            </button>
 
-                                        {wsExpanded[ws.id] && (
-                                            <div className="space-y-0.5 relative">
-                                                {ws.chats.map((chat) => {
-                                                    const isActive = activeTab === 'search' && activeChatId === chat.id;
-                                                    return (
-                                                        <button
-                                                            key={chat.id}
-                                                            onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
-                                                            onContextMenu={(e) => {
-                                                                e.preventDefault();
-                                                                setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
-                                                            }}
-                                                            className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'}`}
-                                                        >
-                                                            <div className="sidebar-accent-container">
-                                                                <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-                                                            </div>
-                                                            <div className="sidebar-icon-container opacity-40">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                                                            </div>
-                                                            <span className="truncate flex-1 text-left">{chat.title}</span>
-                                                            <div
-                                                                className="sidebar-menu-trigger"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
+                                            {isExpanded && (
+                                                <div className="relative">
+                                                    {ws.chats.map((chat) => {
+                                                        const isActive = activeTab === 'search' && activeChatId === chat.id;
+                                                        return (
+                                                            <button
+                                                                key={chat.id}
+                                                                onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
+                                                                onContextMenu={(e) => {
+                                                                    e.preventDefault();
                                                                     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
                                                                 }}
+                                                                className={`sidebar-nav-item sidebar-child-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'}`}
                                                             >
-                                                                <MoreHorizontal size={14} />
-                                                            </div>
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                                <div className="sidebar-accent-container">
+                                                                    <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                                                </div>
+                                                                <div className="sidebar-icon-container">
+                                                                    <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-synapse-500' : 'bg-slate-400 dark:bg-dark-600'}`} />
+                                                                </div>
+                                                                <span className="sidebar-label">{chat.title}</span>
+                                                                <div
+                                                                    className="sidebar-menu-trigger"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
+                                                                    }}
+                                                                >
+                                                                    <MoreHorizontal size={14} />
+                                                                </div>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
 
                         {/* Your Chats Section */}
                         {!isSidebarCollapsed && (
-                            <div className="sidebar-header mt-4">
+                            <div className="sidebar-header">
                                 <span>Your Chats</span>
                             </div>
                         )}
-                        <div className={`space-y-0.5 ${isSidebarCollapsed ? 'mt-4' : ''}`}>
+                        <div className="relative">
                             {MOCK_INDEPENDENT_CHATS.map((chat) => {
                                 const isActive = activeTab === 'search' && activeChatId === chat.id;
                                 return (
@@ -344,16 +347,16 @@ export default function App() {
                                         title={isSidebarCollapsed ? chat.title : ''}
                                     >
                                         <div className="sidebar-accent-container">
-                                            <div className={`sidebar-active-accent ${isActive && !isSidebarCollapsed ? 'opacity-100' : 'opacity-0'}`} />
+                                            {!isSidebarCollapsed && <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />}
                                         </div>
                                         {isSidebarCollapsed ? (
                                             <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-synapse-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-300 dark:bg-dark-700'}`} />
                                         ) : (
                                             <>
-                                                <div className="sidebar-icon-container opacity-40">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                                <div className="sidebar-icon-container">
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-synapse-500' : 'bg-slate-400 dark:bg-dark-600'}`} />
                                                 </div>
-                                                <span className="truncate flex-1 text-left">{chat.title}</span>
+                                                <span className="sidebar-label">{chat.title}</span>
                                                 <div
                                                     className="sidebar-menu-trigger"
                                                     onClick={(e) => {

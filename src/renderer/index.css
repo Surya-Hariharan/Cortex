@@ -165,38 +165,75 @@ body {
   }
 
   /* ── Sidebar Nav ─────────────────────────────────────────── */
+  /* ── Sidebar Nav ─────────────────────────────────────────── */
   .sidebar-header {
-    @apply text-[10px] font-bold text-slate-400 dark:text-dark-500/60 uppercase tracking-[0.05em] px-2 py-3 select-none flex items-center justify-between;
+    @apply text-[10px] font-bold text-slate-400 dark:text-dark-500/60 uppercase tracking-[0.08em] px-3 select-none flex items-center justify-between mb-2;
+    margin-top: 16px;
   }
 
+  /* First header doesn't need top margin */
+  div:first-child>.sidebar-header {
+    margin-top: 4px;
+  }
+
+  /* Base class — ALWAYS applied to every sidebar item */
   .sidebar-nav-item {
-    @apply flex items-center w-full h-9 rounded-xl text-[13px] font-bold transition-all duration-200 relative;
-    padding-left: 0;
+    @apply flex items-center w-full rounded-xl text-[13px] font-bold transition-colors duration-150 relative;
+    height: 40px;
+    padding: 0;
+    margin-bottom: 4px;
+    box-sizing: border-box;
   }
 
   .sidebar-nav-item:hover {
     @apply bg-slate-200/50 dark:bg-dark-800/80 text-slate-900 dark:text-dark-50;
   }
 
+  /* Modifier — applied IN ADDITION to .sidebar-nav-item */
   .sidebar-nav-item-active {
-    @apply bg-slate-200/80 dark:bg-dark-800 text-slate-900 dark:text-dark-50 shadow-sm;
+    @apply bg-slate-200/80 dark:bg-dark-800 text-synapse-600 dark:text-synapse-400 shadow-sm;
   }
 
   .sidebar-accent-container {
-    @apply w-1.5 h-full flex items-center justify-start flex-shrink-0;
+    @apply flex-shrink-0 flex items-center justify-start;
+    width: 6px;
+    height: 100%;
   }
 
   .sidebar-active-accent {
-    @apply w-[3px] h-4 bg-synapse-500 rounded-r-full transition-opacity duration-200;
+    @apply bg-synapse-500 rounded-r-full transition-opacity duration-150;
+    width: 3px;
+    height: 16px;
   }
 
   .sidebar-icon-container {
-    @apply w-10 flex-shrink-0 flex items-center justify-center;
+    @apply flex-shrink-0 flex items-center justify-center;
+    width: 32px;
+    margin-left: 2px;
+  }
+
+  .sidebar-label {
+    @apply truncate flex-1 text-left;
+    margin-left: 8px;
+  }
+
+  .sidebar-child-item {
+    @apply opacity-70 hover:opacity-100 transition-opacity;
+    padding-left: 24px !important;
+  }
+
+  .sidebar-chevron {
+    @apply transition-transform duration-200 text-slate-400 dark:text-dark-600;
+  }
+
+  .sidebar-chevron-expanded {
+    @apply rotate-90;
   }
 
   /* 3-Dot Menu trigger */
   .sidebar-menu-trigger {
     @apply absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-slate-300/50 dark:hover:bg-dark-700/50 text-slate-400 hover:text-slate-600 dark:text-dark-500 dark:hover:text-dark-200 z-10;
+    margin-right: 4px;
   }
 
   /* ── Context Menu ────────────────────────────────────────── */
@@ -238,14 +275,89 @@ body {
     @apply text-dark-500 dark:text-dark-400 hover:text-dark-800 dark:hover:text-dark-50 hover:bg-dark-200/30 dark:hover:bg-dark-800/30;
   }
 
-  /* ── Network Specific ────────────────────────────────────── */
-  .radar-ripple {
-    @apply absolute rounded-full border border-synapse-500/20 dark:border-synapse-400/20;
-    animation: radar-ping 4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  .tab-underline {
+    @apply absolute bottom-0 left-0 right-0 h-[3px] bg-synapse-500 rounded-full transition-all duration-300;
   }
 
-  .pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+  /* ── Layout & Safety ────────────────────────────────────── */
+  .page-container-safe {
+    @apply max-w-[1400px] mx-auto w-full px-8;
+  }
+
+  .content-max-width {
+    @apply max-w-[1200px] mx-auto;
+  }
+
+  .btn-share-glow {
+    @apply relative overflow-hidden;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+  }
+
+  .btn-share-glow:hover {
+    @apply shadow-xl shadow-synapse-500/30 -translate-y-0.5;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes glow-pulse {
+
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+  }
+
+  .empty-state-container {
+    @apply flex flex-col items-center justify-center h-full py-20 text-center;
+  }
+
+  /* ── Network Specific ────────────────────────────────────── */
+  .radar-container {
+    @apply relative w-[320px] h-[320px] rounded-full flex items-center justify-center;
+    background: radial-gradient(circle at center, rgba(99, 102, 241, 0.03) 0%, transparent 70%);
+  }
+
+  .radar-ring {
+    @apply absolute rounded-full border border-dark-200/30 dark:border-dark-800/50;
+  }
+
+  .radar-sweep {
+    @apply absolute inset-0 rounded-full;
+    background: conic-gradient(from 0deg, rgba(99, 102, 241, 0.15) 0deg, transparent 90deg);
+    animation: radar-sweep 4s linear infinite;
+  }
+
+  .radar-ping {
+    @apply absolute rounded-full border-2 border-synapse-500/40;
+    animation: radar-ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  .activity-card-accent {
+    @apply absolute left-0 top-0 bottom-0 w-1.5;
+  }
+
+  .accent-pdf {
+    @apply bg-rose-500;
+  }
+
+  .accent-code {
+    @apply bg-synapse-500;
+  }
+
+  .accent-doc {
+    @apply bg-blue-500;
+  }
+
+  .accent-default {
+    @apply bg-slate-400;
   }
 
   .network-node {
@@ -253,7 +365,7 @@ body {
   }
 
   .network-node:hover {
-    @apply scale-110;
+    @apply scale-110 z-20;
   }
 
   .network-line {
@@ -261,6 +373,23 @@ body {
   }
 
   /* ── Performance Specific ────────────────────────────────── */
+  .hero-gradient-animate {
+    background: linear-gradient(-45deg, rgba(99, 102, 241, 0.05), rgba(16, 185, 129, 0.05), rgba(99, 102, 241, 0.05));
+    background-size: 400% 400%;
+    animation: gradient-move 15s ease infinite;
+  }
+
+  .monitor-grid {
+    background-image:
+      linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .performance-chip {
+    @apply flex items-center gap-2 px-4 py-2 rounded-full border border-dark-200/60 dark:border-dark-800/60 bg-white/50 dark:bg-dark-900/50 text-[10px] font-black uppercase tracking-widest text-dark-500 dark:text-dark-400;
+  }
+
   .glow-pulse {
     animation: glow-pulse 3s ease-in-out infinite;
   }
@@ -269,6 +398,20 @@ body {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
     background-size: 200% 100%;
     animation: shimmer 2s infinite linear;
+  }
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
   }
 }
 
@@ -302,8 +445,18 @@ body {
   }
 
   100% {
-    transform: scale(4);
+    transform: scale(2.5);
     opacity: 0;
+  }
+}
+
+@keyframes radar-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 

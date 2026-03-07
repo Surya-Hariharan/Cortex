@@ -1,24 +1,44 @@
-# Cortex - Python Environment Requirements
-# 
-# Note: The core Cortex application runs entirely on Node.js/Electron.
-# These Python requirements are provided strictly for research, 
-# advanced data processing scripts, or model evaluations that 
-# you might want to run alongside the application.
-#
-# Install via: pip install -r requirements.txt
+# Cortex Backend — SynapseX
+# Install: pip install -r requirements.txt
 
-# LLM & Embedding processing equivalents to what runs on-device via ONNX
-transformers>=4.38.0
-sentence-transformers>=2.4.0
+# ── Web Framework ────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+
+# ── Database ─────────────────────────────────────────────────────────────────
+sqlalchemy>=2.0.30
+aiosqlite>=0.20.0
+alembic>=1.13.1
+
+# ── Vector Store ─────────────────────────────────────────────────────────────
+faiss-cpu>=1.8.0
+numpy>=1.26.4
+
+# ── AI / ONNX Runtime ────────────────────────────────────────────────────────
 onnxruntime>=1.17.0
 tokenizers>=0.15.2
-torch>=2.2.0
+transformers>=4.38.0          # tokenizer only (no torch dep needed at runtime)
 
-# Document Parsing utilities
-PyMuPDF>=1.23.21
-pdfminer.six>=20231228
+# ── Document Parsing ─────────────────────────────────────────────────────────
+PyMuPDF>=1.24.0               # fitz – fast PDF extraction
+python-docx>=1.1.0
 
-# Utilities
-numpy>=1.26.4
-tqdm>=4.66.2
+# ── Async / Utilities ────────────────────────────────────────────────────────
+httpx>=0.27.0
 python-dotenv>=1.0.1
+tqdm>=4.66.2
+tenacity>=8.3.0               # retry logic for sync
+
+# ── Mesh Networking ──────────────────────────────────────────────────────────
+zeroconf>=0.131.0             # mDNS peer discovery
+websockets>=12.0
+
+# ── Logging & Monitoring ─────────────────────────────────────────────────────
+structlog>=24.1.0
+
+# ── Cloud / Docker (optional) ────────────────────────────────────────────────
+# asyncpg>=0.29.0             # PostgreSQL async driver
+# pgvector>=0.2.5             # pgvector Python client

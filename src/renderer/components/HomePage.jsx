@@ -83,9 +83,9 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                                 key={action.id}
                                 onClick={() => {
                                     if (action.id === 'upload') onUploadPdf?.();
-                                    else if (action.id === 'search') onTabChange?.('search');
-                                    else if (action.id === 'note') onTabChange?.('notes');
-                                    else if (action.id === 'group') onTabChange?.('study-groups');
+                                    else if (action.id === 'search') onTabChange?.('knowledge');
+                                    else if (action.id === 'note') onTabChange?.('workspace');
+                                    else if (action.id === 'group') onTabChange?.('campus');
                                 }}
                                 className="relative overflow-hidden group flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 hover:border-slate-300 dark:hover:border-dark-700 transition-all duration-300 hover:shadow-lg dark:hover:shadow-none"
                             >

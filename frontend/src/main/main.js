@@ -11,11 +11,11 @@ const path = require('path');
 const fs = require('fs');
 
 // Services
-const { initializeDatabase, getDatabase } = require('../services/database');
-const { EmbeddingsEngine } = require('../services/embeddings');
-const { extractPdfText } = require('../services/pdfHandler');
-const { ragSearch } = require('../services/ragPipeline');
-const { PeerDiscovery } = require('../services/peerDiscovery');
+const { initializeDatabase, getDatabase } = require('../services/storage/database');
+const { EmbeddingsEngine } = require('../services/ai/embeddings');
+const { extractPdfText } = require('../services/storage/pdfHandler');
+const { ragSearch } = require('../services/ai/ragPipeline');
+const { PeerDiscovery } = require('../services/network/peerDiscovery');
 
 let mainWindow;
 let embeddingsEngine;

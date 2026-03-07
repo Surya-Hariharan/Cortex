@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import HomePage from './components/HomePage';
-import Knowledge from './components/Knowledge';
-import Workspace from './components/Workspace';
-import Campus from './components/Campus';
-import Activity from './components/Activity';
-import AIEngine from './components/AIEngine';
-import StreamSelectorModal from './components/StreamSelectorModal';
-import CommandPalette from './components/CommandPalette';
-import Toast from './components/Toast';
+import HomePage from './components/pages/HomePage';
+import Knowledge from './components/pages/Knowledge';
+import Workspace from './components/pages/Workspace';
+import Campus from './components/pages/Campus';
+import Activity from './components/pages/Activity';
+import AIEngine from './components/pages/AIEngine';
+import StreamSelectorModal from './components/layout/StreamSelectorModal';
+import CommandPalette from './components/layout/CommandPalette';
+import Toast from './components/layout/Toast';
 import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu } from 'lucide-react';
 
 const TABS = [

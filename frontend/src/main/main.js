@@ -47,7 +47,7 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
 
     // Load the built React bundle
-    const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
+    const rendererPath = path.join(__dirname, '../../../dist/renderer/index.html');
     if (fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
     } else {

@@ -72,19 +72,19 @@ export default function DocumentStatus() {
                                 <Database size={24} />
                             </div>
                             <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50">
-                                Document <span className="text-violet-600 dark:text-violet-500">Processing</span>
+                                AI <span className="text-violet-600 dark:text-violet-500">Processing</span>
                             </h1>
                         </div>
                         <p className="text-sm text-slate-500 dark:text-dark-400 font-medium">
-                            On-device OCR and semantic indexing status.
+                            OCR, embedding generation, indexing, and inference pipeline.
                         </p>
                     </div>
                     <div className="flex gap-3">
                         <button
                             onClick={() => setIsPaused(!isPaused)}
                             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${isPaused
-                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                                 }`}
                         >
                             {isPaused ? <Play size={16} /> : <Pause size={16} />}

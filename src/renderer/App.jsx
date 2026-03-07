@@ -6,17 +6,25 @@ import NotesTab from './components/NotesTab';
 import AcademicHub from './components/AcademicHub';
 import MyContributions from './components/MyContributions';
 import DocumentStatus from './components/DocumentStatus';
+import HomePage from './components/HomePage';
+import Library from './components/Library';
+import StudyGroups from './components/StudyGroups';
+import Notifications from './components/Notifications';
 import StreamSelectorModal from './components/StreamSelectorModal';
 import Toast from './components/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, GraduationCap, BarChart3, Database } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, GraduationCap, BarChart3, Database, Home, BookOpen, Users, Bell } from 'lucide-react';
 
 const TABS = [
+    { id: 'home', label: 'Home', icon: <Home size={18} /> },
     { id: 'search', label: 'Search', icon: <Search size={18} /> },
     { id: 'notes', label: 'Notes', icon: <FileText size={18} /> },
+    { id: 'library', label: 'Library', icon: <BookOpen size={18} /> },
     { id: 'academic-hub', label: 'Academic Hub', icon: <GraduationCap size={18} /> },
+    { id: 'study-groups', label: 'Study Groups', icon: <Users size={18} /> },
     { id: 'my-contributions', label: 'My Contributions', icon: <BarChart3 size={18} /> },
-    { id: 'indexing', label: 'Indexing Status', icon: <Database size={18} /> },
-    { id: 'network', label: 'Network', icon: <Globe size={18} /> },
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
+    { id: 'ai-processing', label: 'AI Processing', icon: <Database size={18} /> },
+    { id: 'network', label: 'Mesh Network', icon: <Globe size={18} /> },
     { id: 'performance', label: 'Performance', icon: <Zap size={18} /> },
 ];
 
@@ -41,7 +49,7 @@ const MOCK_INDEPENDENT_CHATS = [
 ];
 
 export default function App() {
-    const [activeTab, setActiveTab] = useState('search');
+    const [activeTab, setActiveTab] = useState('home');
     const [stats, setStats] = useState({ documents: 0, embeddings: 0, subjects: [] });
     const [toast, setToast] = useState(null);
     const [perfProvider, setPerfProvider] = useState('cpu');
@@ -233,7 +241,7 @@ export default function App() {
                             </div>
                         )}
                         <div className="relative">
-                            {TABS.slice(1).map((tab) => {
+                            {TABS.map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 return (
                                     <button
@@ -425,11 +433,15 @@ export default function App() {
                 <div className="h-4 w-full absolute top-0 left-0 bg-transparent z-50 pointer-events-none" style={{ WebkitAppRegion: 'drag' }} />
 
                 <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+                    {activeTab === 'home' && <HomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
                     {activeTab === 'search' && <SearchTab onToast={showToast} onUploadPdf={uploadPdf} />}
                     {activeTab === 'notes' && <NotesTab onToast={showToast} />}
+                    {activeTab === 'library' && <Library onUploadPdf={uploadPdf} onToast={showToast} />}
                     {activeTab === 'academic-hub' && <AcademicHub userStream={userStream} />}
+                    {activeTab === 'study-groups' && <StudyGroups />}
                     {activeTab === 'my-contributions' && <MyContributions />}
-                    {activeTab === 'indexing' && <DocumentStatus />}
+                    {activeTab === 'notifications' && <Notifications />}
+                    {activeTab === 'ai-processing' && <DocumentStatus />}
                     {activeTab === 'network' && <NetworkTab />}
                     {activeTab === 'performance' && <PerformanceTab />}
                 </main>

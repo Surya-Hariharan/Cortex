@@ -134,8 +134,27 @@ export default function ResultCard({ result, index, onToast }) {
                 </div>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-dark-100 dark:border-dark-800">
+            {/* AI Actions */}
+            <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-dark-100 dark:border-dark-800 overflow-x-auto">
+                {[
+                    { label: 'Summarize', emoji: '📋' },
+                    { label: 'Explain', emoji: '💡' },
+                    { label: 'Quiz', emoji: '❓' },
+                    { label: 'Citations', emoji: '📎' },
+                    { label: 'Flashcards', emoji: '🃏' },
+                ].map(action => (
+                    <button
+                        key={action.label}
+                        onClick={() => onToast(`${action.label}: AI processing "${result.title}"...`)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 bg-slate-50 dark:bg-dark-800/50 hover:bg-synapse-50 dark:hover:bg-synapse-900/20 border border-slate-200 dark:border-dark-700 hover:border-synapse-200 dark:hover:border-synapse-800 transition-all whitespace-nowrap"
+                    >
+                        <span>{action.emoji}</span> {action.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Share Action */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-dark-100/50 dark:border-dark-800/50">
                 <div className="text-[10px] text-dark-400 dark:text-dark-500 font-mono font-medium">
                     Score: {result.score.toFixed(3)}
                 </div>

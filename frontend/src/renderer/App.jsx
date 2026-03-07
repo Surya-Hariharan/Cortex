@@ -72,12 +72,39 @@ export default function App() {
         return () => window.removeEventListener('click', handleClick);
     }, [contextMenu.visible]);
 
-    // Ctrl+K command palette
+    // Ctrl+K / Ctrl+F / Ctrl+Up / Ctrl+Down
     useEffect(() => {
+        function getScrollTarget() {
+            let el = document.activeElement;
+            while (el && el !== document.body) {
+                const s = window.getComputedStyle(el);
+                if (['auto', 'scroll'].includes(s.overflowY) && el.scrollHeight > el.clientHeight) return el;
+                el = el.parentElement;
+            }
+            const main = document.querySelector('main');
+            if (main) {
+                for (const node of main.querySelectorAll('*')) {
+                    const s = window.getComputedStyle(node);
+                    if (['auto', 'scroll'].includes(s.overflowY) && node.scrollHeight > node.clientHeight) return node;
+                }
+            }
+            return document.documentElement;
+        }
+
         const handleKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            if (!e.ctrlKey && !e.metaKey) return;
+            if (e.key === 'k') {
                 e.preventDefault();
                 setShowCommandPalette(prev => !prev);
+            } else if (e.key === 'f') {
+                e.preventDefault();
+                setShowCommandPalette(true);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                getScrollTarget().scrollBy({ top: -120, behavior: 'smooth' });
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                getScrollTarget().scrollBy({ top: 120, behavior: 'smooth' });
             }
         };
         window.addEventListener('keydown', handleKeyDown);

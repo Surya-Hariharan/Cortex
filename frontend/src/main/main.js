@@ -8,14 +8,15 @@
 
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const fs   = require('fs');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
+require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
 
 // ── Python Backend ────────────────────────────────────────────────────────────
 let pythonProcess = null;
 const BACKEND_PORT = 8765;
-const BACKEND_URL  = `http://127.0.0.1:${BACKEND_PORT}/api/v1`;
+const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}/api/v1`;
 
 function findPython() {
     // Prefer the project venv, then fall back to system python.
@@ -34,7 +35,7 @@ function findPython() {
 
 function startPythonBackend() {
     const root = path.join(__dirname, '../../../');
-    const py   = findPython();
+    const py = findPython();
     console.log('[Cortex] Starting Python backend with:', py);
     pythonProcess = spawn(
         py,
@@ -131,8 +132,8 @@ function createWindow() {
     }
 
     // Route: skip landing page for returning users who have a saved session.
-    const landingPath   = path.join(__dirname, '../../landing.html');
-    const rendererPath  = path.join(__dirname, '../../dist/renderer/index.html');
+    const landingPath = path.join(__dirname, '../../landing.html');
+    const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
 
     if (hasSession() && fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
@@ -158,7 +159,7 @@ function createWindow() {
 
     mainWindow.on('closed', () => { mainWindow = null; });
 
-    mainWindow.on('maximize',   () => mainWindow?.webContents.send('window-maximize-change', true));
+    mainWindow.on('maximize', () => mainWindow?.webContents.send('window-maximize-change', true));
     mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window-maximize-change', false));
 
     // Keyboard zoom: Ctrl +/-/0 and Ctrl+scroll
@@ -236,7 +237,7 @@ function registerIpcHandlers() {
     // ── Window Controls ────────────────────────────────────────────────────
     ipcMain.on('window-minimize', () => mainWindow?.minimize());
     ipcMain.on('window-maximize', () => { mainWindow?.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(); });
-    ipcMain.on('window-close',    () => mainWindow?.close());
+    ipcMain.on('window-close', () => mainWindow?.close());
     ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false);
 
     // ── Launch App (from landing page) ──────────────────────────────────────
@@ -267,10 +268,10 @@ function registerIpcHandlers() {
         }
     });
 
-    ipcMain.on('zoom-in',    () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
-    ipcMain.on('zoom-out',   () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
+    ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
+    ipcMain.on('zoom-out', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
     ipcMain.on('zoom-reset', () => { if (!mainWindow) return; broadcastZoom(1.0); });
-    ipcMain.on('zoom-set',   (_e, pct) => { if (!mainWindow) return; broadcastZoom(Math.min(Math.max(+(pct / 100).toFixed(2), ZOOM_MIN), ZOOM_MAX)); });
+    ipcMain.on('zoom-set', (_e, pct) => { if (!mainWindow) return; broadcastZoom(Math.min(Math.max(+(pct / 100).toFixed(2), ZOOM_MIN), ZOOM_MAX)); });
     ipcMain.handle('zoom-get', () => mainWindow ? Math.round(mainWindow.webContents.getZoomFactor() * 100) : 100);
 
     // ── Search ──────────────────────────────────────────────────────────────
@@ -354,7 +355,7 @@ function registerIpcHandlers() {
                 req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
             });
             if (res?.subsystems) return res;
-        } catch (_) {}
+        } catch (_) { }
         try { return getDatabase()?.getStats() ?? { documents: 0, embeddings: 0 }; }
         catch { return { documents: 0, embeddings: 0 }; }
     });

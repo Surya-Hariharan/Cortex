@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     BGE_MODEL_DIR: Path = MODELS_DIR / "bge-small-en-v1.5"
     WHISPER_MODEL_DIR: Path = MODELS_DIR / "whisper-tiny"
     LLM_MODEL_DIR: Path = MODELS_DIR / "phi-3-mini"
+    GEMINI_API_KEY: str = ""
 
     # ── Ingestion ────────────────────────────────────────────────────────────
     CHUNK_SIZE: int = 512          # tokens per chunk

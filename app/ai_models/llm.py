@@ -16,6 +16,7 @@ import asyncio
 import os
 from pathlib import Path
 from typing import AsyncIterator, List, Optional
+import httpx
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -36,6 +37,7 @@ class LLMModel:
         self._model_dir = Path(model_dir or settings.LLM_MODEL_DIR)
         self._session = None
         self._tokenizer = None
+        self._use_api = False
 
     def _load(self) -> None:
         try:
@@ -50,27 +52,35 @@ class LLMModel:
 
         self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
 
-        onnx_candidates = ["model.onnx", "model_quantized.onnx", "decoder_model.onnx"]
-        model_path: Optional[Path] = None
-        for candidate in onnx_candidates:
-            p = self._model_dir / candidate
-            if p.exists():
-                model_path = p
-                break
-        if model_path is None:
-            raise FileNotFoundError(f"No ONNX model file found in {self._model_dir}")
+        try:
+            onnx_candidates = ["model.onnx", "model_quantized.onnx", "decoder_model.onnx"]
+            model_path: Optional[Path] = None
+            for candidate in onnx_candidates:
+                p = self._model_dir / candidate
+                if p.exists():
+                    model_path = p
+                    break
+            if model_path is None:
+                raise FileNotFoundError(f"No ONNX model file found in {self._model_dir}")
 
-        so = ort.SessionOptions()
-        so.intra_op_num_threads = int(os.environ.get("ORT_THREADS", "4"))
-        self._session = ort.InferenceSession(
-            str(model_path),
-            sess_options=so,
-            providers=["CPUExecutionProvider"],
-        )
+            so = ort.SessionOptions()
+            so.intra_op_num_threads = int(os.environ.get("ORT_THREADS", "4"))
+            self._session = ort.InferenceSession(
+                str(model_path),
+                sess_options=so,
+                providers=["CPUExecutionProvider"],
+            )
+        except Exception as exc:
+            if settings.GEMINI_API_KEY:
+                logger.info("Failed to load local LLM, falling back to Gemini API.")
+                self._use_api = True
+                return
+            raise FileNotFoundError(f"Failed to load local LLM: {exc}")
+
         logger.info("LLMModel loaded", model_path=str(model_path))
 
     def _ensure_loaded(self) -> None:
-        if self._session is None:
+        if self._session is None and not self._use_api:
             self._load()
 
     def _build_prompt(
@@ -105,6 +115,48 @@ class LLMModel:
         Model must support a simple seq2seq or autoregressive ONNX interface.
         """
         self._ensure_loaded()
+        
+        if self._use_api:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+            
+            # Construct Gemini 'contents' array
+            contents = []
+            for msg in (history or []):
+                role = msg.get("role", "user")
+                # Gemini roles are "user" and "model"
+                gemini_role = "model" if role == "assistant" else "user"
+                contents.append({"role": gemini_role, "parts": [{"text": msg.get("content", "")}]})
+            
+            # Combine context into the query if present
+            final_query = query
+            if context:
+                final_query = f"Context:\n{context}\n\nQuery: {query}"
+            
+            contents.append({"role": "user", "parts": [{"text": final_query}]})
+            
+            payload = {
+                "systemInstruction": {"parts": [{"text": system if 'system' in locals() else DEFAULT_SYSTEM}]},
+                "contents": contents,
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_new_tokens
+                }
+            }
+            try:
+                with httpx.Client() as client:
+                    resp = client.post(url, json=payload, timeout=60.0)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
+                    return ""
+            except Exception as e:
+                logger.error("Gemini LLM API fallback failed", error=str(e))
+                return "Error: Could not generate response via API fallback."
+
         import numpy as np  # type: ignore
 
         prompt = self._build_prompt(query, context, history=history)

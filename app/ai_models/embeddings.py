@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
+import httpx
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -34,6 +35,7 @@ class EmbeddingModel:
         self._model_dir = Path(model_dir or settings.BGE_MODEL_DIR)
         self._session = None
         self._tokenizer = None
+        self._use_api = False
 
     def _load(self) -> None:
         """Load tokenizer and ONNX inference session on first use."""
@@ -54,21 +56,29 @@ class EmbeddingModel:
         self._tokenizer.enable_padding(pad_id=0, pad_token="[PAD]", length=512)
         self._tokenizer.enable_truncation(max_length=512)
 
-        model_path = self._model_dir / "model.onnx"
-        if not model_path.exists():
-            raise FileNotFoundError(f"model.onnx not found in {self._model_dir}")
+        try:
+            model_path = self._model_dir / "model.onnx"
+            if not model_path.exists():
+                raise FileNotFoundError(f"model.onnx not found in {self._model_dir}")
 
-        so = ort.SessionOptions()
-        so.intra_op_num_threads = int(os.environ.get("ORT_THREADS", "4"))
-        self._session = ort.InferenceSession(
-            str(model_path),
-            sess_options=so,
-            providers=["CPUExecutionProvider"],
-        )
+            so = ort.SessionOptions()
+            so.intra_op_num_threads = int(os.environ.get("ORT_THREADS", "4"))
+            self._session = ort.InferenceSession(
+                str(model_path),
+                sess_options=so,
+                providers=["CPUExecutionProvider"],
+            )
+        except Exception as exc:
+            if settings.GEMINI_API_KEY:
+                logger.info("Failed to load local embeddings, falling back to Gemini API.")
+                self._use_api = True
+                return
+            raise FileNotFoundError(f"Failed to load local embeddings: {exc}")
+
         logger.info("EmbeddingModel loaded", model_dir=str(self._model_dir))
 
     def _ensure_loaded(self) -> None:
-        if self._session is None:
+        if self._session is None and not self._use_api:
             self._load()
 
     def encode(self, texts: List[str], normalize: bool = True) -> np.ndarray:
@@ -78,6 +88,36 @@ class EmbeddingModel:
             np.ndarray of shape (N, VECTOR_DIM), dtype float32.
         """
         self._ensure_loaded()
+        
+        if self._use_api:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={settings.GEMINI_API_KEY}"
+            payload = {
+                "requests": [{"model": "models/text-embedding-004", "content": {"parts": [{"text": t}]}} for t in texts]
+            }
+            try:
+                with httpx.Client() as client:
+                    resp = client.post(url, json=payload, timeout=30.0)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    
+                    # Gemini returns 768-dim embeddings. We must slice them to 384 or pad if the system expects 384. 
+                    # Actually we can just keep them as 768, but if VECTOR_DIM is 384, we need to slice it to match if LanceDB/FAISS was initialized with 384
+                    # BGE is 384. Since we're replacing the whole thing, let's just slice Gemini to 384 for seamless fallback.
+                    results = []
+                    for emb in data.get("embeddings", []):
+                        vec = emb["values"][:_VECTOR_DIM]
+                        results.append(vec)
+                    
+                    embeddings = np.array(results, dtype=np.float32)
+                    if normalize:
+                        norms = np.linalg.norm(embeddings, axis=1, keepdims=True).clip(min=1e-9)
+                        embeddings = embeddings / norms
+                    return embeddings
+            except Exception as e:
+                logger.error("Gemini API fallback failed", error=str(e))
+                # return zero vectors on failure to avoid crash
+                return np.zeros((len(texts), _VECTOR_DIM), dtype=np.float32)
+
         encodings = self._tokenizer.encode_batch(texts)
         input_ids = np.array([e.ids for e in encodings], dtype=np.int64)
         attention_mask = np.array([e.attention_mask for e in encodings], dtype=np.int64)

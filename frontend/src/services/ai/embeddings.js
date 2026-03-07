@@ -12,6 +12,7 @@ class EmbeddingsEngine {
         this.activeProvider = 'cpu';
         this.lastEmbedTimeMs = 0;
         this.embedHistory = [];
+        this.useApi = false;
     }
 
     async initialize() {
@@ -19,7 +20,14 @@ class EmbeddingsEngine {
         const tokenizerPath = path.join(this.modelDir, 'tokenizer.json');
 
         if (!fs.existsSync(modelPath)) {
-            console.warn(`[Embeddings] Model not found at ${modelPath}`);
+            if (process.env.GEMINI_API_KEY) {
+                console.log(`[Embeddings] Local model not found. Using Gemini API fallback`);
+                this.useApi = true;
+                this.activeProvider = 'gemini-api';
+                this.ready = true;
+                return;
+            }
+            console.warn(`[Embeddings] Model not found at ${modelPath} and GEMINI_API_KEY not set`);
             return;
         }
 
@@ -65,6 +73,32 @@ class EmbeddingsEngine {
         if (!this.ready) throw new Error('Embeddings engine not initialized');
 
         const _t0 = Date.now();
+
+        if (this.useApi) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'models/text-embedding-004',
+                    content: { parts: [{ text }] }
+                })
+            });
+            if (!response.ok) {
+                throw new Error(`Gemini API Error: ${response.statusText}`);
+            }
+            const data = await response.json();
+            const rawEmbedding = data.embedding.values;
+            const embedding = rawEmbedding.slice(0, 384);
+            const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+            const normalized = embedding.map((val) => val / (norm + 1e-12));
+
+            const _elapsed = Date.now() - _t0;
+            this.lastEmbedTimeMs = _elapsed;
+            this.embedHistory = [...this.embedHistory.slice(-9), _elapsed];
+
+            return normalized;
+        }
 
         // Tokenize
         const { inputIds, attentionMask } = this.tokenizer.encode(text, 512);

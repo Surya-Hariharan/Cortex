@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
     # 1. Ensure data directories exist
     data_dir = Path(settings.DATA_DIR)
-    for sub in ("uploads", "audio_tmp", "models", "exports"):
+    for sub in ("uploads", "audio_tmp", "models", "exports", "database"):
         (data_dir / sub).mkdir(parents=True, exist_ok=True)
     logger.info("cortex.data_dirs_ready", path=str(data_dir))
 

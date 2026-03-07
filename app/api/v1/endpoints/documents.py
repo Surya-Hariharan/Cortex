@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
@@ -15,6 +17,14 @@ from app.services.document_service import (
     delete_document, trigger_ingestion,
 )
 from app.core.config import settings
+
+_SAFE_FILENAME = re.compile(r"[^\w\s.\-]")  # strip non-alphanumeric chars
+
+def _sanitize_filename(name: str) -> str:
+    """Return a safe filename — strips path components and special characters."""
+    name = Path(name).name          # strip any directory component
+    name = _SAFE_FILENAME.sub("_", name)
+    return name[:200] or "upload"
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -31,23 +41,28 @@ async def upload_document(
     upload_dir = os.path.join(settings.DATA_DIR, "uploads", user_id)
     os.makedirs(upload_dir, exist_ok=True)
 
-    safe_name = f"{uuid.uuid4()}_{file.filename}"
+    original_name = _sanitize_filename(file.filename or "upload")
+    safe_name = f"{uuid.uuid4()}_{original_name}"
     dest_path = os.path.join(upload_dir, safe_name)
 
     content = await file.read()
     with open(dest_path, "wb") as f:
         f.write(content)
 
+    original_name = _sanitize_filename(file.filename or safe_name)
     data = DocumentCreate(
         user_id=user_id,
         project_id=project_id,
-        filename=file.filename or safe_name,
+        filename=original_name,
         file_path=dest_path,
         file_size=len(content),
         mime_type=file.content_type or "application/pdf",
+        title=Path(original_name).stem.replace("_", " ").replace("-", " "),
     )
     doc = await create_document(data, db)
-    background_tasks.add_task(trigger_ingestion, doc.id, db)
+    # trigger_ingestion creates its own DB session — do NOT pass the
+    # request-scoped `db` here (it will be closed when the response sends).
+    background_tasks.add_task(trigger_ingestion, doc.id)
     return DocumentRead.model_validate(doc)
 
 
@@ -96,5 +111,5 @@ async def reindex_doc(
     doc = await get_document(doc_id, db)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    background_tasks.add_task(trigger_ingestion, doc_id, db)
+    background_tasks.add_task(trigger_ingestion, doc_id)
     return {"status": "queued", "document_id": doc_id}

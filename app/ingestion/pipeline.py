@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.domain.document import Document, DocumentChunk
-from app.ingestion.pdf_extractor import extract_file
+from app.ingestion.pdf_extractor import extract_document
 from app.ingestion.chunker import chunk_pages
 from app.ai_models.model_manager import model_manager
 from app.rag.vector_store import vector_store
@@ -46,8 +46,8 @@ async def ingest_document(document_id: str, db: AsyncSession) -> None:
         doc.status = "processing"
         await db.commit()
 
-        # 1. Extract
-        pages = extract_file(doc.file_path, doc.mime_type)
+        # 1. Extract (with automatic PaddleOCR fallback for scanned PDFs)
+        pages, ocr_applied = extract_document(doc.file_path, doc.mime_type)
         page_count = len(pages)
 
         # 2. Chunk
@@ -92,6 +92,7 @@ async def ingest_document(document_id: str, db: AsyncSession) -> None:
         doc.status = "indexed"
         doc.page_count = page_count
         doc.word_count = word_count
+        doc.ocr_applied = int(ocr_applied)
         doc.updated_at = datetime.utcnow()
         db.add(doc)
 

@@ -14,8 +14,9 @@ router = APIRouter(prefix="/rag", tags=["RAG"])
 
 @router.post("/query", response_model=RAGQueryResponse)
 async def rag_query(request: RAGQueryRequest, db: AsyncSession = Depends(get_db)) -> RAGQueryResponse:
-    """Execute a RAG query against a chat session."""
-    chat = await get_chat(request.chat_id, db)
-    if not chat:
-        raise HTTPException(status_code=404, detail="Chat not found")
+    """Execute a RAG query. Creates a new chat session if chat_id is not provided."""
+    if request.chat_id:
+        chat = await get_chat(request.chat_id, db)
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
     return await run_rag_pipeline(request, db)

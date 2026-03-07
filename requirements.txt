@@ -23,8 +23,14 @@ tokenizers>=0.15.2
 transformers>=4.38.0          # tokenizer only (no torch dep needed at runtime)
 
 # ── Document Parsing ─────────────────────────────────────────────────────────
-PyMuPDF>=1.24.0               # fitz – fast PDF extraction
+PyMuPDF>=1.24.0               # fitz – fast PDF extraction + page rendering for OCR
 python-docx>=1.1.0
+
+# ── OCR (PaddleOCR — for scanned / image-based PDFs) ────────────────────────
+# Install separately due to large size (~1 GB with models):
+#   pip install paddlepaddle paddleocr
+# paddlepaddle>=2.6.0         # CPU build; use paddlepaddle-gpu for CUDA
+# paddleocr>=2.7.0            # PaddleOCR engine
 
 # ── Async / Utilities ────────────────────────────────────────────────────────
 httpx>=0.27.0

@@ -1,7 +1,6 @@
 """Document service — CRUD + async ingestion trigger."""
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -75,14 +74,15 @@ async def delete_document(doc_id: str, db: AsyncSession) -> bool:
     return True
 
 
-async def trigger_ingestion(doc_id: str, db: AsyncSession) -> None:
-    """Fire-and-forget background ingestion task."""
+async def trigger_ingestion(doc_id: str) -> None:
+    """Background ingestion task — creates its own DB session so it works
+    correctly when called from FastAPI BackgroundTasks (after response is sent).
+    """
     from app.ingestion.pipeline import ingest_document
+    from app.database.connection import get_db_context
 
-    async def _run() -> None:
-        try:
+    try:
+        async with get_db_context() as db:
             await ingest_document(doc_id, db)
-        except Exception as exc:
-            logger.error("Background ingestion error", id=doc_id, error=str(exc))
-
-    asyncio.create_task(_run())
+    except Exception as exc:
+        logger.error("Background ingestion error", id=doc_id, error=str(exc))

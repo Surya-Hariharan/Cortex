@@ -16,20 +16,11 @@ import {
     Pause
 } from 'lucide-react';
 
-const MOCK_INDEXED = [
-    { id: 'd1', name: 'Thermodynamics_Ch3.pdf', size: '2.4 MB', status: 'Indexed', type: 'PDF', date: '2026-03-01' },
-    { id: 'd2', name: 'Data_Structures_Lecture_1.pdf', size: '1.8 MB', status: 'Indexed', type: 'Handwritten', date: '2026-03-02' },
-    { id: 'd3', name: 'Microprocessors_Lab.docx', size: '850 KB', status: 'Indexed', type: 'DOCX', date: '2026-03-02' },
-];
+const MOCK_INDEXED = [];
 
-const MOCK_QUEUE = [
-    { id: 'q1', name: 'Operating_Systems_Final.pdf', stage: 'OCR Processing', progress: 65, startTime: '2m ago' },
-    { id: 'q2', name: 'Machine_Learning_Notes.pdf', stage: 'Embedding Generation', progress: 12, startTime: '10s ago' },
-];
+const MOCK_QUEUE = [];
 
-const MOCK_ERRORS = [
-    { id: 'e1', name: 'Corrupted_Scan_01.pdf', error: 'OCR Confidence low (42%)', date: '1h ago', status: 'Failed' },
-];
+const MOCK_ERRORS = [];
 
 const StatCard = ({ label, value, subtext, icon: Icon, color }) => (
     <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 group">

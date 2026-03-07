@@ -19,35 +19,9 @@ import {
     Filter
 } from 'lucide-react';
 
-const MOCK_CONTRIBUTIONS = [
+const MOCK_CONTRIBUTIONS = [/* placeholder removed
     {
-        id: 'c1',
-        title: 'Neural Networks & Deep Learning',
-        visibility: 'Academic Hub',
-        downloads: 1240,
-        views: 3500,
-        rating: 4.8,
-        isOCR: true,
-        date: 'Oct 24, 2025'
-    },
-    {
-        id: 'c2',
-        title: 'Operating Systems - Core Concepts',
-        visibility: 'Mesh Network',
-        downloads: 850,
-        views: 2100,
-        rating: 4.5,
-        isOCR: true,
-        date: 'Sep 12, 2025'
-    },
-    {
-        id: 'c3',
-        title: 'Theory of Computation Cheatsheet',
-        visibility: 'Academic Hub',
-        downloads: 3100,
-        views: 7200,
-        rating: 4.9,
-        isOCR: false,
+        id: 'c3_stub',
         date: 'Feb 05, 2026'
     },
     {

@@ -20,33 +20,9 @@ const TABS = [
     { id: 'ai-engine', label: 'AI Engine', icon: <Cpu size={18} /> },
 ];
 
-const MOCK_PROJECTS = [
-    {
-        id: 'w1',
-        title: 'AI Research',
-        sources: [],
-        chats: [
-            { id: 'c1', title: 'RAG Pipeline',     preview: "Let's optimize the retrieval pipeline for better accuracy",    date: 'Mar 7',  ts: 1741305600 },
-            { id: 'c2', title: 'OCR Integration',  preview: 'PaddleOCR works great for scanned PDFs with low text density', date: 'Mar 5',  ts: 1741132800 },
-        ]
-    },
-    {
-        id: 'w2',
-        title: 'AMD Hackathon',
-        sources: [],
-        chats: [
-            { id: 'c3', title: 'UI Design System Fix',     preview: "Just see chatgpt's sidebar — the new chat button and project...",  date: 'Mar 3',  ts: 1740960000 },
-            { id: 'c4', title: 'Mesh Protocol',            preview: 'WebRTC-based mesh network for peer discovery across LAN',           date: 'Mar 1',  ts: 1740787200 },
-            { id: 'c5', title: 'Frontend UI/UX Improvements', preview: 'Give me a proper prompt to initialise PaddleOCR into my workflow', date: 'Feb 28', ts: 1740700800 },
-            { id: 'c6', title: 'Hackathon PPT Design',     preview: 'Impact of your solution? 2000 chars',                              date: 'Mar 1',  ts: 1740787200 },
-        ]
-    }
-];
+const MOCK_PROJECTS = [];
 
-const MOCK_INDEPENDENT_CHATS = [
-    { id: 'ic1', title: 'General Inquiry' },
-    { id: 'ic2', title: 'Bug Report Log' },
-];
+const MOCK_INDEPENDENT_CHATS = [];
 
 export default function App() {
     const [activeTab, setActiveTab] = useState('knowledge');

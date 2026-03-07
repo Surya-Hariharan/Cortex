@@ -23,16 +23,7 @@ import {
     Plus
 } from 'lucide-react';
 
-const MOCK_FILES = [
-    { id: 'f1', name: 'Neural Networks & Deep Learning.pdf', type: 'pdf', size: '14.2 MB', date: 'Mar 02, 2026', status: 'indexed', chunks: 28, subject: 'Machine Learning' },
-    { id: 'f2', name: 'Operating Systems — Core Concepts.pdf', type: 'pdf', size: '9.8 MB', date: 'Feb 25, 2026', status: 'indexed', chunks: 19, subject: 'Computer Science' },
-    { id: 'f3', name: 'Lecture 12 — Thermodynamics.pdf', type: 'pdf', size: '5.4 MB', date: 'Feb 18, 2026', status: 'indexed', chunks: 12, subject: 'Physics' },
-    { id: 'f4', name: 'Handwritten Notes — TOC.png', type: 'scan', size: '18.2 MB', date: 'Feb 14, 2026', status: 'processing', chunks: 0, subject: 'TOC' },
-    { id: 'f5', name: 'Research Paper — Attention Is All You Need.pdf', type: 'research', size: '1.2 MB', date: 'Jan 30, 2026', status: 'indexed', chunks: 15, subject: 'AI Research' },
-    { id: 'f6', name: 'Lab Recording — Digital Electronics.mp3', type: 'recording', size: '48.6 MB', date: 'Jan 22, 2026', status: 'pending', chunks: 0, subject: 'Electronics' },
-    { id: 'f7', name: 'Data Structures Cheatsheet.pdf', type: 'pdf', size: '2.1 MB', date: 'Jan 15, 2026', status: 'indexed', chunks: 5, subject: 'Computer Science' },
-    { id: 'f8', name: 'Microprocessors Lab Manual.pdf', type: 'pdf', size: '7.6 MB', date: 'Jan 10, 2026', status: 'indexed', chunks: 22, subject: 'Electronics' },
-];
+const MOCK_FILES = [];
 
 const TYPE_ICONS = {
     pdf: { icon: FileText, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },

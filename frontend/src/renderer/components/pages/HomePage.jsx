@@ -18,14 +18,7 @@ import {
     Bell
 } from 'lucide-react';
 
-const MOCK_ACTIVITY_FEED = [
-    { id: 1, type: 'upload', icon: <Upload size={16} />, color: 'text-synapse-500 bg-synapse-50 dark:bg-synapse-900/20', message: 'Deep Learning Notes uploaded to Academic Hub', user: 'Aditya Raj', time: '2 min ago' },
-    { id: 2, type: 'download', icon: <Download size={16} />, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20', message: 'Operating Systems Lab Manual downloaded by 3 peers', user: 'Network', time: '15 min ago' },
-    { id: 3, type: 'peer', icon: <Users size={16} />, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20', message: '4 students nearby sharing resources', user: 'Mesh Network', time: '28 min ago' },
-    { id: 4, type: 'rating', icon: <Star size={16} />, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20', message: 'Your TOC Cheatsheet received a 5-star rating', user: 'Priya S.', time: '1h ago' },
-    { id: 5, type: 'ai', icon: <Zap size={16} />, color: 'text-synapse-500 bg-synapse-50 dark:bg-synapse-900/20', message: 'AI indexed 12 new document chunks from your uploads', user: 'System', time: '2h ago' },
-    { id: 6, type: 'group', icon: <MessageSquare size={16} />, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20', message: 'New message in ML Study Group', user: 'Rohan K.', time: '3h ago' },
-];
+const MOCK_ACTIVITY_FEED = [];
 
 const QUICK_ACTIONS = [
     { id: 'search', label: 'New Search', icon: Search, color: 'from-synapse-500 to-synapse-700', shadow: 'shadow-synapse-200/40' },
@@ -100,10 +93,10 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard label="Documents" value="42" icon={FileText} trend="+3 this week" color="text-synapse-500" accent="bg-synapse-50 dark:bg-synapse-900/20" />
-                        <StatCard label="Active Peers" value="7" icon={Globe} trend="2 nearby" color="text-emerald-500" accent="bg-emerald-50 dark:bg-emerald-900/20" />
-                        <StatCard label="Contributions" value="12" icon={BookOpen} trend="+2 uploads" color="text-blue-500" accent="bg-blue-50 dark:bg-blue-900/20" />
-                        <StatCard label="AI Queries" value="156" icon={Zap} trend="+28 today" color="text-amber-500" accent="bg-amber-50 dark:bg-amber-900/20" />
+                        <StatCard label="Documents" value="0" icon={FileText} color="text-synapse-500" accent="bg-synapse-50 dark:bg-synapse-900/20" />
+                        <StatCard label="Active Peers" value="0" icon={Globe} color="text-emerald-500" accent="bg-emerald-50 dark:bg-emerald-900/20" />
+                        <StatCard label="Contributions" value="0" icon={BookOpen} color="text-blue-500" accent="bg-blue-50 dark:bg-blue-900/20" />
+                        <StatCard label="AI Queries" value="0" icon={Zap} color="text-amber-500" accent="bg-amber-50 dark:bg-amber-900/20" />
                     </div>
 
                     {/* Trending on Campus */}
@@ -115,26 +108,8 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                             </div>
                             <button onClick={() => onTabChange?.('knowledge')} className="text-xs font-bold text-synapse-600 dark:text-synapse-400 hover:underline">View All</button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {[
-                                { title: 'Operating Systems Cheatsheet', subject: 'Computer Science', downloads: 1240, rating: 4.9, trend: '🔥', color: 'from-red-500 to-red-600' },
-                                { title: 'ML Midterm Revision Notes', subject: 'Machine Learning', downloads: 980, rating: 4.8, trend: '📈', color: 'from-synapse-500 to-synapse-700' },
-                                { title: 'Computer Networks Quick Guide', subject: 'Networking', downloads: 670, rating: 4.6, trend: '⭐', color: 'from-emerald-500 to-emerald-600' },
-                            ].map((note, i) => (
-                                <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/80 dark:bg-dark-950/50 border border-slate-100 dark:border-dark-800/60 hover:shadow-md hover:shadow-slate-100/50 dark:hover:shadow-none transition-all cursor-pointer group">
-                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${note.color} flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0`}>
-                                        {note.trend}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-[13px] font-bold text-slate-800 dark:text-dark-100 truncate group-hover:text-synapse-600 transition-colors">{note.title}</h4>
-                                        <p className="text-[11px] text-slate-400 dark:text-dark-500 font-medium mb-2">{note.subject}</p>
-                                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 dark:text-dark-500">
-                                            <span className="flex items-center gap-1"><Download size={10} /> {note.downloads.toLocaleString()}</span>
-                                            <span className="flex items-center gap-1"><Star size={10} className="text-amber-400" /> {note.rating}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                            <p className="text-sm text-slate-400 dark:text-dark-500">No trending notes yet. Start sharing to see what's popular.</p>
                         </div>
                     </div>
 
@@ -178,28 +153,10 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                                     <h3 className="text-[10px] font-black uppercase text-slate-400 dark:text-dark-500 tracking-[0.2em] flex items-center gap-2">
                                         <Activity size={12} /> Peers Nearby
                                     </h3>
-                                    <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/50">4 ONLINE</span>
+                                    <span className="text-[10px] font-black text-slate-400 dark:text-dark-500 bg-slate-100 dark:bg-dark-800 px-3 py-1 rounded-full border border-slate-200 dark:border-dark-700">0 ONLINE</span>
                                 </div>
-                                <div className="space-y-3">
-                                    {[
-                                        { name: 'Aditya R.', docs: 12, status: 'online' },
-                                        { name: 'Priya S.', docs: 8, status: 'online' },
-                                        { name: 'Rohan K.', docs: 15, status: 'online' },
-                                        { name: 'Maya D.', docs: 6, status: 'idle' },
-                                    ].map((peer, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-colors cursor-pointer">
-                                            <div className="relative">
-                                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 dark:from-dark-700 dark:to-dark-600 flex items-center justify-center text-[11px] font-bold text-slate-500 dark:text-dark-300">
-                                                    {peer.name.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-dark-900 ${peer.status === 'online' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[13px] font-bold text-slate-700 dark:text-dark-200 truncate">{peer.name}</p>
-                                                <p className="text-[10px] text-slate-400 dark:text-dark-500 font-bold">{peer.docs} docs shared</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <p className="text-xs text-slate-400 dark:text-dark-500">No peers nearby yet</p>
                                 </div>
                             </div>
 

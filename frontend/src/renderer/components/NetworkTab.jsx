@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Share, Shield, Globe, Cpu, Zap, Activity, Monitor, ChevronRight, MoreHorizontal, FileText, Code, File, Search } from 'lucide-react';
 
-const MOCK_SHARED_DOCS = [
-    { id: 1, title: 'Quantum Entanglement Notes.pdf', from: "Arjun's Laptop", time: '3m ago', size: '2.4 MB', type: 'pdf', encrypted: true },
-    { id: 2, title: 'BST Implementation.cpp', from: 'Study Group Hub', time: '8m ago', size: '12 KB', type: 'code', encrypted: true },
-    { id: 3, title: 'Organic Chem Lab.docx', from: "Priya's Desktop", time: '15m ago', size: '1.1 MB', type: 'doc', encrypted: true },
-];
+const MOCK_SHARED_DOCS = [];
 
 const FILE_TYPE_CONFIG = {
     pdf: { icon: <FileText size={18} />, color: 'accent-pdf', label: 'PDF' },

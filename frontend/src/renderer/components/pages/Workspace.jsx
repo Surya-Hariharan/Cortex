@@ -2,14 +2,7 @@ import React, { useState } from 'react';
 import { FileText, CheckSquare, Plus, Calendar, Clock, AlertCircle, Flag, ChevronRight, GripVertical } from 'lucide-react';
 import NotesTab from '../NotesTab';
 
-const MOCK_TASKS = [
-    { id: 't1', title: 'Submit ML Assignment — Backpropagation', due: 'Mar 10, 2026', priority: 'high', course: 'Machine Learning', completed: false },
-    { id: 't2', title: 'Read Chapter 5 — Operating Systems', due: 'Mar 12, 2026', priority: 'medium', course: 'Operating Systems', completed: false },
-    { id: 't3', title: 'Complete Lab Report — Digital Electronics', due: 'Mar 14, 2026', priority: 'low', course: 'Electronics', completed: false },
-    { id: 't4', title: 'Review TOC — PDA & Turing Machines', due: 'Mar 08, 2026', priority: 'high', course: 'TOC', completed: true },
-    { id: 't5', title: 'Group meeting — Final Year Project', due: 'Mar 09, 2026', priority: 'medium', course: 'Project', completed: true },
-    { id: 't6', title: 'Practice coding problems — Arrays', due: 'Mar 15, 2026', priority: 'low', course: 'DSA', completed: false },
-];
+const MOCK_TASKS = [];
 
 const PRIORITY_CONFIG = {
     high: { label: 'High', color: 'text-red-500 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/50', dot: 'bg-red-500' },

@@ -41,7 +41,9 @@ AsyncSessionLocal = async_sessionmaker(
 
 # ── Base ──────────────────────────────────────────────────────────────────────
 class Base(DeclarativeBase):
-    pass
+    # Allow un-typed / bare `Mapped` annotations without raising errors;
+    # our domain models use `Mapped[list]` shorthands for relationships.
+    __allow_unmapped__ = True
 
 
 # ── Dependency ────────────────────────────────────────────────────────────────

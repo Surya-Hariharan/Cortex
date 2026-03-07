@@ -5,6 +5,7 @@ import Workspace from './components/pages/Workspace';
 import Campus from './components/pages/Campus';
 import Activity from './components/pages/Activity';
 import AIEngine from './components/pages/AIEngine';
+import ProjectView from './components/pages/ProjectView';
 import StreamSelectorModal from './components/layout/StreamSelectorModal';
 import CommandPalette from './components/layout/CommandPalette';
 import Toast from './components/layout/Toast';
@@ -21,15 +22,23 @@ const TABS = [
 
 const MOCK_PROJECTS = [
     {
-        id: 'w1', title: 'AI Research', chats: [
-            { id: 'c1', title: 'RAG Pipeline' },
-            { id: 'c2', title: 'OCR Integration' }
+        id: 'w1',
+        title: 'AI Research',
+        sources: [],
+        chats: [
+            { id: 'c1', title: 'RAG Pipeline',     preview: "Let's optimize the retrieval pipeline for better accuracy",    date: 'Mar 7',  ts: 1741305600 },
+            { id: 'c2', title: 'OCR Integration',  preview: 'PaddleOCR works great for scanned PDFs with low text density', date: 'Mar 5',  ts: 1741132800 },
         ]
     },
     {
-        id: 'w2', title: 'AMD Hackathon', chats: [
-            { id: 'c3', title: 'UI System Fix' },
-            { id: 'c4', title: 'Mesh Protocol' }
+        id: 'w2',
+        title: 'AMD Hackathon',
+        sources: [],
+        chats: [
+            { id: 'c3', title: 'UI Design System Fix',     preview: "Just see chatgpt's sidebar — the new chat button and project...",  date: 'Mar 3',  ts: 1740960000 },
+            { id: 'c4', title: 'Mesh Protocol',            preview: 'WebRTC-based mesh network for peer discovery across LAN',           date: 'Mar 1',  ts: 1740787200 },
+            { id: 'c5', title: 'Frontend UI/UX Improvements', preview: 'Give me a proper prompt to initialise PaddleOCR into my workflow', date: 'Feb 28', ts: 1740700800 },
+            { id: 'c6', title: 'Hackathon PPT Design',     preview: 'Impact of your solution? 2000 chars',                              date: 'Mar 1',  ts: 1740787200 },
         ]
     }
 ];
@@ -63,6 +72,8 @@ export default function App() {
     const [settingsTab, setSettingsTab] = useState('general');
     const [improveModel, setImproveModel] = useState(true);
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
+    const [activeProjectId, setActiveProjectId] = useState(null);
+    const [projects, setProjects] = useState(MOCK_PROJECTS);
 
     // Close context menu on outside click
     useEffect(() => {
@@ -326,7 +337,7 @@ export default function App() {
                                     return (
                                         <div key={ws.id}>
                                             <button
-                                                onClick={() => toggleWs(ws.id)}
+                                                onClick={() => { setActiveProjectId(ws.id); setActiveTab('project'); setWsExpanded(prev => ({ ...prev, [ws.id]: true })); }}
                                                 onContextMenu={(e) => {
                                                     e.preventDefault();
                                                     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
@@ -334,12 +345,16 @@ export default function App() {
                                                 className="sidebar-nav-item text-slate-600 dark:text-dark-400 group"
                                             >
                                                 <div className="sidebar-accent-container">
-                                                    <ChevronRight size={14} className={`sidebar-chevron ${isExpanded ? 'sidebar-chevron-expanded' : ''}`} />
+                                                    <ChevronRight size={14} className={`sidebar-chevron ${wsExpanded[ws.id] ? 'sidebar-chevron-expanded' : ''}`} />
                                                 </div>
                                                 <div className="sidebar-icon-container">
-                                                    {isExpanded ? <FolderOpen size={18} className="text-synapse-500" /> : <Folder size={18} className="text-slate-400 dark:text-dark-500" />}
+                                                    {wsExpanded[ws.id] ? <FolderOpen size={18} className="text-synapse-500" /> : <Folder size={18} className="text-slate-400 dark:text-dark-500" />}
                                                 </div>
-                                                <span className="sidebar-label font-bold text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100 transition-colors uppercase text-[11px] tracking-wide">
+                                                <span className={`sidebar-label font-bold transition-colors uppercase text-[11px] tracking-wide ${
+                                                    activeTab === 'project' && activeProjectId === ws.id
+                                                        ? 'text-synapse-600 dark:text-synapse-400'
+                                                        : 'text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100'
+                                                }`}>
                                                     {ws.title}
                                                 </span>
                                                 <div
@@ -353,7 +368,7 @@ export default function App() {
                                                 </div>
                                             </button>
 
-                                            {isExpanded && (
+                                            {wsExpanded[ws.id] && (
                                                 <div className="relative">
                                                     {ws.chats.map((chat) => {
                                                         const isActive = activeTab === 'search' && activeChatId === chat.id;
@@ -473,6 +488,18 @@ export default function App() {
                     {activeTab === 'campus' && <Campus />}
                     {activeTab === 'activity' && <Activity />}
                     {activeTab === 'ai-engine' && <AIEngine />}
+                    {activeTab === 'project' && (() => {
+                        const proj = projects.find(p => p.id === activeProjectId);
+                        return proj ? (
+                            <ProjectView
+                                project={proj}
+                                onToast={showToast}
+                                onNewChat={(projectId, text) => {
+                                    showToast(`New chat started in ${proj.title}`, 'success');
+                                }}
+                            />
+                        ) : null;
+                    })()}
                 </main>
 
                 {/* ── Context Menu ────────────────────────────────────────────── */}

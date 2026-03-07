@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     MESH_WS_PORT: int = 41235
     MESH_SERVICE_TYPE: str = "_cortex._tcp.local."
 
+    # ── Data directories ─────────────────────────────────────────────────────
+    DATA_DIR: Path = DATA_DIR   # root-level data/ directory
+
     # ── Security ─────────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production"
     CORS_ORIGINS: list[str] = ["http://localhost", "http://127.0.0.1"]

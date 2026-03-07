@@ -69,3 +69,15 @@ async def init_db() -> None:
 async def close_db() -> None:
     await engine.dispose()
     log.info("database.closed")
+
+
+@asynccontextmanager
+async def get_db_context() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager version of get_db for use outside FastAPI request cycle."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

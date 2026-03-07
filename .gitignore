@@ -38,6 +38,11 @@ release/
 __pycache__/
 **/__pycache__/
 *.py[cod]
+*.pyc
+*.pyo
+*.pyc.*
+**/*.pyc
+**/*.pyo
 *$py.class
 *.pyo
 *.pyd
@@ -66,6 +71,7 @@ pip-delete-this-directory.txt
 
 # Pytest / coverage
 .pytest_cache/
+.hypothesis/
 .coverage
 .coverage.*
 coverage/
@@ -138,6 +144,8 @@ coverage/
 
 # ── Misc ──────────────────────────────────────────────────────
 Mockframes/
+tmp/
+temp/
 *.local
 *.bak
 *.tmp

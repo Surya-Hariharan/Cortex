@@ -42,8 +42,8 @@ class Settings(BaseSettings):
 
     # ── Database ─────────────────────────────────────────────────────────────
     SQLITE_URL: str = f"sqlite+aiosqlite:///{DATA_DIR / 'database' / 'cortex.db'}"
-    # Cloud override — uncomment and set in .env
-    # DATABASE_URL: str = "postgresql+asyncpg://user:pass@host/cortex"
+    # Cloud override: set in .env to use Supabase/Postgres instead of SQLite
+    DATABASE_URL: str = ""
 
     # ── Vector Store ─────────────────────────────────────────────────────────
     VECTOR_STORE_PATH: Path = DATA_DIR / "vector_store"
@@ -67,6 +67,7 @@ class Settings(BaseSettings):
 
     # ── Sync ─────────────────────────────────────────────────────────────────
     SYNC_INTERVAL_SECONDS: int = 30
+    CLOUD_RELAY_URL: str = ""
     SYNC_ENDPOINT: str = ""       # Set cloud URL in .env to enable cloud sync
     SYNC_BATCH_SIZE: int = 50
 

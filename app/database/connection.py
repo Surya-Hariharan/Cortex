@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import event, text
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -21,14 +22,47 @@ from app.core.logging import get_logger
 log = get_logger(__name__)
 
 # ── Engine ────────────────────────────────────────────────────────────────────
-_connect_args = {"check_same_thread": False} if "sqlite" in settings.SQLITE_URL else {}
+_db_url = settings.DATABASE_URL or settings.SQLITE_URL
+if "sqlite" in _db_url:
+    _connect_args = {"check_same_thread": False}
+elif "postgresql+asyncpg" in _db_url:
+    # Supabase pooler (PgBouncer) can fail with duplicate prepared statements.
+    # Disabling statement caches avoids that incompatibility.
+    _connect_args = {
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+    }
+else:
+    _connect_args = {}
+
+
+def _safe_db_url(url: str) -> str:
+    """Hide credentials when logging database URLs."""
+    if "@" in url and "://" in url:
+        scheme, rest = url.split("://", 1)
+        if "@" in rest:
+            return f"{scheme}://***@{rest.split('@', 1)[1]}"
+    return url
 
 engine = create_async_engine(
-    settings.SQLITE_URL,
+    _db_url,
     connect_args=_connect_args,
     echo=settings.DEBUG,
     pool_pre_ping=True,
 )
+
+# Enable FK enforcement for every SQLite connection.
+# Without this PRAGMA, SQLite silently ignores foreign-key constraints.
+if "sqlite" in _db_url:
+    from sqlalchemy import event
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_conn, _connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute("PRAGMA journal_mode = WAL")
+        cursor.execute("PRAGMA synchronous  = NORMAL")
+        cursor.close()
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
@@ -63,9 +97,12 @@ async def init_db() -> None:
     from app.models.domain import (  # noqa: F401 — side-effect imports
         chat, document, note, project, sync, task, user,
     )
+    from app.database.schema_bootstrap import bootstrap_operational_schema
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    log.info("database.ready", url=settings.SQLITE_URL)
+        await bootstrap_operational_schema(conn, dialect=engine.dialect.name)
+    log.info("database.ready", url=_safe_db_url(_db_url))
 
 
 async def close_db() -> None:

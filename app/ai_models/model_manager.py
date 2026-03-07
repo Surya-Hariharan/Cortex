@@ -6,6 +6,19 @@ Usage::
     emb = model_manager.embeddings
     llm = model_manager.llm
     stt = model_manager.whisper
+
+Memory-aware loading
+────────────────────
+``model_manager.load_by_available_memory()`` inspects free RAM via psutil
+and loads only the subset that fits comfortably:
+
+  ≥ 4 GB free  → embeddings + LLM + Whisper
+  ≥ 2 GB free  → embeddings + LLM
+  ≥ 1 GB free  → embeddings only
+
+Call this at startup instead of ``preload_all()`` on memory-constrained
+devices.  The lazy properties are still available regardless — they just
+load on first access.
 """
 from __future__ import annotations
 
@@ -18,6 +31,11 @@ from app.ai_models.whisper import WhisperModel
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Approximate footprint of each model in RAM (MiB)
+_EMBEDDINGS_MB = 150
+_LLM_MB = 2_200
+_WHISPER_MB = 200
 
 
 class ModelManager:
@@ -69,6 +87,82 @@ class ModelManager:
         _ = self.llm
         _ = self.whisper
         logger.info("All models pre-loaded")
+
+    def load_by_available_memory(self) -> dict[str, bool]:
+        """Selectively preload models based on current free RAM.
+
+        Returns a dict of which models were loaded.
+        """
+        free_mib = _free_memory_mib()
+        loaded: dict[str, bool] = {"embeddings": False, "llm": False, "whisper": False}
+
+        if free_mib >= _EMBEDDINGS_MB + 64:
+            _ = self.embeddings
+            loaded["embeddings"] = True
+            logger.info("EmbeddingModel pre-loaded (memory check passed)", free_mib=free_mib)
+        else:
+            logger.warning(
+                "Skipping EmbeddingModel preload — low memory",
+                free_mib=free_mib,
+                needed_mib=_EMBEDDINGS_MB,
+            )
+            return loaded
+
+        if free_mib >= _EMBEDDINGS_MB + _LLM_MB + 256:
+            _ = self.llm
+            loaded["llm"] = True
+            logger.info("LLMModel pre-loaded (memory check passed)", free_mib=free_mib)
+        else:
+            logger.warning(
+                "Skipping LLMModel preload — low memory",
+                free_mib=free_mib,
+                needed_mib=_LLM_MB,
+            )
+            return loaded
+
+        if free_mib >= _EMBEDDINGS_MB + _LLM_MB + _WHISPER_MB + 256:
+            _ = self.whisper
+            loaded["whisper"] = True
+            logger.info("WhisperModel pre-loaded (memory check passed)", free_mib=free_mib)
+        else:
+            logger.warning(
+                "Skipping WhisperModel preload — low memory",
+                free_mib=free_mib,
+                needed_mib=_WHISPER_MB,
+            )
+
+        return loaded
+
+    def health(self) -> dict:
+        """Return a JSON-serialisable health payload for the /system/health endpoint."""
+        free_mib = _free_memory_mib()
+        return {
+            "models": {
+                "embeddings": {
+                    "loaded": self._embeddings is not None,
+                    "approx_mb": _EMBEDDINGS_MB,
+                },
+                "llm": {
+                    "loaded": self._llm is not None,
+                    "approx_mb": _LLM_MB,
+                },
+                "whisper": {
+                    "loaded": self._whisper is not None,
+                    "approx_mb": _WHISPER_MB,
+                },
+            },
+            "system_free_ram_mb": free_mib,
+        }
+
+
+def _free_memory_mib() -> int:
+    """Return available system memory in MiB.  Falls back to 0 if psutil absent."""
+    try:
+        import psutil  # type: ignore
+        return psutil.virtual_memory().available // (1024 * 1024)
+    except ImportError:
+        logger.debug("psutil not installed — assuming sufficient memory")
+        return 8_192  # assume 8 GiB free so all models load by default
 
 
 # Global singleton

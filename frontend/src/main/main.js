@@ -8,7 +8,27 @@
 
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const fs = require('fs');
+const fs   = require('fs');
+
+// Session file stored in Electron's userData folder — survives app restarts
+// but is removed on explicit logout, causing the landing page to show again.
+function sessionFilePath() {
+    return path.join(app.getPath('userData'), 'cortex-session.json');
+}
+function hasSession() {
+    return fs.existsSync(sessionFilePath());
+}
+function readSession() {
+    try { return JSON.parse(fs.readFileSync(sessionFilePath(), 'utf8')); }
+    catch { return null; }
+}
+function writeSession(profile) {
+    fs.writeFileSync(sessionFilePath(), JSON.stringify(profile));
+}
+function deleteSession() {
+    const f = sessionFilePath();
+    if (fs.existsSync(f)) fs.unlinkSync(f);
+}
 
 // Services
 const { initializeDatabase, getDatabase } = require('../services/storage/database');
@@ -29,12 +49,7 @@ function createWindow() {
         minWidth: 900,
         minHeight: 600,
         backgroundColor: '#FFFFFF',
-        titleBarStyle: 'hidden',
-        titleBarOverlay: {
-            color: '#FFFFFF',
-            symbolColor: '#475569',
-            height: 32,
-        },
+        frame: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -43,12 +58,20 @@ function createWindow() {
         },
     });
 
-    // Open DevTools immediately for debugging
-    mainWindow.webContents.openDevTools();
+    // Open DevTools only when explicitly enabled.
+    if (process.env.CORTEX_OPEN_DEVTOOLS === '1') {
+        mainWindow.webContents.openDevTools({ mode: 'detach' });
+    }
 
-    // Load the built React bundle
-    const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
-    if (fs.existsSync(rendererPath)) {
+    // Route: skip landing page for returning users who have a saved session.
+    const landingPath   = path.join(__dirname, '../../landing.html');
+    const rendererPath  = path.join(__dirname, '../../dist/renderer/index.html');
+
+    if (hasSession() && fs.existsSync(rendererPath)) {
+        mainWindow.loadFile(rendererPath);
+    } else if (fs.existsSync(landingPath)) {
+        mainWindow.loadFile(landingPath);
+    } else if (fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
     } else {
         // Tell the user to run npm run build first
@@ -68,24 +91,32 @@ function createWindow() {
 
     mainWindow.on('closed', () => { mainWindow = null; });
 
+    mainWindow.on('maximize',   () => mainWindow?.webContents.send('window-maximize-change', true));
+    mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window-maximize-change', false));
+
     // Keyboard zoom: Ctrl +/-/0 and Ctrl+scroll
     const ZOOM_STEP = 0.1;
     const ZOOM_MIN = 0.5;
     const ZOOM_MAX = 2.0;
+
+    function applyZoom(factor) {
+        mainWindow.webContents.setZoomFactor(factor);
+        mainWindow.webContents.send('zoom-changed', Math.round(factor * 100));
+    }
 
     mainWindow.webContents.on('before-input-event', (event, input) => {
         if (!input.control && !input.meta) return;
         const k = input.key;
         if ((k === '=' || k === '+') && input.type === 'keyDown') {
             const cur = mainWindow.webContents.getZoomFactor();
-            mainWindow.webContents.setZoomFactor(Math.min(+(cur + ZOOM_STEP).toFixed(1), ZOOM_MAX));
+            applyZoom(Math.min(+(cur + ZOOM_STEP).toFixed(1), ZOOM_MAX));
             event.preventDefault();
         } else if (k === '-' && input.type === 'keyDown') {
             const cur = mainWindow.webContents.getZoomFactor();
-            mainWindow.webContents.setZoomFactor(Math.max(+(cur - ZOOM_STEP).toFixed(1), ZOOM_MIN));
+            applyZoom(Math.max(+(cur - ZOOM_STEP).toFixed(1), ZOOM_MIN));
             event.preventDefault();
         } else if ((k === '0' || k === 'num0') && input.type === 'keyDown') {
-            mainWindow.webContents.setZoomFactor(1.0);
+            applyZoom(1.0);
             event.preventDefault();
         }
     });
@@ -98,7 +129,11 @@ async function initializeServices() {
         initializeDatabase(dbPath);
         console.log('[Cortex] Database initialized');
 
-        const modelDir = path.join(__dirname, '../../models/bge-small-en-v1.5');
+        const modelCandidates = [
+            path.join(__dirname, '../../models/bge-small-en-v1.5'),
+            path.join(__dirname, '../../../models/bge-small-en-v1.5'),
+        ];
+        const modelDir = modelCandidates.find((dir) => fs.existsSync(path.join(dir, 'model.onnx'))) || modelCandidates[0];
         embeddingsEngine = new EmbeddingsEngine(modelDir);
         await embeddingsEngine.initialize();
         console.log('[Cortex] Embeddings engine initialized');
@@ -126,9 +161,50 @@ function registerIpcHandlers() {
     const ZOOM_STEP = 0.1;
     const ZOOM_MIN = 0.5;
     const ZOOM_MAX = 2.0;
-    ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); mainWindow.webContents.setZoomFactor(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
-    ipcMain.on('zoom-out', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); mainWindow.webContents.setZoomFactor(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
-    ipcMain.on('zoom-reset', () => { if (!mainWindow) return; mainWindow.webContents.setZoomFactor(1.0); });
+    function broadcastZoom(factor) {
+        if (!mainWindow) return;
+        mainWindow.webContents.setZoomFactor(factor);
+        mainWindow.webContents.send('zoom-changed', Math.round(factor * 100));
+    }
+    // ── Window Controls ────────────────────────────────────────────────────
+    ipcMain.on('window-minimize', () => mainWindow?.minimize());
+    ipcMain.on('window-maximize', () => { mainWindow?.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(); });
+    ipcMain.on('window-close',    () => mainWindow?.close());
+    ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false);
+
+    // ── Launch App (from landing page) ──────────────────────────────────────
+    ipcMain.on('launch-app', () => {
+        const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
+        if (mainWindow && fs.existsSync(rendererPath)) {
+            mainWindow.loadFile(rendererPath);
+        }
+    });
+
+    // ── Session management ─────────────────────────────────────────────
+    ipcMain.handle('save-session', (_e, profile) => {
+        try { writeSession(profile); return { success: true }; }
+        catch (err) { return { success: false, error: err.message }; }
+    });
+
+    ipcMain.handle('get-session', () => readSession());
+
+    ipcMain.on('logout', () => {
+        deleteSession();
+        const landingPath = path.join(__dirname, '../../landing.html');
+        const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
+        if (!mainWindow) return;
+        if (fs.existsSync(landingPath)) {
+            mainWindow.loadFile(landingPath);
+        } else if (fs.existsSync(rendererPath)) {
+            mainWindow.loadFile(rendererPath);
+        }
+    });
+
+    ipcMain.on('zoom-in',    () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
+    ipcMain.on('zoom-out',   () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
+    ipcMain.on('zoom-reset', () => { if (!mainWindow) return; broadcastZoom(1.0); });
+    ipcMain.on('zoom-set',   (_e, pct) => { if (!mainWindow) return; broadcastZoom(Math.min(Math.max(+(pct / 100).toFixed(2), ZOOM_MIN), ZOOM_MAX)); });
+    ipcMain.handle('zoom-get', () => mainWindow ? Math.round(mainWindow.webContents.getZoomFactor() * 100) : 100);
 
     // ── Search ──────────────────────────────────────────────────────────────
     ipcMain.handle('search', async (_event, query) => {
@@ -215,8 +291,12 @@ function registerIpcHandlers() {
 
     // ── Window Controls ──────────────────────────────────────────────────────
     ipcMain.on('update-titlebar-overlay', (_event, settings) => {
-        if (mainWindow && mainWindow.setTitleBarOverlay) {
+        if (!mainWindow || !mainWindow.setTitleBarOverlay) return;
+        try {
             mainWindow.setTitleBarOverlay(settings);
+        } catch (error) {
+            // Frameless windows may not have overlay enabled on all platforms.
+            // Keep this as a non-fatal best-effort update.
         }
     });
 }

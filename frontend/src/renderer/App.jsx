@@ -6,10 +6,13 @@ import Campus from './components/pages/Campus';
 import Activity from './components/pages/Activity';
 import AIEngine from './components/pages/AIEngine';
 import ProjectView from './components/pages/ProjectView';
-import StreamSelectorModal from './components/layout/StreamSelectorModal';
+import AuthPortal from './components/pages/AuthPortal';
+import Settings from './components/layout/Settings';
 import CommandPalette from './components/layout/CommandPalette';
+import StreamSelectorModal from './components/layout/StreamSelectorModal';
+import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, Bell, Palette, Database, ShieldCheck, X } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X } from 'lucide-react';
 
 const TABS = [
     { id: 'knowledge', label: 'Home', icon: <Home size={18} /> },
@@ -37,19 +40,66 @@ export default function App() {
     const [userStream, setUserStream] = useState(localStorage.getItem('cortex-user-stream'));
     const [showStreamSelector, setShowStreamSelector] = useState(!localStorage.getItem('cortex-user-stream'));
     const [showCommandPalette, setShowCommandPalette] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('cortex-auth-session') === 'active');
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem('cortex-theme') || 'system';
     });
     const [activeChatId, setActiveChatId] = useState('c1');
-    const [username, setUsername] = useState('Surya Hariharan');
+    const [username, setUsername] = useState(() => {
+        try {
+            const savedProfile = localStorage.getItem('cortex-auth-profile');
+            if (savedProfile) {
+                const parsed = JSON.parse(savedProfile);
+                return parsed.name || 'Surya Hariharan';
+            }
+        } catch {
+            // Ignore malformed local profile payloads.
+        }
+        return 'Surya Hariharan';
+    });
 
-    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null });
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null, title: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
-    const [settingsTab, setSettingsTab] = useState('general');
-    const [improveModel, setImproveModel] = useState(true);
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
-    const [activeProjectId, setActiveProjectId] = useState(null);
-    const [projects, setProjects] = useState(MOCK_PROJECTS);
+
+    // ── Zoom bar ─────────────────────────────────────────────────────────────
+    const [zoom, setZoom] = useState(100);
+    const [showZoomBar, setShowZoomBar] = useState(false);
+    const zoomHideTimer = useRef(null);
+
+    // On mount, sync with the main-process session file so a returning user
+    // who arrives directly (session file exists) is immediately authenticated
+    // even if their localStorage was somehow cleared.
+    useEffect(() => {
+        if (isAuthenticated) return; // already authenticated via localStorage
+        window.electronAPI?.getSession?.().then((profile) => {
+            if (profile) {
+                localStorage.setItem('cortex-auth-session', 'active');
+                localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
+                if (profile.name) setUsername(profile.name);
+                setIsAuthenticated(true);
+            }
+        }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+
+        const unsub = window.electronAPI?.onZoomChanged?.(pct => {
+            setZoom(pct);
+            setShowZoomBar(true);
+            clearTimeout(zoomHideTimer.current);
+            zoomHideTimer.current = setTimeout(() => setShowZoomBar(false), 2500);
+        });
+        return () => {
+            unsub?.();
+            clearTimeout(zoomHideTimer.current);
+        };
+    }, []);
+
+    function zoomIn()    { window.electronAPI?.zoomIn?.();    }
+    function zoomOut()   { window.electronAPI?.zoomOut?.();   }
+    function zoomReset() { window.electronAPI?.zoomReset?.(); }
 
     // Close context menu on outside click
     useEffect(() => {
@@ -200,6 +250,28 @@ export default function App() {
             }
         }
     };
+
+    const handleAuthSuccess = (profile) => {
+        if (profile?.name) {
+            setUsername(profile.name);
+        }
+        localStorage.setItem('cortex-auth-session', 'active');
+        // Persist session to the main-process file so the landing page is
+        // skipped on the next app launch.
+        window.electronAPI?.saveSession?.(profile ?? {});
+        setIsAuthenticated(true);
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('cortex-auth-session');
+        localStorage.removeItem('cortex-auth-profile');
+        // Tell main process to delete the session file and reload landing page.
+        window.electronAPI?.logout?.();
+    };
+
+    if (!isAuthenticated) {
+        return <AuthPortal onAuthSuccess={handleAuthSuccess} />;
+    }
 
     return (
         <div className="h-screen flex bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
@@ -455,7 +527,8 @@ export default function App() {
 
             {/* ── Main Content Area ────────────────────────────────────────────── */}
             <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-dark-950 relative">
-                <div className="h-4 w-full absolute top-0 left-0 bg-transparent z-50 pointer-events-none" style={{ WebkitAppRegion: 'drag' }} />
+                {/* Drag strip across top of main area */}
+                <div className="h-8 w-full absolute top-0 left-0 bg-transparent z-50 pointer-events-none" style={{ WebkitAppRegion: 'drag' }} />
 
                 <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
                     {activeTab === 'home' && <HomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
@@ -550,328 +623,26 @@ export default function App() {
                 />
             )}
 
-            {/* ── Settings Modal (ChatGPT-style) ──────────────────────────────── */}
-            {showProfileModal && (
-                <div
-                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-                    style={{ WebkitAppRegion: 'no-drag' }}
-                    onClick={() => setShowProfileModal(false)}
-                >
-                    <div
-                        className="bg-white dark:bg-dark-900 rounded-2xl w-full max-w-3xl h-[580px] shadow-2xl overflow-hidden border border-slate-200/60 dark:border-dark-700/60 flex animate-scale-in"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* ── Left nav ── */}
-                        <div className="w-52 flex-shrink-0 bg-slate-50 dark:bg-dark-950/70 border-r border-slate-100 dark:border-dark-800 flex flex-col p-3">
-                            <div className="flex items-center justify-between px-2 py-2 mb-2">
-                                <h2 className="text-base font-bold text-slate-800 dark:text-dark-50">Settings</h2>
-                                <button
-                                    onClick={() => setShowProfileModal(false)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:text-dark-500 dark:hover:text-dark-200 hover:bg-slate-200 dark:hover:bg-dark-800 transition-colors"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-                            <nav className="flex flex-col gap-0.5">
-                                {[
-                                    { id: 'general',         label: 'General',         Icon: Settings    },
-                                    { id: 'notifications',   label: 'Notifications',   Icon: Bell        },
-                                    { id: 'personalization', label: 'Personalization', Icon: Palette     },
-                                    { id: 'data-controls',   label: 'Data controls',   Icon: Database    },
-                                    { id: 'security',        label: 'Security',        Icon: ShieldCheck },
-                                    { id: 'account',         label: 'Account',         Icon: User        },
-                                ].map(({ id, label, Icon }) => (
-                                    <button
-                                        key={id}
-                                        onClick={() => setSettingsTab(id)}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full ${
-                                            settingsTab === id
-                                                ? 'bg-white dark:bg-dark-800 text-slate-900 dark:text-dark-50 shadow-sm border border-slate-100 dark:border-dark-700'
-                                                : 'text-slate-600 dark:text-dark-400 hover:bg-white/70 dark:hover:bg-dark-800/60 hover:text-slate-900 dark:hover:text-dark-100'
-                                        }`}
-                                    >
-                                        <Icon size={16} />
-                                        {label}
-                                    </button>
-                                ))}
-                            </nav>
-                            <div className="mt-auto pt-3 border-t border-slate-100 dark:border-dark-800">
-                                <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full">
-                                    <LogOut size={16} />
-                                    Log out
-                                </button>
-                            </div>
-                        </div>
+            {/* ── Window Controls (fixed top-right) ──────────────────────── */}
+            <div className="fixed top-0 right-0 z-[9999]">
+                <WindowControls />
+            </div>
 
-                        {/* ── Right content ── */}
-                        <div className="flex-1 overflow-y-auto">
-
-                            {/* General */}
-                            {settingsTab === 'general' && (
-                                <div className="p-7 space-y-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-3">General</h3>
-                                        <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    </div>
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Theme</span>
-                                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-dark-800 rounded-xl p-1">
-                                            {['light', 'dark', 'system'].map(t => (
-                                                <button
-                                                    key={t}
-                                                    onClick={() => setTheme(t)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                                                        theme === t
-                                                            ? 'bg-white dark:bg-dark-700 text-slate-900 dark:text-dark-50 shadow-sm'
-                                                            : 'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-dark-200'
-                                                    }`}
-                                                >{t}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Language</span>
-                                        <span className="text-sm text-slate-500 dark:text-dark-400 flex items-center gap-1">English <ChevronRight size={14} /></span>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Hardware acceleration</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Currently running on <span className="font-bold">{perfProvider.toUpperCase()}</span></p>
-                                        </div>
-                                        <span className="text-xs font-semibold text-slate-500 dark:text-dark-300 bg-slate-100 dark:bg-dark-800 px-3 py-1 rounded-full">{perfProvider.toUpperCase()}</span>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Archive all chats</span>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Archive all</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Delete all chats</span>
-                                        <button onClick={() => setShowDeleteAllChats(true)} className="px-4 py-1.5 text-xs font-semibold border border-red-300 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors">Delete all</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Notifications */}
-                            {settingsTab === 'notifications' && (
-                                <div className="p-7 space-y-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-3">Notifications</h3>
-                                        <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    </div>
-                                    {[
-                                        { label: 'Push notifications', desc: 'Alerts for new messages and AI responses' },
-                                        { label: 'Email digest',        desc: 'Weekly summary of your study activity'   },
-                                        { label: 'Study reminders',     desc: 'Daily reminders for your learning goals' },
-                                    ].map(({ label, desc }) => (
-                                        <React.Fragment key={label}>
-                                            <div className="flex items-center justify-between py-1">
-                                                <div>
-                                                    <p className="text-sm font-medium text-slate-700 dark:text-dark-200">{label}</p>
-                                                    <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">{desc}</p>
-                                                </div>
-                                                <div className="w-10 h-6 rounded-full bg-slate-200 dark:bg-dark-700 relative cursor-pointer flex-shrink-0">
-                                                    <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow transition-all" />
-                                                </div>
-                                            </div>
-                                            <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                        </React.Fragment>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Personalization */}
-                            {settingsTab === 'personalization' && (
-                                <div className="p-7 space-y-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-3">Personalization</h3>
-                                        <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    </div>
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Display name</span>
-                                        <input
-                                            type="text"
-                                            value={username}
-                                            onChange={e => setUsername(e.target.value)}
-                                            className="w-44 px-3 py-1.5 text-sm bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-synapse-500/30 focus:border-synapse-400 transition-all text-slate-800 dark:text-dark-50 text-right"
-                                        />
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Academic stream</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Personalises content recommendations</p>
-                                        </div>
-                                        <span className="text-sm text-slate-500 dark:text-dark-400 flex items-center gap-1">{userStream || 'Not set'} <ChevronRight size={14} /></span>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-start justify-between gap-4 py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Memory</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5 max-w-xs leading-relaxed">Cortex remembers details from your sessions for smarter, personalised responses.</p>
-                                        </div>
-                                        <div className="w-10 h-6 rounded-full bg-synapse-500 relative cursor-pointer flex-shrink-0 mt-0.5">
-                                            <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white shadow" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Data controls */}
-                            {settingsTab === 'data-controls' && (
-                                <div className="p-7 space-y-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-3">Data controls</h3>
-                                        <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    </div>
-                                    <div className="flex items-start justify-between gap-6 py-1">
-                                        <div className="max-w-xs">
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Improve Cortex for everyone</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-1 leading-relaxed">Allow your interactions to help train and improve Cortex's AI models. You can opt out at any time.</p>
-                                        </div>
-                                        <button
-                                            onClick={() => setImproveModel(p => !p)}
-                                            className={`w-10 h-6 rounded-full relative flex-shrink-0 transition-colors mt-0.5 ${improveModel ? 'bg-synapse-500' : 'bg-slate-200 dark:bg-dark-700'}`}
-                                        >
-                                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${improveModel ? 'right-1' : 'left-1'}`} />
-                                        </button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Shared links</span>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Manage</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Archived chats</span>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Manage</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Archive all chats</span>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Archive all</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Delete all chats</span>
-                                        <button
-                                            onClick={() => setShowDeleteAllChats(true)}
-                                            className="px-4 py-1.5 text-xs font-semibold border border-red-300 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors"
-                                        >Delete all</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Export data</span>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Export</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Security */}
-                            {settingsTab === 'security' && (
-                                <div className="p-7 space-y-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-3">Security</h3>
-                                        <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    </div>
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Password</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Last changed over 30 days ago</p>
-                                        </div>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Change</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Two-factor authentication</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Add an extra layer of security to your account</p>
-                                        </div>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Enable</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Active sessions</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">1 active session on this device</p>
-                                        </div>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors flex items-center gap-1">View <ChevronRight size={12} /></button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Log out of all devices</span>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-red-300 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors">Log out all</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Account */}
-                            {settingsTab === 'account' && (
-                                <div className="p-7 space-y-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-3">Account</h3>
-                                        <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    </div>
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Name</span>
-                                        <span className="text-sm text-slate-500 dark:text-dark-400 flex items-center gap-1">{username} <ChevronRight size={14} /></span>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-dark-200">Email</span>
-                                        <span className="text-sm text-slate-500 dark:text-dark-400 flex items-center gap-1">suryahariharan2006@gmail.com <ChevronRight size={14} /></span>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="rounded-xl border border-slate-200 dark:border-dark-700 overflow-hidden">
-                                        <div className="p-4 bg-gradient-to-r from-synapse-500/10 to-indigo-500/10 dark:from-synapse-900/30 dark:to-indigo-900/30 border-b border-slate-200 dark:border-dark-700 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-800 dark:text-dark-50">Cortex Free</p>
-                                                <p className="text-xs text-slate-500 dark:text-dark-400 mt-0.5">Your current plan</p>
-                                            </div>
-                                            <button className="px-4 py-1.5 bg-synapse-500 hover:bg-synapse-600 text-white text-xs font-bold rounded-full transition-colors shadow-sm">Upgrade</button>
-                                        </div>
-                                        <div className="p-4 space-y-2.5 bg-white dark:bg-dark-900">
-                                            <p className="text-xs font-bold text-slate-700 dark:text-dark-200 mb-3">Your plan includes:</p>
-                                            {[
-                                                'Offline AI document search',
-                                                'Up to 50 documents',
-                                                'Basic RAG pipeline',
-                                                'Peer mesh network access',
-                                            ].map(f => (
-                                                <div key={f} className="flex items-center gap-2.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-synapse-400 flex-shrink-0" />
-                                                    <span className="text-xs text-slate-600 dark:text-dark-300">{f}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-dark-200">Payment</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Manage billing and invoices</p>
-                                        </div>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-full transition-colors">Manage</button>
-                                    </div>
-                                    <div className="h-px bg-slate-100 dark:bg-dark-800" />
-                                    <div className="flex items-center justify-between py-1">
-                                        <div>
-                                            <p className="text-sm font-medium text-red-500">Delete account</p>
-                                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Permanently remove your account and all data</p>
-                                        </div>
-                                        <button className="px-4 py-1.5 text-xs font-semibold border border-red-300 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors">Delete</button>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            {/* ── Settings Modal ──────────────────────────────── */}
+            <Settings
+                open={showProfileModal}
+                onClose={() => setShowProfileModal(false)}
+                theme={theme}
+                setTheme={setTheme}
+                username={username}
+                setUsername={setUsername}
+                userStream={userStream}
+                setShowStreamSelector={setShowStreamSelector}
+                perfProvider={perfProvider}
+                setPerfProvider={setPerfProvider}
+                onToast={showToast}
+                onLogout={handleLogout}
+            />
             {/* Delete all chats confirmation */}
             {showDeleteAllChats && (
                 <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" style={{ WebkitAppRegion: 'no-drag' }}>
@@ -888,6 +659,39 @@ export default function App() {
                     </div>
                 </div>
             )}
+
+            {/* ── Zoom Bar ──────────────────────────────────────────────────── */}
+            <div
+                style={{ WebkitAppRegion: 'no-drag' }}
+                className={`fixed bottom-6 right-6 z-[70] flex items-center gap-1 px-1.5 py-1.5 rounded-2xl
+                    bg-white/95 dark:bg-dark-900/95 shadow-xl border border-slate-200/80 dark:border-dark-700/80
+                    backdrop-blur-md transition-all duration-300
+                    ${showZoomBar ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'}`}
+            >
+                <button
+                    onClick={zoomOut}
+                    title="Zoom out (Ctrl -)" 
+                    className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 dark:text-dark-300
+                        hover:bg-slate-100 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-dark-50
+                        transition-colors text-base font-bold select-none"
+                >−</button>
+                <button
+                    onClick={zoomReset}
+                    title="Reset zoom (Ctrl 0)"
+                    className={`min-w-[3.5rem] h-8 px-2 rounded-xl text-xs font-bold tabular-nums transition-colors select-none
+                        ${ zoom === 100
+                            ? 'text-slate-500 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800'
+                            : 'text-synapse-600 dark:text-synapse-400 hover:bg-synapse-50 dark:hover:bg-synapse-900/30'
+                        }`}
+                >{zoom}%</button>
+                <button
+                    onClick={zoomIn}
+                    title="Zoom in (Ctrl +)"
+                    className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 dark:text-dark-300
+                        hover:bg-slate-100 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-dark-50
+                        transition-colors text-base font-bold select-none"
+                >+</button>
+            </div>
 
             {/* Command Palette */}
             <CommandPalette

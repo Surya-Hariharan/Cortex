@@ -157,18 +157,18 @@ export default function PerformanceTab() {
             <div className="max-w-[1200px] mx-auto px-8 py-10 space-y-12 pb-20">
 
                 {/* ── 1. Powerful Hero Header ────────────────────────────── */}
-                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-10 group shadow-2xl shadow-dark-200/50 dark:shadow-dark-950">
+                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-6 group shadow-2xl shadow-dark-200/50 dark:shadow-dark-950">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-synapse-500/10 rounded-full blur-[120px] -mr-40 -mt-20 pointer-events-none" />
 
                     <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-8">
-                            <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br from-synapse-500 to-synapse-600 flex items-center justify-center shadow-2xl shadow-synapse-500/30 border border-white/20 relative ${benchmarkActive ? 'animate-pulse scale-105' : ''} transition-all duration-700`}>
+                        <div className="flex items-center gap-5">
+                            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br from-synapse-500 to-synapse-600 flex items-center justify-center shadow-2xl shadow-synapse-500/30 border border-white/20 relative ${benchmarkActive ? 'animate-pulse scale-105' : ''} transition-all duration-700`}>
                                 <div className="absolute inset-0 rounded-2xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <Zap size={40} className="text-white relative z-10" fill="white" />
+                                <Zap size={28} className="text-white relative z-10" fill="white" />
                             </div>
                             <div>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <h1 className="text-3xl font-black text-dark-800 dark:text-dark-50 tracking-tighter">On-Device AI Engine</h1>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h1 className="text-xl font-black text-dark-800 dark:text-dark-50 tracking-tighter">On-Device AI Engine</h1>
                                     <div className="performance-chip border-synapse-500/20 bg-synapse-500/5 text-synapse-600 dark:text-synapse-400">Local Only</div>
                                 </div>
                                 <p className="text-xs font-bold text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">
@@ -177,27 +177,27 @@ export default function PerformanceTab() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 shadow-sm">
-                                <div className={`w-2.5 h-2.5 rounded-full ${benchmarkActive ? 'bg-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]'}`} />
-                                <span className="text-[11px] font-black text-dark-700 dark:text-dark-100 uppercase tracking-[0.1em]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 shadow-sm">
+                                <div className={`w-2 h-2 rounded-full ${benchmarkActive ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
+                                <span className="text-[10px] font-black text-dark-700 dark:text-dark-100 uppercase tracking-[0.1em]">
                                     {benchmarkActive ? 'Benchmarking...' : 'System Active'}
                                 </span>
                             </div>
                             <button
                                 onClick={() => setBenchmarkActive(!benchmarkActive)}
-                                className={`px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-xl ${benchmarkActive ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-dark-500/20 dark:shadow-dark-950/50 hover:-translate-y-1'}`}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-xl ${benchmarkActive ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-dark-500/20 dark:shadow-dark-950/50 hover:-translate-y-1'}`}
                             >
                                 {benchmarkActive ? 'Stop Engine' : 'Run Benchmark'}
                             </button>
                             <div className="h-10 w-px bg-dark-100 dark:bg-dark-800 mx-1" />
                             <div className="flex gap-1.5">
-                                {hardware.cpu && <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-500 border border-slate-200 dark:border-dark-700" title="CPU Active"><Cpu size={16} /></div>}
-                                {hardware.gpu && <div className="p-2.5 rounded-xl bg-synapse-500/10 text-synapse-500 border border-synapse-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]" title="GPU (DirectML) Detected"><Activity size={16} /></div>}
-                                {hardware.npu && <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]" title="NPU Accelerator Ready"><Zap size={16} /></div>}
+                                {hardware.cpu && <div className="p-2 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-500 border border-slate-200 dark:border-dark-700" title="CPU Active"><Cpu size={14} /></div>}
+                                {hardware.gpu && <div className="p-2 rounded-xl bg-synapse-500/10 text-synapse-500 border border-synapse-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]" title="GPU (DirectML) Detected"><Activity size={14} /></div>}
+                                {hardware.npu && <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]" title="NPU Accelerator Ready"><Zap size={14} /></div>}
                             </div>
-                            <button className="p-3 rounded-xl border border-dark-200 dark:border-dark-800 bg-white dark:bg-dark-900 text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors shadow-sm">
-                                <Terminal size={18} />
+                            <button className="p-2 rounded-xl border border-dark-200 dark:border-dark-800 bg-white dark:bg-dark-900 text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors shadow-sm">
+                                <Terminal size={16} />
                             </button>
                         </div>
                     </div>

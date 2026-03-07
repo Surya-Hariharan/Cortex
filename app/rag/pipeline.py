@@ -14,6 +14,7 @@ from app.models.domain.chat import Chat, Message
 from app.models.schemas.chat import RAGQueryRequest, RAGQueryResponse, MessageRead
 from app.rag.retriever import semantic_search
 from app.rag.context_builder import build_context
+from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -62,15 +63,13 @@ async def run_rag_pipeline(
     # 2. Build context
     context_text, citations = build_context(results)
 
-    # 3. Fetch chat history (last 6 messages for context window)
-    history_stmt = (
-        select(Message)
-        .where(Message.chat_id == chat_id)
-        .order_by(desc(Message.created_at))
-        .limit(6)
+    # 3. Fetch chat history — memory-managed, token-budget-trimmed
+    from app.services.conversation_memory import get_context_messages
+    history = await get_context_messages(
+        chat_id=chat_id,
+        db=db,
+        max_tokens=settings.RAG_MAX_CONTEXT_TOKENS - 512,  # reserve 512 for answer
     )
-    history_rows = (await db.execute(history_stmt)).scalars().all()
-    history = [{"role": m.role, "content": m.content} for m in reversed(history_rows)]
 
     # 4. Generate LLM response (async, offloaded to thread pool)
     gen_start = datetime.utcnow()

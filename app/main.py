@@ -79,6 +79,51 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001
         logger.warning("cortex.mesh_ws_failed", error=str(exc))
 
+    # 7. Start AI task scheduler
+    try:
+        from app.services.ai_task_scheduler import scheduler
+
+        await scheduler.start()
+        logger.info("cortex.task_scheduler_started")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cortex.task_scheduler_failed", error=str(exc))
+
+    # 8. Memory-aware model preload
+    try:
+        from app.ai_models.model_manager import model_manager
+
+        model_manager.load_by_available_memory()
+        logger.info("cortex.models_preloaded")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cortex.model_preload_failed", error=str(exc))
+
+    # 9. Start mesh propagation loop
+    try:
+        from app.mesh_network.peer_sync import start_mesh_propagation_loop
+
+        await start_mesh_propagation_loop(interval_seconds=60)
+        logger.info("cortex.mesh_propagation_started")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cortex.mesh_propagation_failed", error=str(exc))
+
+    # 10. Start document reindexer
+    try:
+        from app.services.document_reindexer import start_reindexer_loop
+
+        await start_reindexer_loop()
+        logger.info("cortex.reindexer_started")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cortex.reindexer_failed", error=str(exc))
+
+    # 11. Start vector store health monitor
+    try:
+        from app.services.vector_store_health import start_health_monitor
+
+        await start_health_monitor(rebuild_on_mismatch=True)
+        logger.info("cortex.vs_health_monitor_started")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cortex.vs_health_monitor_failed", error=str(exc))
+
     logger.info("cortex.ready", host=settings.HOST, port=settings.PORT)
 
     yield  # ── Application running ──────────────────────────────────────────
@@ -111,6 +156,38 @@ async def lifespan(app: FastAPI):
         from app.mesh_network.peer_sync import mesh_server
 
         await mesh_server.stop()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Stop AI task scheduler
+    try:
+        from app.services.ai_task_scheduler import scheduler
+
+        scheduler.stop()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Stop mesh propagation loop
+    try:
+        from app.mesh_network.peer_sync import stop_mesh_propagation_loop
+
+        stop_mesh_propagation_loop()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Stop document reindexer
+    try:
+        from app.services.document_reindexer import stop_reindexer_loop
+
+        stop_reindexer_loop()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Stop vector store health monitor
+    try:
+        from app.services.vector_store_health import stop_health_monitor
+
+        stop_health_monitor()
     except Exception:  # noqa: BLE001
         pass
 
@@ -150,6 +227,14 @@ app.add_middleware(
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(api_router)
+
+# ── Observability: Prometheus /metrics endpoint ───────────────────────────────
+try:
+    from app.core.observability import mount_metrics
+
+    mount_metrics(app)
+except Exception:  # noqa: BLE001
+    pass
 
 
 # ── Root / Health endpoints ───────────────────────────────────────────────────

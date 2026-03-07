@@ -18,7 +18,17 @@ class SyncManager:
     """Coordinates event push to cloud relay and pull of remote events."""
 
     def __init__(self) -> None:
-        self._base_url = str(getattr(settings, "CLOUD_RELAY_URL", "")).rstrip("/")
+        self._base_url = (
+            str(getattr(settings, "CLOUD_RELAY_URL", ""))
+            or str(settings.SYNC_ENDPOINT)
+        ).rstrip("/")
+
+    def _relay_headers(self) -> dict[str, str]:
+        headers = {"Content-Type": "application/json"}
+        if settings.SUPABASE_ANON_KEY:
+            headers["apikey"] = settings.SUPABASE_ANON_KEY
+            headers["Authorization"] = f"Bearer {settings.SUPABASE_ANON_KEY}"
+        return headers
 
     async def push_events(self, events: List[SyncEventCreate]) -> bool:
         """Push a batch of local events to cloud relay.
@@ -31,7 +41,11 @@ class SyncManager:
         try:
             payload = [e.model_dump() for e in events]
             async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.post(f"{self._base_url}/sync/push", json={"events": payload})
+                resp = await client.post(
+                    f"{self._base_url}/sync/push",
+                    json={"events": payload},
+                    headers=self._relay_headers(),
+                )
             resp.raise_for_status()
             logger.info("Events pushed to relay", count=len(events))
             return True
@@ -53,7 +67,11 @@ class SyncManager:
             params["since"] = since.isoformat()
         try:
             async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(f"{self._base_url}/sync/pull", params=params)
+                resp = await client.get(
+                    f"{self._base_url}/sync/pull",
+                    params=params,
+                    headers=self._relay_headers(),
+                )
             resp.raise_for_status()
             data = resp.json()
             return data.get("events", [])

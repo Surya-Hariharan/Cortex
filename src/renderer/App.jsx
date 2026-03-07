@@ -72,6 +72,18 @@ export default function App() {
         return () => window.removeEventListener('click', handleClick);
     }, [contextMenu.visible]);
 
+    // Ctrl+K command palette
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setShowCommandPalette(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     const perfPollRef = useRef(null);
 
     useEffect(() => {

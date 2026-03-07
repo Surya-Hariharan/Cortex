@@ -106,6 +106,38 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                         <StatCard label="AI Queries" value="156" icon={Zap} trend="+28 today" color="text-amber-500" accent="bg-amber-50 dark:bg-amber-900/20" />
                     </div>
 
+                    {/* Trending on Campus */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6">
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp size={16} className="text-rose-500" />
+                                <h3 className="text-sm font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Trending on Campus</h3>
+                            </div>
+                            <button onClick={() => onTabChange?.('knowledge')} className="text-xs font-bold text-synapse-600 dark:text-synapse-400 hover:underline">View All</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {[
+                                { title: 'Operating Systems Cheatsheet', subject: 'Computer Science', downloads: 1240, rating: 4.9, trend: '🔥', color: 'from-orange-500 to-red-500' },
+                                { title: 'ML Midterm Revision Notes', subject: 'Machine Learning', downloads: 980, rating: 4.8, trend: '📈', color: 'from-synapse-500 to-indigo-500' },
+                                { title: 'Computer Networks Quick Guide', subject: 'Networking', downloads: 670, rating: 4.6, trend: '⭐', color: 'from-emerald-500 to-teal-500' },
+                            ].map((note, i) => (
+                                <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/80 dark:bg-dark-950/50 border border-slate-100 dark:border-dark-800/60 hover:shadow-md hover:shadow-slate-100/50 dark:hover:shadow-none transition-all cursor-pointer group">
+                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${note.color} flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0`}>
+                                        {note.trend}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-[13px] font-bold text-slate-800 dark:text-dark-100 truncate group-hover:text-synapse-600 transition-colors">{note.title}</h4>
+                                        <p className="text-[11px] text-slate-400 dark:text-dark-500 font-medium mb-2">{note.subject}</p>
+                                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 dark:text-dark-500">
+                                            <span className="flex items-center gap-1"><Download size={10} /> {note.downloads.toLocaleString()}</span>
+                                            <span className="flex items-center gap-1"><Star size={10} className="text-amber-400" /> {note.rating}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Two-Column Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 

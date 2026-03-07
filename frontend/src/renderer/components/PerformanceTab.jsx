@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Zap, Activity, Shield, Cpu, Monitor, Globe, BarChart3, Clock, CheckCircle2, AlertCircle, Play, Square, Terminal, Network, Droplets, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { system as systemApi } from '../../services/api.js';
 
 // Realistic baselines for comparison
 const CLOUD_API_MS = 847;
@@ -122,16 +123,16 @@ export default function PerformanceTab() {
         embed: []
     });
 
-    // Poll peers and Simulation Logic
+    // Poll system health for live perf stats
     useEffect(() => {
         const fetchPerf = async () => {
             try {
-                const data = window.electronAPI ? await window.electronAPI.getPerfStats() : null;
+                const data = await systemApi.health();
                 if (data) setPerf(data);
             } catch (_) { }
         };
         fetchPerf();
-        const interval = setInterval(fetchPerf, 2000);
+        const interval = setInterval(fetchPerf, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -151,6 +152,7 @@ export default function PerformanceTab() {
 
     const avgMs = perf?.avgEmbedTimeMs || 2.4;
     const history = perf?.embedHistory || [2.5, 2.3, 2.7, 2.4, 2.2, 2.4, 2.3, 2.5, 2.4];
+    const totalOps = perf?.subsystems?.vector_store?.db_chunks || perf?.embedHistory?.length || 142;
 
     return (
         <div className="h-full overflow-y-auto bg-white dark:bg-dark-950 scroll-smooth">
@@ -239,7 +241,7 @@ export default function PerformanceTab() {
                     />
                     <PerformanceTile
                         label="Compute Flow"
-                        value={perf?.embedHistory?.length || 142}
+                        value={totalOps}
                         unit="ops"
                         sub="Embeds processed"
                         trend="↑ 4.2k"

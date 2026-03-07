@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     BarChart3,
     Download,
@@ -18,6 +18,8 @@ import {
     ArrowUpRight,
     Filter
 } from 'lucide-react';
+
+import { notes as notesApi, getUserId } from '../../services/api.js';
 
 const MOCK_CONTRIBUTIONS = [];
 
@@ -53,6 +55,26 @@ const VisibilityBadge = ({ type }) => {
 };
 
 export default function MyContributions() {
+    const [contributions, setContributions] = useState([]);
+
+    useEffect(() => {
+        const userId = getUserId();
+        if (!userId) return;
+        notesApi.list(userId).then(res => {
+            const all = Array.isArray(res) ? res : (res?.notes ?? []);
+            const shared = all.filter(n => n.visibility === 'public' || n.is_shared === 1 || n.visibility === 'link_only');
+            setContributions(shared.map(n => ({
+                id: n.id,
+                title: n.title,
+                visibility: n.visibility === 'public' ? 'Academic Hub' : n.visibility === 'link_only' ? 'Mesh Network' : 'Private',
+                downloads: n.share_info?.download_count ?? 0,
+                views: n.share_info?.view_count ?? 0,
+                rating: 0,
+                isOCR: false,
+                date: n.created_at ? new Date(n.created_at).toLocaleDateString() : '—',
+            })));
+        }).catch(() => {});
+    }, []);
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2 overflow-y-auto scrollbar-thin">
             {/* Header */}
@@ -82,9 +104,9 @@ export default function MyContributions() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard label="Total Uploads" value="0" icon={FileText} color="bg-synapse-500" />
-                        <StatCard label="Total Downloads" value="0" icon={Download} color="bg-emerald-500" />
-                        <StatCard label="Total Views" value="0" icon={Eye} color="bg-blue-500" />
+                        <StatCard label="Total Uploads" value={contributions.length} icon={FileText} color="bg-synapse-500" />
+                        <StatCard label="Total Downloads" value={contributions.reduce((s, n) => s + (n.downloads || 0), 0)} icon={Download} color="bg-emerald-500" />
+                        <StatCard label="Total Views" value={contributions.reduce((s, n) => s + (n.views || 0), 0)} icon={Eye} color="bg-blue-500" />
                         <StatCard label="Avg Rating" value="—" icon={Star} color="bg-amber-500" />
                     </div>
 
@@ -159,7 +181,7 @@ export default function MyContributions() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-                                    {MOCK_CONTRIBUTIONS.map((note) => (
+                                    {contributions.map((note) => (
                                         <tr key={note.id} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3">

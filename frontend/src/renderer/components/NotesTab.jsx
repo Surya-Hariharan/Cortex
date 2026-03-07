@@ -1,4 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { notes as notesApi, getUserId } from '../../../services/api.js';
+
+// Encode/decode note type and due_date as tags on the backend
+function encodeNoteTags(type, dueDate, extraTags = []) {
+    const tags = [`type:${type}`, ...extraTags];
+    if (dueDate) tags.push(`due:${dueDate}`);
+    return tags;
+}
+
+function decodeNoteTags(tags) {
+    const list = Array.isArray(tags) ? tags : (typeof tags === 'string' ? JSON.parse(tags || '[]') : []);
+    let type = 'note', dueDate = null;
+    const other = [];
+    for (const t of list) {
+        if (t.startsWith('type:')) type = t.slice(5);
+        else if (t.startsWith('due:')) dueDate = t.slice(4);
+        else other.push(t);
+    }
+    return { type, dueDate, tags: other };
+}
+
+function toUINote(n) {
+    const { type, dueDate, tags } = decodeNoteTags(n.tags);
+    return {
+        id: n.id,
+        title: n.title,
+        content: n.content || '',
+        type,
+        dueDate,
+        tags,
+        completed: n.is_completed === 1 || n.is_completed === true,
+        createdAt: n.created_at,
+        _raw: n,
+    };
+}
 
 const TYPE_CONFIG = {
     note: { icon: '📝', label: 'Note', color: 'bg-synapse-50 dark:bg-synapse-900/20 text-synapse-600 dark:text-synapse-400 border-synapse-200 dark:border-synapse-800' },
@@ -35,9 +70,13 @@ export default function NotesTab({ onToast }) {
     const [sortBy, setSortBy] = useState('newest'); // newest | oldest | deadline
 
     const loadNotes = async () => {
-        if (window.electronAPI) {
-            const res = await window.electronAPI.getNotes();
-            setNotes(res.notes || []);
+        try {
+            const userId = getUserId();
+            const res = await notesApi.list(userId);
+            const list = Array.isArray(res) ? res : (res?.notes ?? []);
+            setNotes(list.map(toUINote));
+        } catch (err) {
+            onToast?.(`Failed to load notes: ${err.message}`, 'error');
         }
     };
 
@@ -64,37 +103,43 @@ export default function NotesTab({ onToast }) {
     const handleAdd = async (e) => {
         e.preventDefault();
         if (!title.trim()) return;
-
-        if (window.electronAPI) {
-            const result = await window.electronAPI.addNote({
+        try {
+            const userId = getUserId();
+            await notesApi.create({
+                user_id: userId,
                 title: title.trim(),
-                content: content.trim(),
-                type,
-                dueDate: dueDate || null,
+                content: content.trim() || null,
+                tags: encodeNoteTags(type, dueDate || null),
             });
-            if (result.success) {
-                onToast?.(`Added ${TYPE_CONFIG[type]?.label || 'Note'}: "${title.trim()}"`);
-                setTitle('');
-                setContent('');
-                setType('note');
-                setDueDate('');
-                setShowForm(false);
-                loadNotes();
-            }
+            onToast?.(`Added ${TYPE_CONFIG[type]?.label || 'Note'}: "${title.trim()}"`);
+            setTitle('');
+            setContent('');
+            setType('note');
+            setDueDate('');
+            setShowForm(false);
+            loadNotes();
+        } catch (err) {
+            onToast?.(`Failed to save note: ${err.message}`, 'error');
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.electronAPI) {
-            await window.electronAPI.deleteNote(id);
-            loadNotes();
+        try {
+            await notesApi.delete(id);
+            setNotes(prev => prev.filter(n => n.id !== id));
+        } catch (err) {
+            onToast?.(`Delete failed: ${err.message}`, 'error');
         }
     };
 
     const handleToggle = async (id) => {
-        if (window.electronAPI) {
-            await window.electronAPI.toggleNoteComplete(id);
-            loadNotes();
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        try {
+            await notesApi.update(id, { is_completed: note.completed ? 0 : 1 });
+            setNotes(prev => prev.map(n => n.id === id ? { ...n, completed: !n.completed } : n));
+        } catch (err) {
+            onToast?.(`Update failed: ${err.message}`, 'error');
         }
     };
 

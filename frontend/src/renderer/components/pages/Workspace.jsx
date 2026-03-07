@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { FileText, CheckSquare, Plus, Calendar, Clock, AlertCircle, Flag, ChevronRight, GripVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, CheckSquare, Plus, Calendar, Clock, AlertCircle, Flag, ChevronRight, GripVertical, X, RefreshCw } from 'lucide-react';
 import NotesTab from '../NotesTab';
-
-const MOCK_TASKS = [];
+import { tasks as tasksApi, getUserId } from '../../../../services/api.js';
 
 const PRIORITY_CONFIG = {
     high: { label: 'High', color: 'text-red-500 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/50', dot: 'bg-red-500' },
@@ -16,21 +15,80 @@ const SUB_TABS = [
 ];
 
 function TasksView({ onToast }) {
-    const [tasks, setTasks] = useState(MOCK_TASKS);
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [showAdd, setShowAdd] = useState(false);
+    const [newTitle, setNewTitle] = useState('');
+    const [newPriority, setNewPriority] = useState('medium');
+    const [newDue, setNewDue] = useState('');
 
-    const toggleTask = (id) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    };
+    useEffect(() => { loadTasks(); }, []);
+
+    async function loadTasks() {
+        setLoading(true);
+        try {
+            const userId = getUserId();
+            const res = await tasksApi.list(userId);
+            setTasks(Array.isArray(res) ? res : (res?.tasks ?? []));
+        } catch (err) {
+            onToast?.(`Failed to load tasks: ${err.message}`, 'error');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function toggleTask(id) {
+        const task = tasks.find(t => t.id === id);
+        if (!task) return;
+        const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+        try {
+            await tasksApi.update(id, { status: newStatus });
+            setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+        } catch (err) {
+            onToast?.(`Update failed: ${err.message}`, 'error');
+        }
+    }
+
+    async function deleteTask(id) {
+        try {
+            await tasksApi.delete(id);
+            setTasks(prev => prev.filter(t => t.id !== id));
+        } catch (err) {
+            onToast?.(`Delete failed: ${err.message}`, 'error');
+        }
+    }
+
+    async function handleAddTask(e) {
+        e.preventDefault();
+        if (!newTitle.trim()) return;
+        try {
+            const userId = getUserId();
+            const created = await tasksApi.create({
+                user_id: userId,
+                title: newTitle.trim(),
+                priority: newPriority,
+                due_date: newDue || null,
+            });
+            setTasks(prev => [created, ...prev]);
+            setNewTitle('');
+            setNewPriority('medium');
+            setNewDue('');
+            setShowAdd(false);
+            onToast?.('Task added', 'success');
+        } catch (err) {
+            onToast?.(`Failed to add task: ${err.message}`, 'error');
+        }
+    }
 
     const filtered = tasks.filter(t => {
-        if (filter === 'active') return !t.completed;
-        if (filter === 'completed') return t.completed;
+        if (filter === 'active') return t.status !== 'completed';
+        if (filter === 'completed') return t.status === 'completed';
         return true;
     });
 
-    const activeCount = tasks.filter(t => !t.completed).length;
-    const overdueCount = tasks.filter(t => !t.completed && new Date(t.due) < new Date()).length;
+    const activeCount = tasks.filter(t => t.status !== 'completed').length;
+    const overdueCount = tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date()).length;
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in overflow-y-auto custom-scrollbar">
@@ -56,7 +114,7 @@ function TasksView({ onToast }) {
                         <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-4 flex items-center gap-3">
                             <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20"><Calendar size={18} className="text-emerald-500" /></div>
                             <div>
-                                <p className="text-lg font-black text-slate-800 dark:text-dark-50">{tasks.filter(t => t.completed).length}</p>
+                                <p className="text-lg font-black text-slate-800 dark:text-dark-50">{tasks.filter(t => t.status === 'completed').length}</p>
                                 <p className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase tracking-widest">Completed</p>
                             </div>
                         </div>
@@ -75,53 +133,94 @@ function TasksView({ onToast }) {
                                 </button>
                             ))}
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-synapse-600 hover:bg-synapse-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-sm">
+                        <button onClick={() => setShowAdd(v => !v)} className="flex items-center gap-2 px-4 py-2 bg-synapse-600 hover:bg-synapse-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-sm">
                             <Plus size={16} /> Add Task
                         </button>
                     </div>
 
-                    {/* Task List */}
-                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden">
-                        <div className="divide-y divide-slate-100 dark:divide-dark-800">
-                            {filtered.map(task => {
-                                const pConfig = PRIORITY_CONFIG[task.priority];
-                                return (
-                                    <div key={task.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
-                                        <button
-                                            onClick={() => toggleTask(task.id)}
-                                            className={`w-5 h-5 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all ${task.completed
-                                                    ? 'bg-synapse-600 border-synapse-600 text-white'
-                                                    : 'border-slate-300 dark:border-dark-600 hover:border-synapse-400'
-                                                }`}
-                                        >
-                                            {task.completed && (
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                                    <polyline points="20 6 9 17 4 12" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                        <div className="flex-1 min-w-0">
-                                            <p className={`text-[13px] font-bold mb-0.5 ${task.completed ? 'text-slate-400 dark:text-dark-500 line-through' : 'text-slate-800 dark:text-dark-100'}`}>
-                                                {task.title}
-                                            </p>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500">{task.course}</span>
-                                                <span className="text-[10px] text-slate-300 dark:text-dark-600">•</span>
-                                                <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-dark-500">
-                                                    <Clock size={10} /> {task.due}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${pConfig.color}`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full ${pConfig.dot}`} /> {pConfig.label}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    {/* Inline Add Form */}
+                    {showAdd && (
+                        <form onSubmit={handleAddTask} className="bg-white dark:bg-dark-900 border border-synapse-200 dark:border-synapse-800/50 rounded-2xl p-4 space-y-3 shadow-sm">
+                            <div className="flex gap-3">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={newTitle}
+                                    onChange={e => setNewTitle(e.target.value)}
+                                    placeholder="Task title…"
+                                    className="flex-1 bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-800 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-800 dark:text-dark-50 outline-none focus:ring-2 focus:ring-synapse-500/20 focus:border-synapse-400"
+                                />
+                                <select value={newPriority} onChange={e => setNewPriority(e.target.value)} className="bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-800 rounded-xl px-3 text-sm font-bold text-slate-700 dark:text-dark-200 outline-none">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                                <input type="date" value={newDue} onChange={e => setNewDue(e.target.value)} className="bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-800 rounded-xl px-3 text-sm font-medium text-slate-700 dark:text-dark-200 outline-none" />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-xl transition-all">Cancel</button>
+                                <button type="submit" className="px-5 py-2 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all">Save</button>
+                            </div>
+                        </form>
+                    )}
 
-                    {filtered.length === 0 && (
+                    {/* Task List */}
+                    {loading ? (
+                        <div className="flex items-center justify-center py-16 text-slate-400">
+                            <RefreshCw size={20} className="animate-spin mr-2" /><span className="text-sm">Loading tasks…</span>
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden">
+                            <div className="divide-y divide-slate-100 dark:divide-dark-800">
+                                {filtered.map(task => {
+                                    const pConfig = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
+                                    const completed = task.status === 'completed';
+                                    const dueLabel = task.due_date ? new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
+                                    return (
+                                        <div key={task.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
+                                            <button
+                                                onClick={() => toggleTask(task.id)}
+                                                className={`w-5 h-5 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all ${completed
+                                                        ? 'bg-synapse-600 border-synapse-600 text-white'
+                                                        : 'border-slate-300 dark:border-dark-600 hover:border-synapse-400'
+                                                    }`}
+                                            >
+                                                {completed && (
+                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-[13px] font-bold mb-0.5 ${completed ? 'text-slate-400 dark:text-dark-500 line-through' : 'text-slate-800 dark:text-dark-100'}`}>
+                                                    {task.title}
+                                                </p>
+                                                <div className="flex items-center gap-3">
+                                                    {task.description && <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 truncate max-w-[200px]">{task.description}</span>}
+                                                    {dueLabel && (
+                                                        <>
+                                                            <span className="text-[10px] text-slate-300 dark:text-dark-600">•</span>
+                                                            <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-dark-500">
+                                                                <Clock size={10} /> {dueLabel}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${pConfig.color}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${pConfig.dot}`} /> {pConfig.label}
+                                            </span>
+                                            <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-300 hover:text-red-500 transition-all">
+                                                <X size={13} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && filtered.length === 0 && (
                         <div className="text-center py-16">
                             <CheckSquare size={32} className="text-slate-300 dark:text-dark-600 mx-auto mb-3" />
                             <h3 className="text-lg font-black text-slate-800 dark:text-dark-50 mb-1">All caught up!</h3>

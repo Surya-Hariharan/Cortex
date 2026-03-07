@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Share, Shield, Globe, Cpu, Zap, Activity, Monitor, ChevronRight, MoreHorizontal, FileText, Code, File, Search } from 'lucide-react';
+import { mesh } from '../../../services/api.js';
 
 const MOCK_SHARED_DOCS = [];
 
@@ -17,25 +18,27 @@ export default function NetworkTab() {
     const [recentDocs, setRecentDocs] = useState(MOCK_SHARED_DOCS);
     const [simulatedEvent, setSimulatedEvent] = useState(null);
 
-    // Poll peers and Simulation Logic
+    // Poll peers
     useEffect(() => {
         const fetchPeers = async () => {
-            if (window.electronAPI && isAutoDiscovery) {
-                try {
-                    const res = await window.electronAPI.getPeers();
-                    if (res?.peers) {
-                        const updatedPeers = [
-                            { id: 'me', name: 'This Device (You)', status: 'online', isMe: true, ip: '192.168.1.42', strength: 100 },
-                            ...res.peers.filter(p => p.id !== 'me').map(p => ({ ...p, strength: Math.floor(Math.random() * 40) + 60, ip: `192.168.1.${Math.floor(Math.random() * 254)}` }))
-                        ];
-                        setPeers(updatedPeers);
-                    }
-                } catch (_) { }
-            }
+            if (!isAutoDiscovery) return;
+            try {
+                const res = await mesh.peers();
+                const list = Array.isArray(res) ? res : (res?.peers ?? []);
+                const updatedPeers = [
+                    { id: 'me', name: 'This Device (You)', status: 'online', isMe: true, ip: '127.0.0.1', strength: 100 },
+                    ...list.filter(p => p.id !== 'me').map(p => ({
+                        ...p,
+                        strength: Math.floor(Math.random() * 40) + 60,
+                        ip: p.ip || `192.168.1.${Math.floor(Math.random() * 254)}`,
+                    })),
+                ];
+                setPeers(updatedPeers);
+            } catch (_) { }
         };
 
         fetchPeers();
-        const interval = setInterval(fetchPeers, 3000);
+        const interval = setInterval(fetchPeers, 5000);
         return () => clearInterval(interval);
     }, [isAutoDiscovery]);
 

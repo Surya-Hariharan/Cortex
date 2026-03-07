@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Search,
     Filter,
@@ -18,6 +18,7 @@ import {
     User,
     Plus
 } from 'lucide-react';
+import { notes as notesApi, getUserId } from '../../services/api.js';
 import UploadNoteModal from './shared/UploadNoteModal';
 
 const MOCK_NOTES = [];
@@ -151,16 +152,36 @@ const STREAM_MAP = {
 export default function AcademicHub({ userStream }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeStream, setActiveStream] = useState(() => {
-        // Default to user preference if available
-        if (userStream && STREAM_MAP[userStream]) {
-            return STREAM_MAP[userStream];
-        }
+        if (userStream && STREAM_MAP[userStream]) return STREAM_MAP[userStream];
         return 'All';
     });
     const [activeYear, setActiveYear] = useState('All');
     const [activeType, setActiveType] = useState('All');
     const [sortBy, setSortBy] = useState('Recent');
     const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [publicNotes, setPublicNotes] = useState([]);
+
+    useEffect(() => {
+        notesApi.browsePublic({ limit: 100 }).then(res => {
+            const raw = Array.isArray(res) ? res : (res?.notes ?? []);
+            setPublicNotes(raw.map(n => ({
+                id: n.id,
+                title: n.title || 'Untitled',
+                subject: (n.tags ? (typeof n.tags === 'string' ? JSON.parse(n.tags) : n.tags) : []).find(t => t.startsWith('subject:'))?.split(':')[1] || 'General',
+                stream: (n.tags ? (typeof n.tags === 'string' ? JSON.parse(n.tags) : n.tags) : []).find(t => t.startsWith('stream:'))?.split(':')[1] || 'All',
+                type: 'Typed PDF',
+                isHandwritten: false,
+                isOCR: false,
+                uploadedBy: n.user_id ?? 'Anonymous',
+                batch: '2024',
+                downloads: n.share_info?.download_count ?? 0,
+                rating: 4.5,
+                size: '—',
+                date: n.created_at ? new Date(n.created_at).toLocaleDateString() : '—',
+                noteId: n.id,
+            })));
+        }).catch(() => {});
+    }, []);
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2">
@@ -292,7 +313,7 @@ export default function AcademicHub({ userStream }) {
                     {/* Right Notes Grid */}
                     <main className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {MOCK_NOTES
+                            {publicNotes
                                 .filter(note => {
                                     const matchesStream = activeStream === 'All' || note.stream === activeStream;
                                     const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -305,8 +326,8 @@ export default function AcademicHub({ userStream }) {
                             }
                         </div>
 
-                        {/* Empty State Mockup */}
-                        {MOCK_NOTES.length === 0 && (
+                        {/* Empty State */}
+                        {publicNotes.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center text-center p-12">
                                 <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-dark-900 flex items-center justify-center text-slate-300 dark:text-dark-800 mb-6">
                                     <Search size={40} />

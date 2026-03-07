@@ -9,6 +9,73 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs   = require('fs');
+const { spawn } = require('child_process');
+const http = require('http');
+
+// ── Python Backend ────────────────────────────────────────────────────────────
+let pythonProcess = null;
+const BACKEND_PORT = 8765;
+const BACKEND_URL  = `http://127.0.0.1:${BACKEND_PORT}/api/v1`;
+
+function findPython() {
+    // Prefer the project venv, then fall back to system python.
+    const root = path.join(__dirname, '../../../');
+    const candidates = [
+        path.join(root, '.venv', 'Scripts', 'python.exe'),  // Windows venv
+        path.join(root, '.venv', 'bin', 'python'),           // Unix venv
+        'python',
+        'python3',
+    ];
+    return candidates.find(p => {
+        try { return p.includes(path.sep) ? fs.existsSync(p) : true; }
+        catch { return false; }
+    }) || 'python';
+}
+
+function startPythonBackend() {
+    const root = path.join(__dirname, '../../../');
+    const py   = findPython();
+    console.log('[Cortex] Starting Python backend with:', py);
+    pythonProcess = spawn(
+        py,
+        ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(BACKEND_PORT), '--log-level', 'warning'],
+        { cwd: root, stdio: 'pipe' }
+    );
+    pythonProcess.stdout.on('data', d => console.log('[Python]', d.toString().trim()));
+    pythonProcess.stderr.on('data', d => console.error('[Python]', d.toString().trim()));
+    pythonProcess.on('exit', code => {
+        console.log('[Cortex] Python backend exited with code', code);
+        pythonProcess = null;
+    });
+}
+
+function stopPythonBackend() {
+    if (pythonProcess) {
+        pythonProcess.kill();
+        pythonProcess = null;
+    }
+}
+
+// Ping the backend until it answers (max 30s)
+function waitForBackend(timeout = 30000) {
+    return new Promise(resolve => {
+        const start = Date.now();
+        const tryPing = () => {
+            const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
+                res.resume();
+                if (res.statusCode < 500) { resolve(true); return; }
+                retry();
+            });
+            req.on('error', retry);
+            req.setTimeout(1000, () => { req.destroy(); retry(); });
+        };
+        const retry = () => {
+            if (Date.now() - start > timeout) { resolve(false); return; }
+            setTimeout(tryPing, 500);
+        };
+        tryPing();
+    });
+}
 
 // Session file stored in Electron's userData folder — survives app restarts
 // but is removed on explicit logout, causing the landing page to show again.
@@ -215,35 +282,96 @@ function registerIpcHandlers() {
         } catch (e) { return { error: e.message }; }
     });
 
-    // ── Upload PDF ──────────────────────────────────────────────────────────
-    ipcMain.handle('upload-pdf', async () => {
+    // ── Upload PDF — forward to FastAPI backend ──────────────────────────────
+    ipcMain.handle('upload-pdf', async (_event, userId) => {
         try {
             const result = await dialog.showOpenDialog(mainWindow, {
                 properties: ['openFile'],
-                filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+                filters: [
+                    { name: 'Documents', extensions: ['pdf', 'txt', 'md', 'docx'] },
+                    { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'ogg'] },
+                ],
             });
             if (result.canceled || result.filePaths.length === 0) return { canceled: true };
 
             const filePath = result.filePaths[0];
-            const chunks = await extractPdfText(filePath);
-            const db = getDatabase();
-            const title = path.basename(filePath, '.pdf');
+            const filename = path.basename(filePath);
 
-            for (const chunk of chunks) {
-                const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
-                if (embeddingsEngine?.isReady()) {
-                    const vector = await embeddingsEngine.embed(chunk.content);
-                    db.insertEmbedding(docId, vector);
+            // Try to upload via FastAPI; fall back to old local engine if backend is down
+            try {
+                const FormData = require('form-data');
+                const fileStream = fs.createReadStream(filePath);
+                const fd = new FormData();
+                fd.append('file', fileStream, filename);
+                fd.append('user_id', userId || 'local-user');
+
+                // Node's built-in http to avoid a fetch polyfill dep
+                const uploadResult = await new Promise((resolve, reject) => {
+                    const req = http.request({
+                        hostname: '127.0.0.1',
+                        port: BACKEND_PORT,
+                        path: '/api/v1/documents/upload',
+                        method: 'POST',
+                        headers: fd.getHeaders(),
+                    }, res => {
+                        let body = '';
+                        res.on('data', d => body += d);
+                        res.on('end', () => {
+                            try { resolve(JSON.parse(body)); }
+                            catch { resolve({ error: 'Invalid response' }); }
+                        });
+                    });
+                    req.on('error', reject);
+                    fd.pipe(req);
+                });
+                return { success: true, ...uploadResult };
+            } catch (_apiErr) {
+                // Backend unavailable — fall back to legacy local pipeline
+                const chunks = await extractPdfText(filePath);
+                const db = getDatabase();
+                const title = path.basename(filePath, '.pdf');
+                for (const chunk of chunks) {
+                    const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
+                    if (embeddingsEngine?.isReady()) {
+                        const vector = await embeddingsEngine.embed(chunk.content);
+                        db.insertEmbedding(docId, vector);
+                    }
                 }
+                return { success: true, title, chunks: chunks.length, source: 'local' };
             }
-            return { success: true, title, chunks: chunks.length };
         } catch (e) { return { error: e.message }; }
     });
 
-    // ── Stats ───────────────────────────────────────────────────────────────
-    ipcMain.handle('get-stats', () => {
+    // ── Stats — prefer FastAPI; fall back to local DB ────────────────────────
+    ipcMain.handle('get-stats', async () => {
+        try {
+            const res = await new Promise((resolve, reject) => {
+                const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, r => {
+                    let b = ''; r.on('data', d => b += d);
+                    r.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(null); } });
+                });
+                req.on('error', reject);
+                req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
+            });
+            if (res?.subsystems) return res;
+        } catch (_) {}
         try { return getDatabase()?.getStats() ?? { documents: 0, embeddings: 0 }; }
         catch { return { documents: 0, embeddings: 0 }; }
+    });
+
+    // ── Backend status ──────────────────────────────────────────────────────
+    ipcMain.handle('backend-ready', async () => {
+        try {
+            const res = await new Promise((resolve, reject) => {
+                const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, r => {
+                    let b = ''; r.on('data', d => b += d);
+                    r.on('end', () => resolve(r.statusCode < 500));
+                });
+                req.on('error', () => resolve(false));
+                req.setTimeout(2000, () => { req.destroy(); resolve(false); });
+            });
+            return res;
+        } catch { return false; }
     });
 
     // ── Performance ─────────────────────────────────────────────────────────
@@ -307,7 +435,14 @@ app.disableHardwareAcceleration();
 app.whenReady().then(async () => {
     registerIpcHandlers();
     await initializeServices();
+    startPythonBackend();
     createWindow();
+
+    // Notify renderer when backend becomes ready
+    waitForBackend().then(ready => {
+        console.log('[Cortex] Python backend ready:', ready);
+        mainWindow?.webContents.send('backend-status', { ready });
+    });
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -315,5 +450,8 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+    stopPythonBackend();
     if (process.platform !== 'darwin') app.quit();
 });
+
+app.on('before-quit', () => stopPythonBackend());

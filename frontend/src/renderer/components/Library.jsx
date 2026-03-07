@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     BookOpen,
     FileText,
@@ -20,10 +20,29 @@ import {
     Mic,
     Image as ImageIcon,
     File,
-    Plus
+    Plus,
+    RefreshCw,
 } from 'lucide-react';
+import { documents as docsApi, getUserId } from '../../../services/api.js';
 
-const MOCK_FILES = [];
+function inferType(mimeType = '', fileName = '') {
+    if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) return 'pdf';
+    if (mimeType.startsWith('image/')) return 'scan';
+    if (mimeType.startsWith('audio/')) return 'recording';
+    return 'default';
+}
+
+function formatSize(bytes) {
+    if (!bytes) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 const TYPE_ICONS = {
     pdf: { icon: FileText, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
@@ -43,11 +62,65 @@ const STATUS_CONFIG = {
 const FILTERS = ['All', 'PDFs', 'Scans', 'Research', 'Recordings'];
 
 export default function Library({ onUploadPdf, onToast }) {
+    const [files, setFiles] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('list');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
-    const filteredFiles = MOCK_FILES.filter(f => {
+    const userId = getUserId();
+
+    useEffect(() => {
+        loadDocuments();
+    }, []);
+
+    async function loadDocuments() {
+        setLoading(true);
+        try {
+            const res = await docsApi.list(userId);
+            // Backend returns { documents: [...] } or just an array
+            const list = Array.isArray(res) ? res : (res?.documents ?? []);
+            setFiles(list);
+        } catch (err) {
+            onToast?.(`Failed to load library: ${err.message}`, 'error');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleDelete(id) {
+        try {
+            await docsApi.delete(id);
+            setFiles(prev => prev.filter(f => f.id !== id));
+            onToast?.('File deleted', 'success');
+        } catch (err) {
+            onToast?.(`Delete failed: ${err.message}`, 'error');
+        }
+    }
+
+    async function handleReindex(id) {
+        try {
+            await docsApi.reindex(id);
+            onToast?.('Reindexing started', 'success');
+            setTimeout(loadDocuments, 2000);
+        } catch (err) {
+            onToast?.(`Reindex failed: ${err.message}`, 'error');
+        }
+    }
+
+    const displayFiles = files.map(doc => ({
+        id: doc.id,
+        name: doc.title || doc.file_name || 'Untitled',
+        subject: doc.subject || doc.project_id || 'Library',
+        type: inferType(doc.mime_type, doc.file_name || ''),
+        status: doc.status || 'pending',
+        chunks: doc.chunk_count ?? '—',
+        size: formatSize(doc.file_size),
+        date: formatDate(doc.created_at),
+        _raw: doc,
+    }));
+
+    const filteredFiles = displayFiles.filter(f => {
         const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) || f.subject.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = activeFilter === 'All' ||
             (activeFilter === 'PDFs' && f.type === 'pdf') ||
@@ -57,8 +130,9 @@ export default function Library({ onUploadPdf, onToast }) {
         return matchesSearch && matchesFilter;
     });
 
-    const totalSize = '106.1 MB';
-    const indexedCount = MOCK_FILES.filter(f => f.status === 'indexed').length;
+    const totalSizeBytes = files.reduce((acc, d) => acc + (d.file_size || 0), 0);
+    const totalSize = formatSize(totalSizeBytes);
+    const indexedCount = files.filter(f => f.status === 'indexed').length;
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in overflow-y-auto custom-scrollbar">
@@ -79,12 +153,17 @@ export default function Library({ onUploadPdf, onToast }) {
                                 Your personal knowledge base — the raw dataset for Cortex AI.
                             </p>
                         </div>
-                        <button
-                            onClick={onUploadPdf}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-200/40 dark:shadow-none"
-                        >
-                            <Plus size={18} /> Upload File
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button onClick={loadDocuments} className="p-2.5 border border-slate-200 dark:border-dark-700 rounded-xl hover:bg-slate-50 dark:hover:bg-dark-800 transition-all text-slate-500 dark:text-dark-400">
+                                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                            </button>
+                            <button
+                                onClick={onUploadPdf}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-200/40 dark:shadow-none"
+                            >
+                                <Plus size={18} /> Upload File
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -97,7 +176,7 @@ export default function Library({ onUploadPdf, onToast }) {
                         <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-4 flex items-center gap-3">
                             <div className="p-2 rounded-xl bg-synapse-50 dark:bg-synapse-900/20"><FileText size={18} className="text-synapse-500" /></div>
                             <div>
-                                <p className="text-lg font-black text-slate-800 dark:text-dark-50">{MOCK_FILES.length}</p>
+                                <p className="text-lg font-black text-slate-800 dark:text-dark-50">{files.length}</p>
                                 <p className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase tracking-widest">Total Files</p>
                             </div>
                         </div>
@@ -111,7 +190,9 @@ export default function Library({ onUploadPdf, onToast }) {
                         <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-4 flex items-center gap-3">
                             <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20"><Zap size={18} className="text-blue-500" /></div>
                             <div>
-                                <p className="text-lg font-black text-slate-800 dark:text-dark-50">101</p>
+                                <p className="text-lg font-black text-slate-800 dark:text-dark-50">
+                                    {files.reduce((s, d) => s + (d.chunk_count || 0), 0)}
+                                </p>
                                 <p className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase tracking-widest">AI Chunks</p>
                             </div>
                         </div>
@@ -158,7 +239,12 @@ export default function Library({ onUploadPdf, onToast }) {
                     </div>
 
                     {/* File List / Grid */}
-                    {viewMode === 'list' ? (
+                    {loading ? (
+                        <div className="flex items-center justify-center py-24 text-slate-400 dark:text-dark-500">
+                            <RefreshCw size={24} className="animate-spin mr-3" />
+                            <span className="text-sm font-medium">Loading library…</span>
+                        </div>
+                    ) : viewMode === 'list' ? (
                         <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -209,10 +295,12 @@ export default function Library({ onUploadPdf, onToast }) {
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <div className="flex items-center justify-end gap-2">
-                                                            <button className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-slate-400 hover:text-synapse-600 opacity-0 group-hover:opacity-100">
-                                                                <Eye size={14} />
-                                                            </button>
-                                                            <button className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                                                            {file.status === 'failed' && (
+                                                                <button onClick={() => handleReindex(file.id)} className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-amber-400 hover:text-amber-600 opacity-0 group-hover:opacity-100" title="Reindex">
+                                                                    <RefreshCw size={14} />
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => handleDelete(file.id)} className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
                                                                 <Trash2 size={14} />
                                                             </button>
                                                             <button className="p-2 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-lg transition-all text-slate-400">
@@ -233,7 +321,10 @@ export default function Library({ onUploadPdf, onToast }) {
                                 const typeConfig = TYPE_ICONS[file.type] || TYPE_ICONS.default;
                                 const statusConfig = STATUS_CONFIG[file.status];
                                 return (
-                                    <div key={file.id} className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg hover:shadow-slate-100/50 dark:hover:shadow-none transition-all group cursor-pointer">
+                                    <div key={file.id} className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg hover:shadow-slate-100/50 dark:hover:shadow-none transition-all group cursor-pointer relative">
+                                        <button onClick={() => handleDelete(file.id)} className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-300 hover:text-red-500 transition-all">
+                                            <Trash2 size={13} />
+                                        </button>
                                         <div className={`w-12 h-12 rounded-xl ${typeConfig.color} flex items-center justify-center mb-4`}>
                                             <typeConfig.icon size={24} />
                                         </div>

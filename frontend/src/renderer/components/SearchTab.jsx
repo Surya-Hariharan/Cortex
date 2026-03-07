@@ -9,6 +9,7 @@ import {
     Plus
 } from 'lucide-react';
 import ResultCard from './shared/ResultCard';
+import { search as searchApi, chat as chatApi, getUserId } from '../../../services/api.js';
 
 const SEARCH_STAGES = [
     'Tokenizing query…',
@@ -25,7 +26,7 @@ export default function SearchTab({ onToast, onUploadPdf }) {
     const [searchStage, setSearchStage] = useState(-1);
     const [synthesizedAnswer, setSynthesizedAnswer] = useState(null);
     const inputRef = useRef(null);
-    const typewriterRef = useRef(null);
+    const streamAbortRef = useRef(null);
     const stageTimerRef = useRef(null);
 
     useEffect(() => {
@@ -37,75 +38,62 @@ export default function SearchTab({ onToast, onUploadPdf }) {
         e.preventDefault();
         if (!query.trim() || isSearching) return;
 
+        // Cancel any ongoing stream
+        if (streamAbortRef.current) { streamAbortRef.current.abort(); streamAbortRef.current = null; }
+        if (stageTimerRef.current) clearInterval(stageTimerRef.current);
+
         setIsSearching(true);
         setResults(null);
         setSynthesizedAnswer(null);
         setSearchStage(0);
 
-        if (typewriterRef.current) clearInterval(typewriterRef.current);
-        if (stageTimerRef.current) clearInterval(stageTimerRef.current);
-
-        // Advance stage label every 160ms for visual effect
+        // Advance stage label for visual effect
         let stage = 0;
         stageTimerRef.current = setInterval(() => {
             stage = Math.min(stage + 1, SEARCH_STAGES.length - 1);
             setSearchStage(stage);
         }, 160);
 
-        const minPause = new Promise((r) => setTimeout(r, 640));
+        const minPause = new Promise(r => setTimeout(r, 640));
 
         try {
-            let response;
-            if (window.electronAPI) {
-                const [res] = await Promise.all([window.electronAPI.search(query.trim()), minPause]);
-                response = res;
-            } else {
-                await minPause;
-                response = {
-                    results: {
-                        results: [
-                            { rank: 1, docId: 1, title: 'Thermodynamics - Concept 2', subject: 'Thermodynamics', content: 'The second law of thermodynamics introduces the concept of entropy. Entropy is a measure of the disorder or randomness in a closed system.', score: 0.924, relevancePercent: 92, chunkIndex: 1 },
-                            { rank: 2, docId: 2, title: 'Thermodynamics - Concept 3', subject: 'Thermodynamics', content: 'Entropy always increases in an isolated system. This is a key constraint on the efficiency of any heat engine.', score: 0.871, relevancePercent: 87, chunkIndex: 2 },
-                            { rank: 3, docId: 3, title: 'Thermodynamics - Concept 1', subject: 'Thermodynamics', content: 'The first law of thermodynamics states that energy cannot be created or destroyed, only converted from one form to another.', score: 0.812, relevancePercent: 81, chunkIndex: 0 },
-                        ],
-                        searchTimeMs: 11,
-                        totalDocuments: 100,
-                        query,
-                        synthesizedAnswer: 'Based on your study materials: The second law of thermodynamics introduces the concept of entropy — a measure of disorder or randomness in a closed system. Furthermore, entropy always increases in an isolated system, which constrains heat engine efficiency. Additionally, the first law establishes that energy is conserved across all thermodynamic processes.',
-                    },
-                };
-            }
+            const [res] = await Promise.all([
+                searchApi.query(query.trim()),
+                minPause,
+            ]);
 
             clearInterval(stageTimerRef.current);
             setSearchStage(-1);
 
-            if (response.error) {
-                onToast(response.error, 'error');
-                setResults([]);
-            } else {
-                setResults(response.results.results);
-                setSearchMeta({
-                    time: response.results.searchTimeMs,
-                    total: response.results.totalDocuments,
-                    query: response.results.query,
-                });
-                const answer = response.results.synthesizedAnswer;
-                if (answer) {
-                    setSynthesizedAnswer('');
-                    let i = 0;
-                    typewriterRef.current = setInterval(() => {
-                        i += 3;
-                        setSynthesizedAnswer(answer.slice(0, i));
-                        if (i >= answer.length) {
-                            setSynthesizedAnswer(answer);
-                            clearInterval(typewriterRef.current);
-                        }
-                    }, 20);
-                }
+            // Map backend SearchResult[] to the shape ResultCard expects
+            const uiResults = (res.results || []).map((r, idx) => ({
+                rank: idx + 1,
+                docId: r.document_id,
+                title: r.document_title || r.filename || 'Untitled',
+                subject: r.filename || r.document_title || 'Library',
+                content: r.content,
+                score: r.score,
+                relevancePercent: Math.round(r.score * 100),
+                chunkIndex: r.chunk_index,
+            }));
+            setResults(uiResults);
+            setSearchMeta({ time: 0, total: res.total || uiResults.length, query: res.query });
+
+            // If we have results, start streaming the synthesized answer
+            if (uiResults.length > 0) {
+                setSynthesizedAnswer('');
+                const userId = getUserId();
+                streamAbortRef.current = chatApi.stream(
+                    { query: query.trim(), user_id: userId || 'local-user' },
+                    (token) => setSynthesizedAnswer(prev => (prev || '') + token),
+                    (_done) => { streamAbortRef.current = null; },
+                    (err) => { console.warn('[SearchTab] stream error:', err); setSynthesizedAnswer(prev => prev || null); },
+                );
             }
         } catch (error) {
             clearInterval(stageTimerRef.current);
-            onToast('Search failed: ' + error.message, 'error');
+            onToast?.('Search failed: ' + error.message, 'error');
+            setResults([]);
         } finally {
             setIsSearching(false);
             setSearchStage(-1);

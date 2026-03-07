@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { documents as docsApi, system as systemApi, getUserId } from '../../services/api.js';
 import {
     Database,
     Zap,
@@ -16,11 +17,7 @@ import {
     Pause
 } from 'lucide-react';
 
-const MOCK_INDEXED = [];
 
-const MOCK_QUEUE = [];
-
-const MOCK_ERRORS = [];
 
 const StatCard = ({ label, value, subtext, icon: Icon, color }) => (
     <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 group">
@@ -49,8 +46,36 @@ const ProgressBar = ({ progress, color = 'bg-synapse-600' }) => (
     </div>
 );
 
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export default function DocumentStatus() {
     const [isPaused, setIsPaused] = useState(false);
+    const [indexedDocs, setIndexedDocs] = useState([]);
+    const [queueDocs, setQueueDocs] = useState([]);
+    const [failedDocs, setFailedDocs] = useState([]);
+    const [health, setHealth] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const loadData = useCallback(async () => {
+        const userId = getUserId();
+        try {
+            const [h, all] = await Promise.all([
+                systemApi.health(),
+                docsApi.list(userId),
+            ]);
+            const docs = Array.isArray(all) ? all : (all?.documents ?? []);
+            setHealth(h);
+            setIndexedDocs(docs.filter(d => d.status === 'indexed' || d.status === 'completed'));
+            setQueueDocs(docs.filter(d => d.status === 'processing' || d.status === 'pending'));
+            setFailedDocs(docs.filter(d => d.status === 'failed' || d.status === 'error'));
+        } catch (_) {}
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2 overflow-y-auto scrollbar-thin">
@@ -71,6 +96,9 @@ export default function DocumentStatus() {
                         </p>
                     </div>
                     <div className="flex gap-3">
+                        <button onClick={loadData} className="px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100">
+                            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        </button>
                         <button
                             onClick={() => setIsPaused(!isPaused)}
                             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${isPaused
@@ -90,10 +118,10 @@ export default function DocumentStatus() {
 
                     {/* Performance Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard label="Total Indexed" value="1,284" subtext="84.2 GB consumed" icon={Database} color="bg-synapse-500" />
-                        <StatCard label="OCR Accuracy" value="98.2%" subtext="Avg confidence score" icon={Zap} color="bg-amber-500" />
-                        <StatCard label="Avg Index Time" value="4.2s" subtext="Per 100 pages" icon={Clock} color="bg-emerald-500" />
-                        <StatCard label="System Load" value="24%" subtext="NPU Acceleration Active" icon={Cpu} color="bg-blue-500" />
+                        <StatCard label="Total Indexed" value={loading ? '…' : indexedDocs.length.toLocaleString()} subtext={`${(health?.subsystems?.vector_store?.db_chunks ?? 0).toLocaleString()} chunks in vector store`} icon={Database} color="bg-synapse-500" />
+                        <StatCard label="AI Models" value={loading ? '…' : (health?.subsystems?.models?.status === 'ok' ? 'Online' : health?.subsystems?.models?.status ?? 'Unknown')} subtext="Embedding engine status" icon={Zap} color="bg-amber-500" />
+                        <StatCard label="Processing Queue" value={loading ? '…' : queueDocs.length} subtext={`${failedDocs.length} failed document${failedDocs.length !== 1 ? 's' : ''}`} icon={Clock} color="bg-emerald-500" />
+                        <StatCard label="Vector Store" value={loading ? '…' : (health?.subsystems?.vector_store?.status === 'healthy' ? 'Ready' : health?.subsystems?.vector_store?.status ?? 'Init')} subtext={`FAISS: ${(health?.subsystems?.vector_store?.faiss_vectors ?? 0).toLocaleString()} vectors`} icon={Cpu} color="bg-blue-500" />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -106,31 +134,31 @@ export default function DocumentStatus() {
                                         <Activity size={16} className="text-synapse-500" />
                                         <h3 className="text-xs font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Processing Queue</h3>
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{MOCK_QUEUE.length} Active Jobs</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{queueDocs.length} Active Jobs</span>
                                 </div>
 
                                 <div className="divide-y divide-slate-100 dark:divide-dark-800">
-                                    {MOCK_QUEUE.map(job => (
-                                        <div key={job.id} className="p-6 hover:bg-slate-50/50 transition-colors">
+                                    {queueDocs.map(doc => (
+                                        <div key={doc.id} className="p-6 hover:bg-slate-50/50 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-400">
                                                         <FileText size={20} />
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-sm font-bold text-slate-800 dark:text-dark-100">{job.name}</h4>
+                                                        <h4 className="text-sm font-bold text-slate-800 dark:text-dark-100">{doc.title || doc.filename}</h4>
                                                         <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-synapse-500 animate-pulse" />
-                                                            {job.stage} • {job.startTime}
+                                                            {doc.status} • {fmtDate(doc.created_at)}
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="text-xs font-black text-synapse-600 dark:text-synapse-400">{job.progress}%</span>
+                                                <span className="text-xs font-black text-synapse-600 dark:text-synapse-400">{doc.status === 'processing' ? '50%' : '0%'}</span>
                                             </div>
-                                            <ProgressBar progress={job.progress} />
+                                            <ProgressBar progress={doc.status === 'processing' ? 50 : 10} />
                                         </div>
                                     ))}
-                                    {MOCK_QUEUE.length === 0 && (
+                                    {queueDocs.length === 0 && (
                                         <div className="p-12 text-center">
                                             <p className="text-sm text-slate-400 font-medium uppercase tracking-widest">Queue is empty</p>
                                         </div>
@@ -154,26 +182,31 @@ export default function DocumentStatus() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-                                            {MOCK_INDEXED.map(doc => (
+                                            {indexedDocs.map(doc => (
                                                 <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-dark-800 flex items-center justify-center text-slate-400">
                                                                 <FileText size={16} />
                                                             </div>
-                                                            <span className="text-sm font-bold text-slate-700 dark:text-dark-200">{doc.name}</span>
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-dark-200">{doc.title || doc.filename}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                            <CheckCircle2 size={12} /> {doc.status}
+                                                            <CheckCircle2 size={12} /> Indexed
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        <span className="text-xs font-medium text-slate-400">{doc.date}</span>
+                                                        <span className="text-xs font-medium text-slate-400">{fmtDate(doc.created_at)}</span>
                                                     </td>
                                                 </tr>
                                             ))}
+                                            {indexedDocs.length === 0 && !loading && (
+                                                <tr>
+                                                    <td colSpan={3} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">No indexed documents</td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -190,16 +223,16 @@ export default function DocumentStatus() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    {MOCK_ERRORS.map(err => (
-                                        <div key={err.id} className="p-4 bg-red-50/30 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl">
-                                            <p className="text-xs font-bold text-slate-800 dark:text-dark-100 mb-1">{err.name}</p>
-                                            <p className="text-[11px] text-red-500 font-bold mb-3">{err.error}</p>
-                                            <button className="w-full py-2 bg-white dark:bg-dark-800 hover:bg-slate-50 text-slate-700 dark:text-dark-200 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-100 dark:border-dark-700 transition-all flex items-center justify-center gap-2">
+                                    {failedDocs.map(doc => (
+                                        <div key={doc.id} className="p-4 bg-red-50/30 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl">
+                                            <p className="text-xs font-bold text-slate-800 dark:text-dark-100 mb-1">{doc.title || doc.filename}</p>
+                                            <p className="text-[11px] text-red-500 font-bold mb-3">Processing failed</p>
+                                            <button onClick={() => docsApi.reindex(doc.id).then(loadData)} className="w-full py-2 bg-white dark:bg-dark-800 hover:bg-slate-50 text-slate-700 dark:text-dark-200 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-100 dark:border-dark-700 transition-all flex items-center justify-center gap-2">
                                                 <RefreshCcw size={12} /> Retry Indexing
                                             </button>
                                         </div>
                                     ))}
-                                    {MOCK_ERRORS.length === 0 && (
+                                    {failedDocs.length === 0 && (
                                         <div className="text-center py-4">
                                             <CheckCircle2 size={24} className="text-emerald-500 mx-auto mb-2 opacity-20" />
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No issues detected</p>

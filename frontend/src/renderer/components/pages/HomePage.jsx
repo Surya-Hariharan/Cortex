@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { documents as docsApi, notes as notesApi, mesh, getUserId } from '../../../services/api.js';
 import {
     Home,
     Search,
@@ -45,6 +46,23 @@ const StatCard = ({ label, value, icon: Icon, trend, color, accent }) => (
 );
 
 export default function HomePage({ onTabChange, onUploadPdf }) {
+    const [stats, setStats] = useState({ docs: 0, peers: 0, contributions: 0 });
+
+    useEffect(() => {
+        const userId = getUserId();
+        Promise.all([
+            docsApi.list(userId).catch(() => []),
+            mesh.peers().catch(() => ({ peers: [] })),
+            notesApi.list(userId).catch(() => []),
+        ]).then(([docs, peersRes, notes]) => {
+            const allDocs = Array.isArray(docs) ? docs : (docs?.documents ?? []);
+            const allPeers = Array.isArray(peersRes) ? peersRes : (peersRes?.peers ?? []);
+            const allNotes = Array.isArray(notes) ? notes : (notes?.notes ?? []);
+            const sharedNotes = allNotes.filter(n => n.visibility === 'public' || n.is_shared === 1);
+            setStats({ docs: allDocs.length, peers: allPeers.length, contributions: sharedNotes.length });
+        });
+    }, []);
+
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in overflow-y-auto custom-scrollbar">
             {/* Header */}
@@ -93,9 +111,9 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard label="Documents" value="0" icon={FileText} color="text-synapse-500" accent="bg-synapse-50 dark:bg-synapse-900/20" />
-                        <StatCard label="Active Peers" value="0" icon={Globe} color="text-emerald-500" accent="bg-emerald-50 dark:bg-emerald-900/20" />
-                        <StatCard label="Contributions" value="0" icon={BookOpen} color="text-blue-500" accent="bg-blue-50 dark:bg-blue-900/20" />
+                        <StatCard label="Documents" value={stats.docs} icon={FileText} color="text-synapse-500" accent="bg-synapse-50 dark:bg-synapse-900/20" />
+                        <StatCard label="Active Peers" value={stats.peers} icon={Globe} color="text-emerald-500" accent="bg-emerald-50 dark:bg-emerald-900/20" />
+                        <StatCard label="Contributions" value={stats.contributions} icon={BookOpen} color="text-blue-500" accent="bg-blue-50 dark:bg-blue-900/20" />
                         <StatCard label="AI Queries" value="0" icon={Zap} color="text-amber-500" accent="bg-amber-50 dark:bg-amber-900/20" />
                     </div>
 

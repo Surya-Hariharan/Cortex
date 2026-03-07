@@ -21,37 +21,26 @@
 
 ## Project Structure
 
-```
+```text
 Cortex/
-├── src/
-│   ├── main/               # Electron main process
-│   │   ├── main.js         # App entry — thin shell, loads Express backend
-│   │   └── preload.js      # Context bridge (IPC)
-│   ├── renderer/           # React frontend
-│   │   ├── App.jsx
-│   │   ├── index.jsx / index.css / index.html
-│   │   └── components/     # SearchTab, NotesTab, NetworkTab, PerformanceTab, ...
-│   └── services/           # Legacy service layer (still used by scripts)
-│       ├── database.js
-│       ├── embeddings.js
-│       └── ...
-├── backend/
-│   ├── server.js           # Express entry point (port 3001)
-│   └── src/
-│       ├── ai/             # BGE embeddings, Phi-3 LLM, RAG pipeline
-│       ├── auth/           # JWT + OTP authentication
-│       ├── core/           # Express app bootstrap + routes
-│       ├── mesh/           # libp2p P2P networking
-│       └── storage/        # SQLite (better-sqlite3) + LanceDB vector store
-├── scripts/
-│   └── setup-demo.js       # Seed sample data for testing
-├── data/                   # Runtime: SQLite DB + LanceDB vectors (gitignored)
-├── models/                 # AI models — download separately (gitignored)
-├── dist/                   # Webpack build output (gitignored)
+├── frontend/
+│   ├── src/
+│   │   ├── main/           # Electron main process (spawns Python backend)
+│   │   │   ├── main.js
+│   │   │   └── preload.js  # Context bridge (IPC)
+│   │   └── renderer/       # React frontend UI
+│   └── package.json        
+├── app/                    # Python FastAPI Backend
+│   ├── main.py             # Entry point (port 8765)
+│   ├── api/                # REST API Routes
+│   ├── ai_models/          # Local ONNX models + Gemini API fallback
+│   ├── database/           # SQLite + SQLAlchemy ORM
+│   ├── mesh_network/       # mDNS and WebSocket P2P networking
+│   └── rag/                # FAISS vector store integration
+├── data/                   # Runtime: SQLite DB + FAISS vectors (auto-generated)
+├── models/                 # Local AI models (download separately, or use Gemini API)
 ├── .env.example            # Environment variable template
-├── package.json
-├── webpack.config.js
-└── tailwind.config.js
+└── requirements.txt        # Backend dependencies
 ```
 
 ---
@@ -61,88 +50,94 @@ Cortex/
 ### Prerequisites
 
 - Node.js ≥ 18
-- Windows 10+ / macOS 12+ / Ubuntu 20+
-- ~4 GB RAM minimum (8 GB recommended for LLM)
+- Python 3.10+
+- Windows 10+ / macOS 12+ / Linux
+- ~4 GB RAM minimum (8 GB recommended for local LLM)
 
 ### Install
 
 ```bash
 git clone https://github.com/yourname/cortex.git
 cd cortex
+
+# 1. Setup Python Backend
+python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+# source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Setup Frontend
+cd frontend
 npm install
-npm run rebuild          # recompile native modules for Electron
 ```
 
 ### Download AI Models
 
-Place the following in the `models/` directory:
+Place the following in the `models/` directory, or use the online Gemini API fallback.
 
 | Model | Size | Purpose |
 |-------|------|---------|
-| `bge-small-en-v1.5/` | ~126 MB | Semantic embeddings |
-| `Phi-3-mini-4k-instruct/` | ~2.4 GB | LLM text generation |
+| `bge-small-en-v1.5/` | ~126 MB | Semantic embeddings (Search) |
+| `phi-3-mini/` | ~2.4 GB | LLM text generation (RAG) |
+
+**Note:** If you choose not to download these large local models, the application will automatically fall back to using the Gemini API if a `GEMINI_API_KEY` is provided in your environment variables.
 
 ### Configure
 
 ```bash
 cp .env.example .env
-# Edit .env with your SMTP credentials (optional — needed for auth emails)
+# Edit .env to set your GEMINI_API_KEY if you are not using local models.
+# By default, Cortex uses a local SQLite database for offline-first capabilities.
 ```
 
 ### Run
 
 ```bash
+cd frontend
 npm run dev
 ```
 
-The Electron window opens, shows a loading screen while the backend starts, then loads the React UI.
+The Electron window opens, automatically starting the Python backend dynamically.
 
 ### Build for Distribution
 
 ```bash
+cd frontend
 npm run build
 ```
 
 ---
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Build frontend + start backend + launch Electron |
-| `npm run build` | Build the Webpack bundle only |
-| `npm run rebuild` | Recompile native modules for Electron's Node version |
-| `npm run setup` | Full install + rebuild from scratch |
-
----
-
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │           Electron Window               │
-│  ┌─────────────────────────────────┐   │
-│  │   React UI (localhost:3001)     │   │
-│  │   SearchTab | NotesTab | ...    │   │
-│  └──────────────┬──────────────────┘   │
-│                 │ HTTP API              │
+│  ┌─────────────────────────────────┐    │
+│  │   React UI (Frontend)           │    │
+│  │   SearchTab | NotesTab | ...    │    │
+│  └──────────────┬──────────────────┘    │
+│                 │ HTTP / REST API       │
 └─────────────────┼───────────────────── ┘
                   │
     ┌─────────────▼────────────────┐
-    │     Express Backend          │
-    │     (Node.js, port 3001)     │
+    │     Python FastAPI Backend   │
+    │     (Localhost:8765)         │
     ├──────────────────────────────┤
-    │  Auth │ AI │ Storage │ Mesh  │
-    │  JWT  │BGE │SQLite   │libp2p │
-    │       │Phi3│LanceDB  │       │
-    └──────────────────────────────┘
+    │  API │ AI │ Storage │ Mesh   │
+    │      │BGE │SQLite   │mDNS    │
+    │      │Phi3│FAISS    │WebSock │
+    └───────┬──────────────────────┘
+            │
+      [Optional Cloud Fallback]
+      Gemini API (Embeddings & LLM)
 ```
 
-- **Electron main process** — creates the window, handles zoom
-- **Express backend** — all data and AI operations (runs separately)
-- **React frontend** — served by Express, communicates via HTTP and IPC
-
----
+- **Electron main process** — manages the app lifecycle and window.
+- **Python FastAPI backend** — handles AI orchestration, RAG pipelines, SQLite database operations, and networking.
+- **React frontend** — interface that runs within the Electron renderer.
 
 ## Contributing
 

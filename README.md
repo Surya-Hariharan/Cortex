@@ -33,7 +33,7 @@ Cortex/
 ├── app/                    # Python FastAPI Backend
 │   ├── main.py             # Entry point (port 8765)
 │   ├── api/                # REST API Routes
-│   ├── ai_models/          # Local ONNX models + Gemini API fallback
+│   ├── ai_models/          # Local ONNX models + Ollama + Gemini API fallbacks
 │   ├── database/           # SQLite + SQLAlchemy ORM
 │   ├── mesh_network/       # mDNS and WebSocket P2P networking
 │   └── rag/                # FAISS vector store integration
@@ -75,14 +75,30 @@ npm install
 
 ### Download AI Models
 
-Place the following in the `models/` directory, or use the online Gemini API fallback.
+Cortex supports running AI locally entirely offline. You have three options:
 
-| Model | Size | Purpose |
-|-------|------|---------|
+**Option A: Ollama (Recommended for LLM)**
+Ollama is the easiest way to run local LLMs. It exposes a local API that Cortex will automatically detect and use.
+
+1. Download Ollama from [ollama.com](https://ollama.com)
+2. Open your terminal and pull the local model:
+
+   ```bash
+   ollama pull phi3
+   ```
+
+Cortex will automatically route LLM text generation to your local Ollama instance if it detects it running.
+
+**Option B: ONNX Models (Offline Fallback)**
+Place the following in the `models/` directory.
+
+| Model                | Size    | Purpose                      |
+|----------------------|---------|------------------------------|
 | `bge-small-en-v1.5/` | ~126 MB | Semantic embeddings (Search) |
-| `phi-3-mini/` | ~2.4 GB | LLM text generation (RAG) |
+| `phi-3-mini/`        | ~2.4 GB | LLM text generation (RAG)    |
 
-**Note:** If you choose not to download these large local models, the application will automatically fall back to using the Gemini API if a `GEMINI_API_KEY` is provided in your environment variables.
+**Option C: Cloud AI (Online Fallback)**
+If you choose not to download these large local models, the application will automatically fall back to using the Gemini API if a `GEMINI_API_KEY` is provided in your environment variables.
 
 ### Configure
 

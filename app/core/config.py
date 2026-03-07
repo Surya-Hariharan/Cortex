@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     WHISPER_MODEL_DIR: Path = MODELS_DIR / "whisper-tiny"
     LLM_MODEL_DIR: Path = MODELS_DIR / "phi-3-mini"
     GEMINI_API_KEY: str = ""
+    OLLAMA_ENDPOINT: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "phi3"
 
     # ── Ingestion ────────────────────────────────────────────────────────────
     CHUNK_SIZE: int = 512          # tokens per chunk

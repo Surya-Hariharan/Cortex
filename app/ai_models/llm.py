@@ -35,11 +35,29 @@ class LLMModel:
 
     def __init__(self, model_dir: str | None = None) -> None:
         self._model_dir = Path(model_dir or settings.LLM_MODEL_DIR)
+        self._model_dir = Path(model_dir or settings.LLM_MODEL_DIR)
         self._session = None
         self._tokenizer = None
-        self._use_api = False
+        self._mode = "onnx"  # can be "onnx", "ollama", or "gemini"
 
     def _load(self) -> None:
+        # 1. Try Ollama local LLM first
+        if settings.OLLAMA_ENDPOINT:
+            try:
+                with httpx.Client() as client:
+                    resp = client.get(f"{settings.OLLAMA_ENDPOINT}/api/tags", timeout=2.0)
+                    if resp.status_code == 200:
+                        models = [m["name"] for m in resp.json().get("models", [])]
+                        if any(m.startswith(settings.OLLAMA_MODEL) for m in models):
+                            logger.info("Ollama LLM detected and loaded.", model=settings.OLLAMA_MODEL)
+                            self._mode = "ollama"
+                            return
+                        else:
+                            logger.warning(f"Ollama running but '{settings.OLLAMA_MODEL}' not found. Try: ollama pull {settings.OLLAMA_MODEL}")
+            except Exception:
+                logger.debug("Ollama not reachable on endpoint. Falling back to local ONNX.")
+
+        # 2. Try Local ONNX Models
         try:
             from tokenizers import Tokenizer  # type: ignore
             import onnxruntime as ort  # type: ignore
@@ -71,16 +89,17 @@ class LLMModel:
                 providers=["CPUExecutionProvider"],
             )
         except Exception as exc:
+            # 3. Fallback to Cloud Gemini API
             if settings.GEMINI_API_KEY:
                 logger.info("Failed to load local LLM, falling back to Gemini API.")
-                self._use_api = True
+                self._mode = "gemini"
                 return
             raise FileNotFoundError(f"Failed to load local LLM: {exc}")
 
         logger.info("LLMModel loaded", model_path=str(model_path))
 
     def _ensure_loaded(self) -> None:
-        if self._session is None and not self._use_api:
+        if self._session is None and self._mode == "onnx":
             self._load()
 
     def _build_prompt(
@@ -116,7 +135,46 @@ class LLMModel:
         """
         self._ensure_loaded()
         
-        if self._use_api:
+        if self._mode == "ollama":
+            url = f"{settings.OLLAMA_ENDPOINT}/api/chat"
+            
+            # Construct Ollama messages array
+            messages = []
+            if 'system' in locals() and system:
+                messages.append({"role": "system", "content": system})
+                
+            for msg in (history or []):
+                messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+            
+            final_query = query
+            if context:
+                final_query = f"Context:\n{context}\n\nQuery: {query}"
+            
+            messages.append({"role": "user", "content": final_query})
+            
+            payload = {
+                "model": settings.OLLAMA_MODEL,
+                "messages": messages,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_new_tokens
+                }
+            }
+            try:
+                with httpx.Client() as client:
+                    resp = client.post(url, json=payload, timeout=60.0)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    return data.get("message", {}).get("content", "").strip()
+            except Exception as e:
+                logger.error("Ollama fallback failed", error=str(e))
+                return "Error: Could not generate response via Ollama."
+
+        if self._mode == "gemini":
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
             
             # Construct Gemini 'contents' array

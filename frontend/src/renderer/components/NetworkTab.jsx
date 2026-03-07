@@ -39,26 +39,7 @@ export default function NetworkTab() {
         return () => clearInterval(interval);
     }, [isAutoDiscovery]);
 
-    // Real-time Simulation: Randomly "receive" a file
-    useEffect(() => {
-        const timer = setInterval(() => {
-            if (Math.random() > 0.8) {
-                const newDoc = {
-                    id: Date.now(),
-                    title: `Shared_Update_${Math.floor(Math.random() * 100)}.txt`,
-                    from: peers[Math.floor(Math.random() * peers.length)]?.name || 'Peer A-90',
-                    time: 'Just now',
-                    size: '45 KB',
-                    type: Math.random() > 0.5 ? 'doc' : 'code',
-                    encrypted: true
-                };
-                setRecentDocs(prev => [newDoc, ...prev.slice(0, 4)]);
-                setSimulatedEvent({ type: 'pulse', peerId: 'me' });
-                setTimeout(() => setSimulatedEvent(null), 2000);
-            }
-        }, 10000);
-        return () => clearInterval(timer);
-    }, [peers]);
+
 
     const onlineCount = peers.filter(p => p.status === 'online' && !p.isMe).length;
     const statusLabel = onlineCount > 0 ? 'Active Mesh' : (isAutoDiscovery ? 'Searching...' : 'Idle');

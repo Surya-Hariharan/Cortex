@@ -2,13 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     Search,
     MessageSquare,
-    History,
     Share2,
     Save,
-    Download as DownloadIcon,
-    ChevronRight,
-    ExternalLink,
-    Trash2,
     ShieldCheck,
     ArrowUpRight,
     Plus
@@ -29,11 +24,6 @@ export default function SearchTab({ onToast, onUploadPdf }) {
     const [searchMeta, setSearchMeta] = useState(null);
     const [searchStage, setSearchStage] = useState(-1);
     const [synthesizedAnswer, setSynthesizedAnswer] = useState(null);
-    const [history, setHistory] = useState([
-        { id: 1, query: 'What is entropy?', date: '2h ago' },
-        { id: 2, query: 'Binary search tree complexity', date: '5h ago' }
-    ]);
-    const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
     const inputRef = useRef(null);
     const typewriterRef = useRef(null);
     const stageTimerRef = useRef(null);
@@ -119,78 +109,13 @@ export default function SearchTab({ onToast, onUploadPdf }) {
         } finally {
             setIsSearching(false);
             setSearchStage(-1);
-            // Add to history
-            if (query.trim()) {
-                setHistory(prev => [{ id: Date.now(), query: query.trim(), date: 'Just now' }, ...prev.slice(0, 4)]);
-            }
         }
     };
 
     return (
         <div className="h-full w-full bg-white dark:bg-dark-950 overflow-y-auto overflow-x-hidden flex flex-col items-center custom-scrollbar">
-            {/* ── Main Structured Layout Container ────────────────────────────── */}
-            <div className="flex flex-row items-start gap-8 w-full max-w-[1248px] px-6 pt-10 min-h-full pb-20 relative">
-
-                {/* ── Left Panel: Search History (Contained Flow) ─────────────── */}
-                {(results !== null || isSearching) && isSidePanelOpen && (
-                    <div className="w-[280px] flex-shrink-0 flex flex-col gap-6 sticky top-10 animate-fade-in relative z-10">
-                        <div className="bg-slate-50/50 dark:bg-dark-900/40 rounded-[32px] border border-slate-100 dark:border-dark-800/60 overflow-hidden flex flex-col max-h-[calc(100vh-120px)] shadow-sm">
-                            <div className="p-5 border-b border-slate-100 dark:border-dark-800/60 flex items-center justify-between bg-white/50 dark:bg-dark-900/50 backdrop-blur-sm">
-                                <h3 className="text-[10px] font-black uppercase text-slate-400 dark:text-dark-500 tracking-[0.2em] flex items-center gap-2">
-                                    <History size={12} /> Search History
-                                </h3>
-                                <button
-                                    onClick={() => setIsSidePanelOpen(false)}
-                                    className="p-1.5 hover:bg-slate-200 dark:hover:bg-dark-800 rounded-xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-dark-200"
-                                    title="Hide Sidebar"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M18 6 6 18M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-thin">
-                                {history.map(item => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => { setQuery(item.query); handleSearch({ preventDefault: () => { } }); }}
-                                        className="w-full p-4 rounded-2xl hover:bg-white dark:hover:bg-dark-800 border border-transparent hover:border-slate-200 dark:hover:border-dark-700 transition-all text-left group/item"
-                                    >
-                                        <p className="text-[13px] font-bold text-slate-700 dark:text-dark-200 mb-1 line-clamp-1 group-hover/item:text-synapse-600 transition-colors">
-                                            {item.query}
-                                        </p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.date}</p>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Local AI Tip Card */}
-                        <div className="bg-synapse-600 rounded-[32px] p-6 text-white shadow-xl shadow-synapse-200/20 dark:shadow-none relative overflow-hidden group/tip">
-                            <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/10 rounded-full blur-2xl group-hover/tip:scale-150 transition-transform duration-700" />
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-3">Local AI Tip</p>
-                            <p className="text-[14px] font-bold leading-relaxed mb-5">Upload technical papers for deeper academic synthesis.</p>
-                            <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hover:gap-3 transition-all pt-1">
-                                Learn More <ArrowUpRight size={14} />
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Right Panel: Main Content ───────────────────────────────── */}
-                <div className={`flex-1 min-w-0 flex flex-col transition-all duration-500 relative z-0 ${results === null && !isSearching ? 'pt-[12vh]' : 'pt-0'}`}>
-
-                    {/* Floating Sidebar Toggle */}
-                    {(results !== null || isSearching) && !isSidePanelOpen && (
-                        <button
-                            onClick={() => setIsSidePanelOpen(true)}
-                            className="absolute left-0 top-0 p-3 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl text-slate-400 hover:text-synapse-600 transition-all shadow-sm z-50 animate-fade-in"
-                            title="Show History"
-                        >
-                            <History size={20} />
-                        </button>
-                    )}
+            <div className="w-full max-w-[1248px] px-6 pt-10 min-h-full pb-20">
+                <div className={`flex flex-col transition-all duration-500 ${results === null && !isSearching ? 'pt-[12vh]' : 'pt-0'}`}>
 
                     <div className="w-full max-w-[860px] mx-auto">
 
@@ -380,9 +305,3 @@ export default function SearchTab({ onToast, onUploadPdf }) {
         </div>
     );
 }
-
-const ResultCardWithActions = ({ result, index, onToast }) => {
-    return (
-        <ResultCard result={result} index={index} onToast={onToast} />
-    );
-};

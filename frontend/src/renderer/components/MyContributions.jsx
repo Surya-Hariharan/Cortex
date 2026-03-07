@@ -19,22 +19,7 @@ import {
     Filter
 } from 'lucide-react';
 
-const MOCK_CONTRIBUTIONS = [/* placeholder removed
-    {
-        id: 'c3_stub',
-        date: 'Feb 05, 2026'
-    },
-    {
-        id: 'c4',
-        title: 'Microprocessors Lab Manual',
-        visibility: 'Private',
-        downloads: 0,
-        views: 12,
-        rating: 0,
-        isOCR: false,
-        date: 'Jan 15, 2026'
-    }
-];
+const MOCK_CONTRIBUTIONS = [];
 
 const StatCard = ({ label, value, icon: Icon, trend, color }) => (
     <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg hover:shadow-slate-100 dark:hover:shadow-none transition-all duration-300 group">
@@ -97,10 +82,10 @@ export default function MyContributions() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard label="Total Uploads" value="12" icon={FileText} trend="+2 this month" color="bg-synapse-500" />
-                        <StatCard label="Total Downloads" value="5.2k" icon={Download} trend="+12%" color="bg-emerald-500" />
-                        <StatCard label="Total Views" value="12.8k" icon={Eye} trend="+8%" color="bg-blue-500" />
-                        <StatCard label="Avg Rating" value="4.7" icon={Star} trend="+0.1" color="bg-amber-500" />
+                        <StatCard label="Total Uploads" value="0" icon={FileText} color="bg-synapse-500" />
+                        <StatCard label="Total Downloads" value="0" icon={Download} color="bg-emerald-500" />
+                        <StatCard label="Total Views" value="0" icon={Eye} color="bg-blue-500" />
+                        <StatCard label="Avg Rating" value="—" icon={Star} color="bg-amber-500" />
                     </div>
 
                     {/* Simple Chart Section */}

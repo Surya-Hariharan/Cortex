@@ -19,81 +19,9 @@ import {
     Smile
 } from 'lucide-react';
 
-const MOCK_GROUPS = [
-    {
-        id: 'g1',
-        name: 'ML Study Group',
-        description: 'Deep learning, neural networks, and AI research',
-        members: [
-            { name: 'Surya H.', avatar: 'SH', role: 'admin', online: true },
-            { name: 'Aditya R.', avatar: 'AR', role: 'member', online: true },
-            { name: 'Priya S.', avatar: 'PS', role: 'member', online: false },
-            { name: 'Rohan K.', avatar: 'RK', role: 'member', online: true },
-            { name: 'Maya D.', avatar: 'MD', role: 'member', online: false },
-        ],
-        sharedFiles: 24,
-        messages: 156,
-        color: 'from-synapse-500 to-synapse-700',
-        recentActivity: '2 min ago',
-        pinnedResources: ['Attention Is All You Need.pdf', 'PyTorch Tutorial Notes'],
-        channels: ['general', 'papers', 'assignments'],
-    },
-    {
-        id: 'g2',
-        name: 'Operating Systems',
-        description: 'OS concepts, lab work, and exam prep',
-        members: [
-            { name: 'Surya H.', avatar: 'SH', role: 'member', online: true },
-            { name: 'Vikram P.', avatar: 'VP', role: 'admin', online: true },
-            { name: 'Neha T.', avatar: 'NT', role: 'member', online: true },
-        ],
-        sharedFiles: 18,
-        messages: 89,
-        color: 'from-emerald-500 to-emerald-600',
-        recentActivity: '15 min ago',
-        pinnedResources: ['Scheduling Algorithms Cheatsheet'],
-        channels: ['general', 'labs'],
-    },
-    {
-        id: 'g3',
-        name: 'Final Year Project',
-        description: 'Cortex — Offline AI for Students',
-        members: [
-            { name: 'Surya H.', avatar: 'SH', role: 'admin', online: true },
-            { name: 'Aditya R.', avatar: 'AR', role: 'member', online: false },
-        ],
-        sharedFiles: 42,
-        messages: 312,
-        color: 'from-amber-500 to-amber-600',
-        recentActivity: '1h ago',
-        pinnedResources: ['Project Proposal.pdf', 'Architecture Diagram', 'Research Survey'],
-        channels: ['general', 'dev', 'docs', 'design'],
-    },
-    {
-        id: 'g4',
-        name: 'AI Hackathon Team',
-        description: 'AMD hackathon preparation and brainstorming',
-        members: [
-            { name: 'Surya H.', avatar: 'SH', role: 'admin', online: true },
-            { name: 'Priya S.', avatar: 'PS', role: 'member', online: true },
-            { name: 'Rohan K.', avatar: 'RK', role: 'member', online: true },
-            { name: 'Neha T.', avatar: 'NT', role: 'member', online: false },
-        ],
-        sharedFiles: 8,
-        messages: 67,
-        color: 'from-red-500 to-red-600',
-        recentActivity: '3h ago',
-        pinnedResources: ['Hackathon Rules.pdf'],
-        channels: ['general', 'ideas'],
-    },
-];
+const MOCK_GROUPS = [];
 
-const MOCK_MESSAGES = [
-    { id: 'm1', user: 'Aditya R.', avatar: 'AR', message: 'Has anyone tried the new transformer architecture from the latest paper?', time: '2:14 PM', reactions: ['🔥', '👍'] },
-    { id: 'm2', user: 'Priya S.', avatar: 'PS', message: 'Yes! I implemented it using PyTorch. The attention mechanism is much more efficient.', time: '2:18 PM', reactions: ['🎉'] },
-    { id: 'm3', user: 'Surya H.', avatar: 'SH', message: 'I uploaded my notes on GANs to the shared folder. Check it out!', time: '2:22 PM', reactions: ['👀', '❤️'] },
-    { id: 'm4', user: 'Rohan K.', avatar: 'RK', message: 'Can we schedule a study session this weekend? I need help with backpropagation.', time: '2:30 PM', reactions: [] },
-];
+const MOCK_MESSAGES = [];
 
 export default function StudyGroups() {
     const [selectedGroup, setSelectedGroup] = useState(null);

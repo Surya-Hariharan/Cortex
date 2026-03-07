@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart3, Bell } from 'lucide-react';
-import MyContributions from './MyContributions';
-import Notifications from './Notifications';
+import MyContributions from '../MyContributions';
+import Notifications from '../Notifications';
 
 const SUB_TABS = [
     { id: 'contributions', label: 'My Contributions', icon: <BarChart3 size={16} /> },

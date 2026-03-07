@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, CheckSquare, Plus, Calendar, Clock, AlertCircle, Flag, ChevronRight, GripVertical } from 'lucide-react';
-import NotesTab from './NotesTab';
+import NotesTab from '../NotesTab';
 
 const MOCK_TASKS = [
     { id: 't1', title: 'Submit ML Assignment — Backpropagation', due: 'Mar 10, 2026', priority: 'high', course: 'Machine Learning', completed: false },

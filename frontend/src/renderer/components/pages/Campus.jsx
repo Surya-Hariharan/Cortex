@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Globe } from 'lucide-react';
-import StudyGroups from './StudyGroups';
-import NetworkTab from './NetworkTab';
+import StudyGroups from '../StudyGroups';
+import NetworkTab from '../NetworkTab';
 
 const SUB_TABS = [
     { id: 'study-groups', label: 'Study Groups', icon: <Users size={16} /> },

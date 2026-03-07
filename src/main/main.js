@@ -222,6 +222,8 @@ function registerIpcHandlers() {
 }
 
 // ── App Lifecycle ────────────────────────────────────────────────────────────
+app.disableHardwareAcceleration();
+
 app.whenReady().then(async () => {
     registerIpcHandlers();
     await initializeServices();

@@ -410,7 +410,7 @@ export default function PerformanceTab() {
                                 </div>
                                 <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-6 monitor-grid h-48 flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
-                                        <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest text-violet-400">OCR Throughput</span>
+                                        <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest text-synapse-400">OCR Throughput</span>
                                         <span className="text-xs font-mono font-bold text-white">{(liveData.ocr[liveData.ocr.length - 1] || 0).toFixed(1)} <span className="text-[10px] opacity-40">pg/s</span></span>
                                     </div>
                                     <div className="flex-1 w-full relative">

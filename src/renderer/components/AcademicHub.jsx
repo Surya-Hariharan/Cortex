@@ -212,7 +212,7 @@ const NoteCard = ({ note }) => {
                     <button className="flex items-center justify-center gap-2 px-3 py-1.5 bg-synapse-600 hover:bg-synapse-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm shadow-synapse-200 dark:shadow-none">
                         <Download size={14} /> Get PDF
                     </button>
-                    <button className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800/50">
+                    <button className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-synapse-50 dark:bg-synapse-900/30 hover:bg-synapse-100 dark:hover:bg-synapse-900/50 text-synapse-600 dark:text-synapse-400 text-xs font-bold rounded-lg transition-colors border border-synapse-100 dark:border-synapse-800/50">
                         <MessageSquare size={14} /> Ask AI About This Note
                     </button>
                 </div>

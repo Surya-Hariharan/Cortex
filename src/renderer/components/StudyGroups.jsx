@@ -33,7 +33,7 @@ const MOCK_GROUPS = [
         ],
         sharedFiles: 24,
         messages: 156,
-        color: 'from-synapse-500 to-indigo-500',
+        color: 'from-synapse-500 to-synapse-700',
         recentActivity: '2 min ago',
         pinnedResources: ['Attention Is All You Need.pdf', 'PyTorch Tutorial Notes'],
         channels: ['general', 'papers', 'assignments'],
@@ -49,7 +49,7 @@ const MOCK_GROUPS = [
         ],
         sharedFiles: 18,
         messages: 89,
-        color: 'from-emerald-500 to-teal-500',
+        color: 'from-emerald-500 to-emerald-600',
         recentActivity: '15 min ago',
         pinnedResources: ['Scheduling Algorithms Cheatsheet'],
         channels: ['general', 'labs'],
@@ -64,7 +64,7 @@ const MOCK_GROUPS = [
         ],
         sharedFiles: 42,
         messages: 312,
-        color: 'from-amber-500 to-orange-500',
+        color: 'from-amber-500 to-amber-600',
         recentActivity: '1h ago',
         pinnedResources: ['Project Proposal.pdf', 'Architecture Diagram', 'Research Survey'],
         channels: ['general', 'dev', 'docs', 'design'],
@@ -81,7 +81,7 @@ const MOCK_GROUPS = [
         ],
         sharedFiles: 8,
         messages: 67,
-        color: 'from-red-500 to-pink-500',
+        color: 'from-red-500 to-red-600',
         recentActivity: '3h ago',
         pinnedResources: ['Hackathon Rules.pdf'],
         channels: ['general', 'ideas'],
@@ -238,7 +238,7 @@ export default function StudyGroups() {
                     <div className="flex items-start justify-between">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-blue-200/40 dark:shadow-none">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200/40 dark:shadow-none">
                                     <Users size={24} />
                                 </div>
                                 <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50">

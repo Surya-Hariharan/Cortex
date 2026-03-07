@@ -77,7 +77,7 @@ export default function Library({ onUploadPdf, onToast }) {
                     <div className="flex items-start justify-between">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-200/40 dark:shadow-none">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-200/40 dark:shadow-none">
                                     <BookOpen size={24} />
                                 </div>
                                 <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50">

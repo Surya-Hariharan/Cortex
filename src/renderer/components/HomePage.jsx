@@ -23,15 +23,15 @@ const MOCK_ACTIVITY_FEED = [
     { id: 2, type: 'download', icon: <Download size={16} />, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20', message: 'Operating Systems Lab Manual downloaded by 3 peers', user: 'Network', time: '15 min ago' },
     { id: 3, type: 'peer', icon: <Users size={16} />, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20', message: '4 students nearby sharing resources', user: 'Mesh Network', time: '28 min ago' },
     { id: 4, type: 'rating', icon: <Star size={16} />, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20', message: 'Your TOC Cheatsheet received a 5-star rating', user: 'Priya S.', time: '1h ago' },
-    { id: 5, type: 'ai', icon: <Zap size={16} />, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20', message: 'AI indexed 12 new document chunks from your uploads', user: 'System', time: '2h ago' },
-    { id: 6, type: 'group', icon: <MessageSquare size={16} />, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20', message: 'New message in ML Study Group', user: 'Rohan K.', time: '3h ago' },
+    { id: 5, type: 'ai', icon: <Zap size={16} />, color: 'text-synapse-500 bg-synapse-50 dark:bg-synapse-900/20', message: 'AI indexed 12 new document chunks from your uploads', user: 'System', time: '2h ago' },
+    { id: 6, type: 'group', icon: <MessageSquare size={16} />, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20', message: 'New message in ML Study Group', user: 'Rohan K.', time: '3h ago' },
 ];
 
 const QUICK_ACTIONS = [
-    { id: 'search', label: 'New Search', icon: Search, color: 'from-synapse-500 to-indigo-500', shadow: 'shadow-synapse-200/40' },
-    { id: 'upload', label: 'Upload PDF', icon: Upload, color: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-200/40' },
-    { id: 'note', label: 'Create Note', icon: FileText, color: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-200/40' },
-    { id: 'group', label: 'Study Group', icon: Users, color: 'from-blue-500 to-cyan-500', shadow: 'shadow-blue-200/40' },
+    { id: 'search', label: 'New Search', icon: Search, color: 'from-synapse-500 to-synapse-700', shadow: 'shadow-synapse-200/40' },
+    { id: 'upload', label: 'Upload PDF', icon: Upload, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-200/40' },
+    { id: 'note', label: 'Create Note', icon: FileText, color: 'from-amber-500 to-amber-600', shadow: 'shadow-amber-200/40' },
+    { id: 'group', label: 'Study Group', icon: Users, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-200/40' },
 ];
 
 const StatCard = ({ label, value, icon: Icon, trend, color, accent }) => (
@@ -58,7 +58,7 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
             <header className="flex-shrink-0 px-8 pt-8 pb-4">
                 <div className="max-w-[1240px] mx-auto">
                     <div className="flex items-center gap-3 mb-1">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-synapse-500 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-synapse-200/40 dark:shadow-none">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-synapse-500 to-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-200/40 dark:shadow-none">
                             <Home size={24} />
                         </div>
                         <div>
@@ -110,16 +110,16 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                     <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6">
                         <div className="flex items-center justify-between mb-5">
                             <div className="flex items-center gap-2">
-                                <TrendingUp size={16} className="text-rose-500" />
+                                <TrendingUp size={16} className="text-amber-500" />
                                 <h3 className="text-sm font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Trending on Campus</h3>
                             </div>
                             <button onClick={() => onTabChange?.('knowledge')} className="text-xs font-bold text-synapse-600 dark:text-synapse-400 hover:underline">View All</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
-                                { title: 'Operating Systems Cheatsheet', subject: 'Computer Science', downloads: 1240, rating: 4.9, trend: '🔥', color: 'from-orange-500 to-red-500' },
-                                { title: 'ML Midterm Revision Notes', subject: 'Machine Learning', downloads: 980, rating: 4.8, trend: '📈', color: 'from-synapse-500 to-indigo-500' },
-                                { title: 'Computer Networks Quick Guide', subject: 'Networking', downloads: 670, rating: 4.6, trend: '⭐', color: 'from-emerald-500 to-teal-500' },
+                                { title: 'Operating Systems Cheatsheet', subject: 'Computer Science', downloads: 1240, rating: 4.9, trend: '🔥', color: 'from-red-500 to-red-600' },
+                                { title: 'ML Midterm Revision Notes', subject: 'Machine Learning', downloads: 980, rating: 4.8, trend: '📈', color: 'from-synapse-500 to-synapse-700' },
+                                { title: 'Computer Networks Quick Guide', subject: 'Networking', downloads: 670, rating: 4.6, trend: '⭐', color: 'from-emerald-500 to-emerald-600' },
                             ].map((note, i) => (
                                 <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/80 dark:bg-dark-950/50 border border-slate-100 dark:border-dark-800/60 hover:shadow-md hover:shadow-slate-100/50 dark:hover:shadow-none transition-all cursor-pointer group">
                                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${note.color} flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0`}>
@@ -204,7 +204,7 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                             </div>
 
                             {/* AI Engine Status */}
-                            <div className="bg-gradient-to-br from-synapse-600 to-indigo-600 rounded-3xl p-6 text-white relative overflow-hidden">
+                            <div className="bg-gradient-to-br from-synapse-600 to-synapse-800 rounded-3xl p-6 text-white relative overflow-hidden">
                                 <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-2 mb-4">

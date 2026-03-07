@@ -68,11 +68,11 @@ export default function DocumentStatus() {
                 <div className="max-w-[1240px] mx-auto flex justify-between items-end">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
-                            <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-200 dark:shadow-none">
+                            <div className="w-10 h-10 rounded-xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-200 dark:shadow-none">
                                 <Database size={24} />
                             </div>
                             <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50">
-                                AI <span className="text-violet-600 dark:text-violet-500">Processing</span>
+                                AI <span className="text-synapse-600 dark:text-synapse-500">Processing</span>
                             </h1>
                         </div>
                         <p className="text-sm text-slate-500 dark:text-dark-400 font-medium">

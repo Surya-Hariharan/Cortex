@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Share, Shield, Globe, Cpu, Zap, Activity, Monitor, ChevronRight, MoreHorizontal, FileText, Code, File, Search } from 'lucide-react';
-import { mesh } from '../../../services/api.js';
+import { mesh } from '../../services/api.js';
 
 const MOCK_SHARED_DOCS = [];
 

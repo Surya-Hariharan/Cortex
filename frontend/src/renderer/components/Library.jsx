@@ -23,7 +23,7 @@ import {
     Plus,
     RefreshCw,
 } from 'lucide-react';
-import { documents as docsApi, getUserId } from '../../../services/api.js';
+import { documents as docsApi, getUserId } from '../../services/api.js';
 
 function inferType(mimeType = '', fileName = '') {
     if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) return 'pdf';

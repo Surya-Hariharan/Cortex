@@ -9,7 +9,7 @@ import {
     Plus
 } from 'lucide-react';
 import ResultCard from './shared/ResultCard';
-import { search as searchApi, chat as chatApi, getUserId } from '../../../services/api.js';
+import { search as searchApi, chat as chatApi, getUserId } from '../../services/api.js';
 
 const SEARCH_STAGES = [
     'Tokenizing query…',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, CheckSquare, Plus, Calendar, Clock, AlertCircle, Flag, ChevronRight, GripVertical, X, RefreshCw } from 'lucide-react';
 import NotesTab from '../NotesTab';
-import { tasks as tasksApi, getUserId } from '../../../../services/api.js';
+import { tasks as tasksApi, getUserId } from '../../../services/api.js';
 
 const PRIORITY_CONFIG = {
     high: { label: 'High', color: 'text-red-500 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/50', dot: 'bg-red-500' },

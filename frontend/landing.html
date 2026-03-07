@@ -175,9 +175,54 @@
       opacity: 0; pointer-events: none; z-index: 30;
     }
 
+    /* ── Window Controls ── */
+    #titlebar-drag {
+      position: fixed;
+      top: 0; left: 0;
+      right: 132px; /* 3 buttons × 44px */
+      height: 32px;
+      z-index: 9998;
+      -webkit-app-region: drag;
+    }
+    #window-controls {
+      position: fixed;
+      top: 0; right: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      -webkit-app-region: no-drag;
+    }
+    #window-controls button {
+      width: 44px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.35);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    #window-controls button:hover {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.9);
+    }
+    #wc-close:hover {
+      background: #ef4444 !important;
+      color: #fff !important;
+    }
+
   </style>
 </head>
 <body>
+
+<!-- Window Controls -->
+<div id="titlebar-drag"></div>
+<div id="window-controls">
+  <button id="wc-minimize" title="Minimize">&#8722;</button>
+  <button id="wc-maximize" title="Maximize">&#9633;</button>
+  <button id="wc-close"    title="Close">&#10005;</button>
+</div>
 
 <!-- HERO -->
 <div id="scroll-container">
@@ -248,5 +293,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="landing.js"></script>
+<script>
+(function () {
+  var api = window.electronAPI;
+  if (!api) return;
+  var btnMin = document.getElementById('wc-minimize');
+  var btnMax = document.getElementById('wc-maximize');
+  var btnClose = document.getElementById('wc-close');
+  btnMin.addEventListener('click', function () { api.windowMinimize && api.windowMinimize(); });
+  btnMax.addEventListener('click', function () { api.windowMaximize && api.windowMaximize(); });
+  btnClose.addEventListener('click', function () { api.windowClose && api.windowClose(); });
+  function syncMaxIcon(isMax) { btnMax.textContent = isMax ? '\u2752' : '\u25A1'; }
+  if (api.windowIsMaximized) api.windowIsMaximized().then(syncMaxIcon);
+  if (api.onWindowMaximizeChange) api.onWindowMaximizeChange(syncMaxIcon);
+})();
+</script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import Campus from './components/Campus';
 import Activity from './components/Activity';
 import AIEngine from './components/AIEngine';
 import StreamSelectorModal from './components/StreamSelectorModal';
+import CommandPalette from './components/CommandPalette';
 import Toast from './components/Toast';
 import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu } from 'lucide-react';
 
@@ -50,6 +51,7 @@ export default function App() {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [userStream, setUserStream] = useState(localStorage.getItem('cortex-user-stream'));
     const [showStreamSelector, setShowStreamSelector] = useState(!localStorage.getItem('cortex-user-stream'));
+    const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem('cortex-theme') || 'system';
     });
@@ -577,6 +579,15 @@ export default function App() {
                     </div>
                 </div>
             )}
+
+            {/* Command Palette */}
+            <CommandPalette
+                isOpen={showCommandPalette}
+                onClose={() => setShowCommandPalette(false)}
+                onNavigate={(tab) => setActiveTab(tab)}
+                onUploadPdf={uploadPdf}
+                onToast={showToast}
+            />
         </div>
     );
 }

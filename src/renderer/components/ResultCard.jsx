@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 const SUBJECT_COLORS = {
     'Thermodynamics': { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
     'Data Structures': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-    'Linear Algebra': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+    'Linear Algebra': { bg: 'bg-synapse-50', text: 'text-synapse-700', border: 'border-synapse-200' },
     'Organic Chemistry': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-    'Machine Learning': { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
-    'Quantum Mechanics': { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
-    'Operating Systems': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+    'Machine Learning': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    'Quantum Mechanics': { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
+    'Operating Systems': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
     'Calculus': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-    'Computer Networks': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
-    'Probability & Statistics': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+    'Computer Networks': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    'Probability & Statistics': { bg: 'bg-synapse-50', text: 'text-synapse-700', border: 'border-synapse-200' },
 };
 
 const DEFAULT_COLOR = { bg: 'bg-dark-100 dark:bg-dark-800', text: 'text-dark-600 dark:text-dark-300', border: 'border-dark-200 dark:border-dark-700' };

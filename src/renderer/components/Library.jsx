@@ -37,7 +37,7 @@ const MOCK_FILES = [
 const TYPE_ICONS = {
     pdf: { icon: FileText, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
     scan: { icon: ImageIcon, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
-    research: { icon: BookOpen, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20' },
+    research: { icon: BookOpen, color: 'text-synapse-500 bg-synapse-50 dark:bg-synapse-900/20' },
     recording: { icon: Mic, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
     default: { icon: File, color: 'text-slate-400 bg-slate-50 dark:bg-dark-800' },
 };

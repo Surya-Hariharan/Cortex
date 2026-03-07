@@ -1,31 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import SearchTab from './components/SearchTab';
-import NetworkTab from './components/NetworkTab';
-import PerformanceTab from './components/PerformanceTab';
-import NotesTab from './components/NotesTab';
-import AcademicHub from './components/AcademicHub';
-import MyContributions from './components/MyContributions';
-import DocumentStatus from './components/DocumentStatus';
 import HomePage from './components/HomePage';
-import Library from './components/Library';
-import StudyGroups from './components/StudyGroups';
-import Notifications from './components/Notifications';
+import Knowledge from './components/Knowledge';
+import Workspace from './components/Workspace';
+import Campus from './components/Campus';
+import Activity from './components/Activity';
+import AIEngine from './components/AIEngine';
 import StreamSelectorModal from './components/StreamSelectorModal';
 import Toast from './components/Toast';
-import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, GraduationCap, BarChart3, Database, Home, BookOpen, Users, Bell } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, Settings, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu } from 'lucide-react';
 
 const TABS = [
     { id: 'home', label: 'Home', icon: <Home size={18} /> },
-    { id: 'search', label: 'Search', icon: <Search size={18} /> },
-    { id: 'notes', label: 'Notes', icon: <FileText size={18} /> },
-    { id: 'library', label: 'Library', icon: <BookOpen size={18} /> },
-    { id: 'academic-hub', label: 'Academic Hub', icon: <GraduationCap size={18} /> },
-    { id: 'study-groups', label: 'Study Groups', icon: <Users size={18} /> },
-    { id: 'my-contributions', label: 'My Contributions', icon: <BarChart3 size={18} /> },
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
-    { id: 'ai-processing', label: 'AI Processing', icon: <Database size={18} /> },
-    { id: 'network', label: 'Mesh Network', icon: <Globe size={18} /> },
-    { id: 'performance', label: 'Performance', icon: <Zap size={18} /> },
+    { id: 'knowledge', label: 'Knowledge', icon: <BookOpen size={18} /> },
+    { id: 'workspace', label: 'Workspace', icon: <FileText size={18} /> },
+    { id: 'campus', label: 'Campus', icon: <Users size={18} /> },
+    { id: 'activity', label: 'Activity', icon: <ActivityIcon size={18} /> },
+    { id: 'ai-engine', label: 'AI Engine', icon: <Cpu size={18} /> },
 ];
 
 const MOCK_PROJECTS = [
@@ -273,7 +263,7 @@ export default function App() {
                     <div>
                         {!isSidebarCollapsed && (
                             <div className="sidebar-header group">
-                                <span>Projects</span>
+                                <span>Workspaces</span>
                                 <Plus size={14} className="opacity-0 group-hover:opacity-100 cursor-pointer hover:text-synapse-500 transition-all" />
                             </div>
                         )}
@@ -434,16 +424,11 @@ export default function App() {
 
                 <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
                     {activeTab === 'home' && <HomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
-                    {activeTab === 'search' && <SearchTab onToast={showToast} onUploadPdf={uploadPdf} />}
-                    {activeTab === 'notes' && <NotesTab onToast={showToast} />}
-                    {activeTab === 'library' && <Library onUploadPdf={uploadPdf} onToast={showToast} />}
-                    {activeTab === 'academic-hub' && <AcademicHub userStream={userStream} />}
-                    {activeTab === 'study-groups' && <StudyGroups />}
-                    {activeTab === 'my-contributions' && <MyContributions />}
-                    {activeTab === 'notifications' && <Notifications />}
-                    {activeTab === 'ai-processing' && <DocumentStatus />}
-                    {activeTab === 'network' && <NetworkTab />}
-                    {activeTab === 'performance' && <PerformanceTab />}
+                    {activeTab === 'knowledge' && <Knowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} />}
+                    {activeTab === 'workspace' && <Workspace onToast={showToast} />}
+                    {activeTab === 'campus' && <Campus />}
+                    {activeTab === 'activity' && <Activity />}
+                    {activeTab === 'ai-engine' && <AIEngine />}
                 </main>
 
                 {/* ── Context Menu ────────────────────────────────────────────── */}

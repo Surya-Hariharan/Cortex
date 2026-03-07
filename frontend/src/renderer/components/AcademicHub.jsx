@@ -18,7 +18,7 @@ import {
     User,
     Plus
 } from 'lucide-react';
-import UploadNoteModal from './UploadNoteModal';
+import UploadNoteModal from './shared/UploadNoteModal';
 
 const MOCK_NOTES = [
     {

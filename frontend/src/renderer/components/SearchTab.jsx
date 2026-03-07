@@ -13,7 +13,7 @@ import {
     ArrowUpRight,
     Plus
 } from 'lucide-react';
-import ResultCard from './ResultCard';
+import ResultCard from './shared/ResultCard';
 
 const SEARCH_STAGES = [
     'Tokenizing query…',

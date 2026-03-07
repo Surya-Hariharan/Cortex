@@ -1,14 +1,15 @@
 {
-  "name": "cortex-backend",
+  "name": "cortex",
   "version": "1.0.0",
-  "description": "Cortex — Python backend. Frontend is in the frontend/ folder.",
-  "private": true
-}
-
+  "description": "Cortex — Offline AI Productivity Platform for Students",
+  "main": "src/main/main.js",
+  "author": "Surya Hariharan",
+  "license": "MIT",
+  "scripts": {
     "start": "npm run build && electron .",
-    "dev": "concurrently \"webpack --config frontend/config/webpack.config.js --watch\" \"wait-on dist/renderer/index.html && electron .\"",
-    "build": "webpack --config frontend/config/webpack.config.js --mode production",
-    "build:watch": "webpack --config frontend/config/webpack.config.js --watch",
+    "dev": "concurrently \"webpack --config config/webpack.config.js --watch\" \"wait-on dist/renderer/index.html && electron .\"",
+    "build": "webpack --config config/webpack.config.js --mode production",
+    "build:watch": "webpack --config config/webpack.config.js --watch",
     "rebuild": "npx @electron/rebuild -f -w better-sqlite3 -w onnxruntime-node",
     "setup": "npm install --ignore-scripts && npm run rebuild && echo Done"
   },

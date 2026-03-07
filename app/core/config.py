@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     # ── Data directories ─────────────────────────────────────────────────────
     DATA_DIR: Path = DATA_DIR   # root-level data/ directory
 
+    # ── Supabase ──────────────────────────────────────────────────────────────
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""   # optional; needed for admin ops
+
     # ── Security ─────────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production"
     CORS_ORIGINS: list[str] = ["http://localhost", "http://127.0.0.1"]

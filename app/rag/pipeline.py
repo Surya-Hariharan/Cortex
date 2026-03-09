@@ -62,6 +62,11 @@ async def run_rag_pipeline(
 
     # 2. Build context
     context_text, citations = build_context(results)
+    
+    # 2.5 Inject personal content if provided
+    if request.personal_content:
+        personal_block = f"--- User Shared Content ---\n{request.personal_content}\n---------------------------\n\n"
+        context_text = personal_block + context_text
 
     # 3. Fetch chat history — memory-managed, token-budget-trimmed
     from app.services.conversation_memory import get_context_messages

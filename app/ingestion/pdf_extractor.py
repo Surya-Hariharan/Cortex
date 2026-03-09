@@ -128,6 +128,37 @@ def extract_pdf_ocr(file_path: str) -> List[dict]:
     return pages
 
 
+def extract_image_ocr(file_path: str) -> List[dict]:
+    """Extract text from a raw image file using PaddleOCR.
+    
+    Returns list of ``{"page": 1, "text": str, "ocr": True}``.
+    """
+    import cv2  # type: ignore
+    
+    ocr = _get_ocr_engine()
+    path = Path(file_path)
+    
+    if not path.exists():
+        raise FileNotFoundError(f"Image not found: {file_path}")
+        
+    img = cv2.imread(str(path))
+    if img is None:
+        raise ValueError(f"Could not load image: {file_path}")
+        
+    result = ocr.ocr(img, cls=True)
+    lines: List[str] = []
+    
+    if result and result[0]:
+        for line in result[0]:
+            if line and len(line) >= 2:
+                text_info = line[1]
+                if text_info and text_info[0]:
+                    lines.append(str(text_info[0]))
+                    
+    logger.info("image.ocr_extracted", path=file_path, length=len("\n".join(lines)))
+    return [{"page": 1, "text": "\n".join(lines), "ocr": True}]
+
+
 # ── Other format extractors ───────────────────────────────────────────────────
 
 def extract_docx(file_path: str) -> List[dict]:
@@ -188,6 +219,14 @@ def extract_document(file_path: str, mime_type: str = "application/pdf") -> Tupl
                 # Return whatever native extraction gave us rather than dying
                 return pages, False
         return pages, False
+
+    if mime_type.startswith("image/"):
+        try:
+            pages = extract_image_ocr(file_path)
+            return pages, True
+        except Exception as exc:
+            logger.warning("image.ocr_failed", error=str(exc))
+            return [{"page": 1, "text": "", "ocr": False}], False
 
     if mime_type in (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

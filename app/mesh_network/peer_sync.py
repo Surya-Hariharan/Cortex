@@ -65,7 +65,7 @@ class PeerSyncServer:
             self._server.close()
             await self._server.wait_closed()
 
-    async def _handle_connection(self, websocket, path: str) -> None:
+    async def _handle_connection(self, websocket, path: str = "") -> None:
         logger.debug("Peer connected", path=path)
         try:
             async for raw in websocket:

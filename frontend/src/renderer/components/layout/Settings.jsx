@@ -42,7 +42,7 @@ const Btn = ({ children, onClick, variant = 'default', className = '' }) => {
     const base = 'px-4 py-1.5 text-xs font-semibold rounded-full transition-all focus:outline-none focus-visible:ring-2';
     const variants = {
         default: 'border border-slate-300 dark:border-dark-600 text-slate-700 dark:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 focus-visible:ring-synapse-400/40',
-        danger:  'border border-red-300 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 focus-visible:ring-red-400/40',
+        danger: 'border border-red-300 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 focus-visible:ring-red-400/40',
         primary: 'bg-synapse-600 hover:bg-synapse-700 text-white border border-synapse-500 shadow-sm focus-visible:ring-synapse-400/40',
     };
     return (
@@ -143,14 +143,14 @@ function GeneralPanel({ theme, setTheme, perfProvider, setPerfProvider, onToast 
     const [language, setLanguage] = useState('en');
 
     const hwOptions = [
-        { value: 'cpu',  label: 'CPU',        icon: <Cpu size={14} /> },
-        { value: 'gpu',  label: 'GPU (CUDA)',  icon: <MonitorIcon size={14} /> },
-        { value: 'npu',  label: 'NPU (ROCm)',  icon: <MonitorIcon size={14} /> },
+        { value: 'cpu', label: 'CPU', icon: <Cpu size={14} /> },
+        { value: 'gpu', label: 'GPU (CUDA)', icon: <MonitorIcon size={14} /> },
+        { value: 'npu', label: 'NPU (ROCm)', icon: <MonitorIcon size={14} /> },
     ];
 
     const themeOptions = [
-        { value: 'light',  label: 'Light',  icon: <Sun size={14} /> },
-        { value: 'dark',   label: 'Dark',   icon: <Moon size={14} /> },
+        { value: 'light', label: 'Light', icon: <Sun size={14} /> },
+        { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
         { value: 'system', label: 'System', icon: <MonitorIcon size={14} /> },
     ];
 
@@ -185,14 +185,14 @@ function GeneralPanel({ theme, setTheme, perfProvider, setPerfProvider, onToast 
                 </Row>
 
                 <Row label="Language">
-                    <Dropdown value={language} onChange={(v) => { setLanguage(v); onToast(`Language set to ${langOptions.find(o=>o.value===v)?.label}`, 'success'); }} options={langOptions} />
+                    <Dropdown value={language} onChange={(v) => { setLanguage(v); onToast(`Language set to ${langOptions.find(o => o.value === v)?.label}`, 'success'); }} options={langOptions} />
                 </Row>
 
                 <Row
                     label="Hardware acceleration"
                     desc={`Currently running on ${perfProvider.toUpperCase()}`}
                 >
-                    <Dropdown value={perfProvider} onChange={(v) => { setPerfProvider(v); onToast(`Switched to ${hwOptions.find(o=>o.value===v)?.label}`, 'success'); }} options={hwOptions} />
+                    <Dropdown value={perfProvider} onChange={(v) => { setPerfProvider(v); onToast(`Switched to ${hwOptions.find(o => o.value === v)?.label}`, 'success'); }} options={hwOptions} />
                 </Row>
 
                 <Row label="Archive all chats" desc="Hide all conversations from the sidebar">
@@ -212,20 +212,20 @@ function GeneralPanel({ theme, setTheme, perfProvider, setPerfProvider, onToast 
 }
 
 function NotificationsPanel() {
-    const [push, setPush]         = useState(false);
-    const [email, setEmail]       = useState(false);
+    const [push, setPush] = useState(false);
+    const [email, setEmail] = useState(false);
     const [reminders, setReminders] = useState(true);
     const [peerAlerts, setPeerAlerts] = useState(true);
     const [downloadAlerts, setDownloadAlerts] = useState(false);
-    const [ratings, setRatings]   = useState(true);
+    const [ratings, setRatings] = useState(true);
 
     const items = [
-        { label: 'Push notifications',  desc: 'Alerts for new messages and AI responses',        value: push,          set: setPush         },
-        { label: 'Email digest',         desc: 'Weekly summary of your study activity',            value: email,         set: setEmail        },
-        { label: 'Study reminders',      desc: 'Daily reminders for your learning goals',           value: reminders,     set: setReminders    },
-        { label: 'Peer activity',        desc: 'When peers join or share on the mesh network',     value: peerAlerts,    set: setPeerAlerts   },
-        { label: 'Download milestones',  desc: 'When your notes cross a download milestone',       value: downloadAlerts,set: setDownloadAlerts},
-        { label: 'Ratings & reviews',    desc: 'When someone rates or reviews your uploads',       value: ratings,       set: setRatings      },
+        { label: 'Push notifications', desc: 'Alerts for new messages and AI responses', value: push, set: setPush },
+        { label: 'Email digest', desc: 'Weekly summary of your study activity', value: email, set: setEmail },
+        { label: 'Study reminders', desc: 'Daily reminders for your learning goals', value: reminders, set: setReminders },
+        { label: 'Peer activity', desc: 'When peers join or share on the mesh network', value: peerAlerts, set: setPeerAlerts },
+        { label: 'Download milestones', desc: 'When your notes cross a download milestone', value: downloadAlerts, set: setDownloadAlerts },
+        { label: 'Ratings & reviews', desc: 'When someone rates or reviews your uploads', value: ratings, set: setRatings },
     ];
 
     return (
@@ -245,8 +245,8 @@ function NotificationsPanel() {
 
 function PersonalizationPanel({ username, setUsername, userStream, onOpenStreamSelector, onToast }) {
     const [editingName, setEditingName] = useState(false);
-    const [tempName, setTempName]       = useState(username);
-    const [memory, setMemory]           = useState(true);
+    const [tempName, setTempName] = useState(username);
+    const [memory, setMemory] = useState(true);
     const [compactMode, setCompactMode] = useState(false);
     const [codeHighlight, setCodeHighlight] = useState(true);
     const nameRef = useRef(null);
@@ -337,14 +337,14 @@ function PersonalizationPanel({ username, setUsername, userStream, onOpenStreamS
 function DataControlsPanel({ onToast }) {
     const [improveModel, setImproveModel] = useState(true);
     const [chat2Improve, setChat2Improve] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm]   = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
     const handleExport = () => {
         const data = { exportedAt: new Date().toISOString(), version: '1.0', note: 'Cortex data export' };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
         a.href = url; a.download = `cortex-export-${Date.now()}.json`; a.click();
         URL.revokeObjectURL(url);
         onToast('Data exported successfully', 'success');
@@ -419,13 +419,13 @@ function DataControlsPanel({ onToast }) {
 }
 
 function SecurityPanel({ onToast, onLogout }) {
-    const [twoFA, setTwoFA]                     = useState(false);
-    const [showPwForm, setShowPwForm]           = useState(false);
-    const [currentPw, setCurrentPw]             = useState('');
-    const [newPw, setNewPw]                     = useState('');
-    const [confirmPw, setConfirmPw]             = useState('');
-    const [showCurrent, setShowCurrent]         = useState(false);
-    const [showNew, setShowNew]                 = useState(false);
+    const [twoFA, setTwoFA] = useState(false);
+    const [showPwForm, setShowPwForm] = useState(false);
+    const [currentPw, setCurrentPw] = useState('');
+    const [newPw, setNewPw] = useState('');
+    const [confirmPw, setConfirmPw] = useState('');
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const savePassword = () => {
@@ -467,8 +467,8 @@ function SecurityPanel({ onToast, onLogout }) {
                     <div className="mb-4 p-4 bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-800 rounded-2xl space-y-3 animate-fade-in">
                         {[
                             { label: 'Current password', value: currentPw, set: setCurrentPw, show: showCurrent, toggle: setShowCurrent },
-                            { label: 'New password',     value: newPw,     set: setNewPw,     show: showNew,    toggle: setShowNew    },
-                            { label: 'Confirm password', value: confirmPw, set: setConfirmPw, show: showNew,    toggle: setShowNew    },
+                            { label: 'New password', value: newPw, set: setNewPw, show: showNew, toggle: setShowNew },
+                            { label: 'Confirm password', value: confirmPw, set: setConfirmPw, show: showNew, toggle: setShowNew },
                         ].map(({ label, value, set, show, toggle }) => (
                             <div key={label}>
                                 <label className="text-xs font-semibold text-slate-500 dark:text-dark-400 mb-1.5 block">{label}</label>
@@ -533,11 +533,11 @@ function SecurityPanel({ onToast, onLogout }) {
 }
 
 function AccountPanel({ username, setUsername, userStream, onToast, onClose }) {
-    const [editingEmail, setEditingEmail]       = useState(false);
-    const [email, setEmail]                     = useState('suryahariharan2006@gmail.com');
-    const [tempEmail, setTempEmail]             = useState(email);
+    const [editingEmail, setEditingEmail] = useState(false);
+    const [email, setEmail] = useState('suryahariharan2006@gmail.com');
+    const [tempEmail, setTempEmail] = useState(email);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [deleteInput, setDeleteInput]         = useState('');
+    const [deleteInput, setDeleteInput] = useState('');
     const DELETE_PHRASE = 'delete my account';
 
     const saveEmail = () => {
@@ -658,12 +658,12 @@ function AccountPanel({ username, setUsername, userStream, onToast, onClose }) {
 ───────────────────────────────────────────────────────────── */
 
 const NAV_ITEMS = [
-    { id: 'general',         label: 'General',         Icon: SettingsIcon },
-    { id: 'notifications',   label: 'Notifications',   Icon: Bell         },
-    { id: 'personalization', label: 'Personalization', Icon: Palette      },
-    { id: 'data-controls',   label: 'Data controls',   Icon: Database     },
-    { id: 'security',        label: 'Security',        Icon: ShieldCheck  },
-    { id: 'account',         label: 'Account',         Icon: User         },
+    { id: 'general', label: 'General', Icon: SettingsIcon },
+    { id: 'notifications', label: 'Notifications', Icon: Bell },
+    { id: 'personalization', label: 'Personalization', Icon: Palette },
+    { id: 'data-controls', label: 'Data controls', Icon: Database },
+    { id: 'security', label: 'Security', Icon: ShieldCheck },
+    { id: 'account', label: 'Account', Icon: User },
 ];
 
 export default function Settings({
@@ -724,7 +724,7 @@ export default function Settings({
 
                     <div className="pt-3 border-t border-slate-100 dark:border-dark-800">
                         <button
-                            onClick={() => { onClose(); onToast('Logged out', 'success'); }}
+                            onClick={() => { onLogout?.(); onClose(); }}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"
                         >
                             <LogOut size={16} />
@@ -735,12 +735,12 @@ export default function Settings({
 
                 {/* ── Right content ── */}
                 <div className="flex-1 overflow-y-auto relative">
-                    {tab === 'general'         && <GeneralPanel theme={theme} setTheme={setTheme} perfProvider={perfProvider} setPerfProvider={setPerfProvider} onToast={onToast} />}
-                    {tab === 'notifications'   && <NotificationsPanel />}
+                    {tab === 'general' && <GeneralPanel theme={theme} setTheme={setTheme} perfProvider={perfProvider} setPerfProvider={setPerfProvider} onToast={onToast} />}
+                    {tab === 'notifications' && <NotificationsPanel />}
                     {tab === 'personalization' && <PersonalizationPanel username={username} setUsername={setUsername} userStream={userStream} onOpenStreamSelector={handleOpenStreamSelector} onToast={onToast} />}
-                    {tab === 'data-controls'   && <DataControlsPanel onToast={onToast} />}
-                    {tab === 'security'        && <SecurityPanel onToast={onToast} onLogout={onLogout} />}
-                    {tab === 'account'         && <AccountPanel username={username} setUsername={setUsername} userStream={userStream} onToast={onToast} onClose={onClose} />}
+                    {tab === 'data-controls' && <DataControlsPanel onToast={onToast} />}
+                    {tab === 'security' && <SecurityPanel onToast={onToast} onLogout={onLogout} />}
+                    {tab === 'account' && <AccountPanel username={username} setUsername={setUsername} userStream={userStream} onToast={onToast} onClose={onClose} />}
                 </div>
             </div>
         </div>

@@ -268,6 +268,62 @@ function registerIpcHandlers() {
         }
     });
 
+    // ── Auth API proxies ────────────────────────────────────────────────────
+    function postToBackend(apiPath, body) {
+        return new Promise((resolve, reject) => {
+            const payload = JSON.stringify(body);
+            const req = http.request({
+                hostname: '127.0.0.1',
+                port: BACKEND_PORT,
+                path: apiPath,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(payload),
+                },
+            }, res => {
+                let data = '';
+                res.on('data', d => data += d);
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(data);
+                        resolve({ status: res.statusCode, data: parsed });
+                    } catch {
+                        resolve({ status: res.statusCode, data: { detail: data } });
+                    }
+                });
+            });
+            req.on('error', err => reject(err));
+            req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
+            req.write(payload);
+            req.end();
+        });
+    }
+
+    ipcMain.handle('auth-register', async (_e, body) => {
+        try {
+            return await postToBackend('/api/v1/auth/register', body);
+        } catch (err) {
+            return { status: 0, data: { detail: 'Backend is not running. Please start the server.' } };
+        }
+    });
+
+    ipcMain.handle('auth-login', async (_e, body) => {
+        try {
+            return await postToBackend('/api/v1/auth/login', body);
+        } catch (err) {
+            return { status: 0, data: { detail: 'Backend is not running. Please start the server.' } };
+        }
+    });
+
+    ipcMain.handle('auth-forgot-password', async (_e, body) => {
+        try {
+            return await postToBackend('/api/v1/auth/forgot-password', body);
+        } catch (err) {
+            return { status: 0, data: { detail: 'Backend is not running. Please start the server.' } };
+        }
+    });
+
     ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
     ipcMain.on('zoom-out', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
     ipcMain.on('zoom-reset', () => { if (!mainWindow) return; broadcastZoom(1.0); });

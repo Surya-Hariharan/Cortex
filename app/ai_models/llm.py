@@ -41,7 +41,7 @@ class LLMModel:
         self._model_dir = Path(model_dir or settings.LLM_MODEL_DIR)
         self._session = None
         self._tokenizer = None
-        self._mode = "onnx"  # can be "onnx", "ollama", or "gemini"
+        self._mode = "onnx"  # can be "onnx", "ollama", "groq", or "gemini"
 
     def _load(self) -> None:
         # 1. Try Ollama local LLM first
@@ -92,7 +92,12 @@ class LLMModel:
                 providers=["CPUExecutionProvider"],
             )
         except Exception as exc:
-            # 3. Fallback to Cloud Gemini API
+            # 3. Fallback to Cloud Groq API
+            if settings.GROQ_API_KEY:
+                logger.info("Failed to load local LLM, falling back to Groq API.")
+                self._mode = "groq"
+                return
+            # 4. Fallback to Cloud Gemini API
             if settings.GEMINI_API_KEY:
                 logger.info("Failed to load local LLM, falling back to Gemini API.")
                 self._mode = "gemini"
@@ -176,6 +181,45 @@ class LLMModel:
             except Exception as e:
                 logger.error("Ollama fallback failed", error=str(e))
                 return "Error: Could not generate response via Ollama."
+
+        if self._mode == "groq":
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            messages = []
+            if 'system' in locals() and system:
+                messages.append({"role": "system", "content": system})
+                
+            for msg in (history or []):
+                messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+            
+            final_query = query
+            if context:
+                final_query = f"Context:\n{context}\n\nQuery: {query}"
+            
+            messages.append({"role": "user", "content": final_query})
+            
+            payload = {
+                "model": settings.GROQ_MODEL,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_new_tokens
+            }
+            try:
+                with httpx.Client() as client:
+                    resp = client.post(url, headers=headers, json=payload, timeout=60.0)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            except Exception as e:
+                logger.error("Groq API fallback failed", error=str(e))
+                return "Error: Could not generate response via Groq API fallback."
 
         if self._mode == "gemini":
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"

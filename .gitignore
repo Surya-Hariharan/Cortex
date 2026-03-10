@@ -151,3 +151,5 @@ temp/
 *.tmp
 *.temp
 
+# ── Scripts & Utilities ───────────────────────────────────────
+partial_wipe/

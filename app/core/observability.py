@@ -197,7 +197,7 @@ def update_faiss_gauge() -> None:
     try:
         from app.rag.vector_store import vector_store
         if vector_store._index is not None:
-            faiss_vectors.set(vector_store._index.ntotal)
+            faiss_vectors.set(vector_store.total)
     except Exception:
         pass
 

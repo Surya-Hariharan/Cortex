@@ -79,7 +79,7 @@ async def run_health_check(rebuild_on_mismatch: bool = False) -> HealthReport:
                 _last_report = report
                 return report
 
-            report.faiss_total = vector_store._index.ntotal
+            report.faiss_total = vector_store.total
             map_chunk_ids: Set[str] = set(vector_store._chunk_to_row.keys())
             report.map_total = len(map_chunk_ids)
 

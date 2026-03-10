@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     # 3. Load FAISS vector store from disk (no-op on first run)
     try:
         vector_store.load()
-        logger.info("cortex.vector_store_ready", vectors=vector_store.index.ntotal)
+        logger.info("cortex.vector_store_ready", vectors=vector_store.total)
     except Exception as exc:  # noqa: BLE001
         logger.warning("cortex.vector_store_load_failed", error=str(exc))
 
@@ -273,7 +273,7 @@ async def health() -> JSONResponse:
     try:
         status["services"]["vector_store"] = {
             "status": "ok",
-            "vectors": vector_store.index.ntotal,
+            "vectors": vector_store.total,
         }
     except Exception as exc:  # noqa: BLE001
         status["services"]["vector_store"] = f"error: {exc}"

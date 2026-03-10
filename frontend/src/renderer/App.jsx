@@ -79,8 +79,8 @@ export default function App() {
                 if (profile.name) setUsername(profile.name);
                 setIsAuthenticated(true);
             }
-        }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        }).catch(() => { });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -97,8 +97,8 @@ export default function App() {
         };
     }, []);
 
-    function zoomIn()    { window.electronAPI?.zoomIn?.();    }
-    function zoomOut()   { window.electronAPI?.zoomOut?.();   }
+    function zoomIn() { window.electronAPI?.zoomIn?.(); }
+    function zoomOut() { window.electronAPI?.zoomOut?.(); }
     function zoomReset() { window.electronAPI?.zoomReset?.(); }
 
     // Close context menu on outside click
@@ -260,6 +260,7 @@ export default function App() {
         // skipped on the next app launch.
         window.electronAPI?.saveSession?.(profile ?? {});
         setIsAuthenticated(true);
+        setTimeout(() => showToast('Login successful!', 'success'), 100);
     };
 
     const handleLogout = () => {
@@ -398,11 +399,10 @@ export default function App() {
                                                 <div className="sidebar-icon-container">
                                                     {wsExpanded[ws.id] ? <FolderOpen size={18} className="text-synapse-500" /> : <Folder size={18} className="text-slate-400 dark:text-dark-500" />}
                                                 </div>
-                                                <span className={`sidebar-label font-bold transition-colors uppercase text-[11px] tracking-wide ${
-                                                    activeTab === 'project' && activeProjectId === ws.id
+                                                <span className={`sidebar-label font-bold transition-colors uppercase text-[11px] tracking-wide ${activeTab === 'project' && activeProjectId === ws.id
                                                         ? 'text-synapse-600 dark:text-synapse-400'
                                                         : 'text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100'
-                                                }`}>
+                                                    }`}>
                                                     {ws.title}
                                                 </span>
                                                 <div
@@ -670,7 +670,7 @@ export default function App() {
             >
                 <button
                     onClick={zoomOut}
-                    title="Zoom out (Ctrl -)" 
+                    title="Zoom out (Ctrl -)"
                     className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 dark:text-dark-300
                         hover:bg-slate-100 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-dark-50
                         transition-colors text-base font-bold select-none"
@@ -679,7 +679,7 @@ export default function App() {
                     onClick={zoomReset}
                     title="Reset zoom (Ctrl 0)"
                     className={`min-w-[3.5rem] h-8 px-2 rounded-xl text-xs font-bold tabular-nums transition-colors select-none
-                        ${ zoom === 100
+                        ${zoom === 100
                             ? 'text-slate-500 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800'
                             : 'text-synapse-600 dark:text-synapse-400 hover:bg-synapse-50 dark:hover:bg-synapse-900/30'
                         }`}

@@ -1,6 +1,7 @@
 """API v1 aggregate router."""
 from fastapi import APIRouter
 
+from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.search import router as search_router
 from app.api.v1.endpoints.rag import router as rag_router
@@ -15,6 +16,7 @@ from app.api.v1.endpoints.system import router as system_router
 
 api_router = APIRouter(prefix="/api/v1")
 
+api_router.include_router(auth_router)
 api_router.include_router(documents_router)
 api_router.include_router(search_router)
 api_router.include_router(rag_router)
@@ -26,3 +28,4 @@ api_router.include_router(chats_router)
 api_router.include_router(mesh_router)
 api_router.include_router(sync_router)
 api_router.include_router(system_router)
+

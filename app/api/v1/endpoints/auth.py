@@ -36,11 +36,13 @@ pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def _hash_password(plain: str) -> str:
-    return pwd_ctx.hash(plain)
+    # bcrypt 4.x throws ValueError if password > 72 bytes.
+    # We truncate manually to ensure compatibility.
+    return pwd_ctx.hash(plain[:72])
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    return pwd_ctx.verify(plain[:72], hashed)
 
 
 def _user_to_profile(user: User) -> dict:

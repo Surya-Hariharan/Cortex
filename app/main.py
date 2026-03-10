@@ -3,6 +3,16 @@ Cortex Backend — main FastAPI application entry point.
 Team SynapseX | Offline-first AI operating layer for AMD Ryzen AI edge devices.
 """
 
+# ── Bcrypt monkeypatch for passlib 1.7.4 compatibility ───────────────────────
+import bcrypt
+
+if not hasattr(bcrypt, "__about__"):
+    # passlib 1.7.4 expects bcrypt.__about__.__version__
+    class BcryptAbout:
+        __version__ = getattr(bcrypt, "__version__", "4.0.0")
+
+    bcrypt.__about__ = BcryptAbout()
+
 import asyncio
 import time
 import uuid

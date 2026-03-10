@@ -93,6 +93,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
     CORS_ORIGINS: list[str] = ["http://localhost", "http://127.0.0.1"]
 
+    # ── SMTP (for forgot-password email) ─────────────────────────────────────
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""        # Gmail address (leave empty to log password instead)
+    SMTP_PASSWORD: str = ""    # Gmail App Password
+    SMTP_FROM: str = ""        # Sender display email (defaults to SMTP_USER)
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

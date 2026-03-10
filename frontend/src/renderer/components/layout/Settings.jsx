@@ -259,6 +259,15 @@ function PersonalizationPanel({ username, setUsername, userStream, onOpenStreamS
         const trimmed = tempName.trim();
         if (trimmed && trimmed !== username) {
             setUsername(trimmed);
+            try {
+                const raw = localStorage.getItem('cortex-auth-profile');
+                if (raw) {
+                    const profile = JSON.parse(raw);
+                    profile.name = trimmed;
+                    localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
+                    window.electronAPI?.saveSession?.(profile);
+                }
+            } catch { }
             onToast('Display name updated', 'success');
         }
         setEditingName(false);
@@ -432,6 +441,21 @@ function SecurityPanel({ onToast, onLogout }) {
         if (!currentPw) { onToast('Enter your current password', 'error'); return; }
         if (newPw.length < 8) { onToast('Password must be at least 8 characters', 'error'); return; }
         if (newPw !== confirmPw) { onToast('Passwords do not match', 'error'); return; }
+
+        try {
+            const raw = localStorage.getItem('cortex-auth-profile');
+            if (raw) {
+                const profile = JSON.parse(raw);
+                if (profile.password !== currentPw) {
+                    onToast('Incorrect current password', 'error');
+                    return;
+                }
+                profile.password = newPw;
+                localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
+                window.electronAPI?.saveSession?.(profile);
+            }
+        } catch { }
+
         onToast('Password updated successfully', 'success');
         setShowPwForm(false); setCurrentPw(''); setNewPw(''); setConfirmPw('');
     };
@@ -532,9 +556,16 @@ function SecurityPanel({ onToast, onLogout }) {
     );
 }
 
-function AccountPanel({ username, setUsername, userStream, onToast, onClose }) {
+function AccountPanel({ username, setUsername, userStream, onToast, onClose, onLogout }) {
     const [editingEmail, setEditingEmail] = useState(false);
-    const [email, setEmail] = useState('suryahariharan2006@gmail.com');
+    const initialEmail = (() => {
+        try {
+            const raw = localStorage.getItem('cortex-auth-profile');
+            if (raw) return JSON.parse(raw).email || 'suryahariharan2006@gmail.com';
+        } catch { }
+        return 'suryahariharan2006@gmail.com';
+    })();
+    const [email, setEmail] = useState(initialEmail);
     const [tempEmail, setTempEmail] = useState(email);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteInput, setDeleteInput] = useState('');
@@ -542,7 +573,18 @@ function AccountPanel({ username, setUsername, userStream, onToast, onClose }) {
 
     const saveEmail = () => {
         if (!tempEmail.includes('@')) { onToast('Enter a valid email address', 'error'); return; }
-        setEmail(tempEmail); onToast('Email updated', 'success'); setEditingEmail(false);
+        setEmail(tempEmail);
+        try {
+            const raw = localStorage.getItem('cortex-auth-profile');
+            if (raw) {
+                const profile = JSON.parse(raw);
+                profile.email = tempEmail;
+                localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
+                window.electronAPI?.saveSession?.(profile);
+            }
+        } catch { }
+        onToast('Email updated', 'success');
+        setEditingEmail(false);
     };
 
     return (
@@ -557,7 +599,10 @@ function AccountPanel({ username, setUsername, userStream, onToast, onClose }) {
                     if (deleteInput.toLowerCase() !== DELETE_PHRASE) {
                         onToast('Please type the confirmation phrase exactly', 'error'); return;
                     }
-                    onToast('Account deletion requested', 'success'); setShowDeleteConfirm(false); onClose();
+                    onToast('Account deleted successfully', 'success');
+                    setShowDeleteConfirm(false);
+                    onClose();
+                    if (onLogout) onLogout();
                 }}
                 onCancel={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}
             >
@@ -740,7 +785,7 @@ export default function Settings({
                     {tab === 'personalization' && <PersonalizationPanel username={username} setUsername={setUsername} userStream={userStream} onOpenStreamSelector={handleOpenStreamSelector} onToast={onToast} />}
                     {tab === 'data-controls' && <DataControlsPanel onToast={onToast} />}
                     {tab === 'security' && <SecurityPanel onToast={onToast} onLogout={onLogout} />}
-                    {tab === 'account' && <AccountPanel username={username} setUsername={setUsername} userStream={userStream} onToast={onToast} onClose={onClose} />}
+                    {tab === 'account' && <AccountPanel username={username} setUsername={setUsername} userStream={userStream} onToast={onToast} onClose={onClose} onLogout={onLogout} />}
                 </div>
             </div>
         </div>

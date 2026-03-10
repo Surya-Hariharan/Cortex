@@ -10,8 +10,17 @@ if not hasattr(bcrypt, "__about__"):
     # passlib 1.7.4 expects bcrypt.__about__.__version__
     class BcryptAbout:
         __version__ = getattr(bcrypt, "__version__", "4.0.0")
-
     bcrypt.__about__ = BcryptAbout()
+
+# bcrypt 4.x throws ValueError for passwords > 72 bytes.
+# passlib 1.7.4's internal bug detection triggers this.
+# We wrap hashpw to truncate to 72 bytes, restoring legacy behavior.
+_orig_hashpw = bcrypt.hashpw
+def _patched_hashpw(password, salt):
+    if len(password) > 72:
+        password = password[:72]
+    return _orig_hashpw(password, salt)
+bcrypt.hashpw = _patched_hashpw
 
 import asyncio
 import time

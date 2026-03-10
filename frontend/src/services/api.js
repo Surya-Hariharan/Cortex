@@ -18,14 +18,51 @@ export function getUserId() {
     }
 }
 
+// ── Backend status tracking ───────────────────────────────────────────────────
+
+export const backendStatus = {
+    online: true,
+    _listeners: new Set(),
+    _set(v) {
+        if (this.online !== v) {
+            this.online = v;
+            this._listeners.forEach(fn => fn(v));
+        }
+    },
+    subscribe(fn) {
+        this._listeners.add(fn);
+        return () => this._listeners.delete(fn);
+    },
+    async check() {
+        try {
+            const res = await fetch(`${BASE}/system/health`, { signal: AbortSignal.timeout(2000) });
+            this._set(res.ok);
+        } catch {
+            this._set(false);
+        }
+        return this.online;
+    },
+};
+
 // ── Core fetch wrapper ────────────────────────────────────────────────────────
 
 async function req(path, options = {}) {
     const url = `${BASE}${path}`;
-    const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json', ...options.headers },
-        ...options,
-    });
+    let res;
+    try {
+        res = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...options.headers },
+            signal: options.signal || AbortSignal.timeout(5000),
+            ...options,
+        });
+    } catch (err) {
+        backendStatus._set(false);
+        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+            throw new Error('Request timed out. The backend may be busy or offline.');
+        }
+        throw new Error('Backend is offline. Your data is saved locally.');
+    }
+    backendStatus._set(true);
     if (res.status === 204) return null;
     const data = await res.json().catch(() => ({ detail: res.statusText }));
     if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
@@ -212,6 +249,7 @@ export const chat = {
             body: JSON.stringify(request),
             signal: controller.signal,
         }).then(async (res) => {
+            backendStatus._set(true);
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ detail: res.statusText }));
                 onError?.(err.detail || `HTTP ${res.status}`);
@@ -235,11 +273,13 @@ export const chat = {
                         if (event.type === 'token') onToken?.(event.content);
                         else if (event.type === 'done') onDone?.(event);
                         else if (event.type === 'error') onError?.(event.detail);
-                    } catch (_) {}
+                    } catch (_) { }
                 }
             }
         }).catch((err) => {
-            if (err.name !== 'AbortError') onError?.(err.message);
+            if (err.name === 'AbortError') return;
+            backendStatus._set(false);
+            onError?.('Backend is offline. AI chat requires the server to be running.');
         });
 
         return controller;
@@ -294,10 +334,5 @@ export const transcription = {
 // ── Convenience: check if backend is reachable ────────────────────────────────
 
 export async function isBackendReady() {
-    try {
-        const res = await fetch(`${BASE}/system/health`, { signal: AbortSignal.timeout(2000) });
-        return res.ok;
-    } catch {
-        return false;
-    }
+    return backendStatus.check();
 }

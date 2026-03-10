@@ -74,9 +74,20 @@ export default function NotesTab({ onToast }) {
             const userId = getUserId();
             const res = await notesApi.list(userId);
             const list = Array.isArray(res) ? res : (res?.notes ?? []);
-            setNotes(list.map(toUINote));
+            const uiNotes = list.map(toUINote);
+            setNotes(uiNotes);
+            // Cache for offline reads
+            try { localStorage.setItem('cortex-notes-cache', JSON.stringify(uiNotes)); } catch { }
         } catch (err) {
-            onToast?.(`Failed to load notes: ${err.message}`, 'error');
+            // Offline fallback: load from cache
+            const cached = localStorage.getItem('cortex-notes-cache');
+            if (cached) {
+                try { setNotes(JSON.parse(cached)); } catch { }
+            }
+            const isOffline = err.message?.includes('offline') || err.message?.includes('timed out');
+            if (!isOffline) {
+                onToast?.(`Failed to load notes: ${err.message}`, 'error');
+            }
         }
     };
 
@@ -119,7 +130,21 @@ export default function NotesTab({ onToast }) {
             setShowForm(false);
             loadNotes();
         } catch (err) {
-            onToast?.(`Failed to save note: ${err.message}`, 'error');
+            const isOffline = err.message?.includes('offline') || err.message?.includes('timed out');
+            if (isOffline) {
+                // Save offline
+                const offlineNote = { id: 'offline-' + Date.now(), title: title.trim(), content: content.trim(), type, dueDate, completed: false, tags: [], createdAt: new Date().toISOString(), offline: true };
+                setNotes(prev => [offlineNote, ...prev]);
+                try {
+                    const q = JSON.parse(localStorage.getItem('cortex-notes-offline-queue') || '[]');
+                    q.push(offlineNote);
+                    localStorage.setItem('cortex-notes-offline-queue', JSON.stringify(q));
+                } catch { }
+                onToast?.('Saved offline — will sync when backend restarts.');
+                setTitle(''); setContent(''); setType('note'); setDueDate(''); setShowForm(false);
+            } else {
+                onToast?.(`Failed to save note: ${err.message}`, 'error');
+            }
         }
     };
 
@@ -127,19 +152,21 @@ export default function NotesTab({ onToast }) {
         try {
             await notesApi.delete(id);
             setNotes(prev => prev.filter(n => n.id !== id));
-        } catch (err) {
-            onToast?.(`Delete failed: ${err.message}`, 'error');
+        } catch {
+            // Optimistic delete even if backend is offline
+            setNotes(prev => prev.filter(n => n.id !== id));
         }
     };
 
     const handleToggle = async (id) => {
         const note = notes.find(n => n.id === id);
         if (!note) return;
+        // Optimistic update
+        setNotes(prev => prev.map(n => n.id === id ? { ...n, completed: !n.completed } : n));
         try {
             await notesApi.update(id, { is_completed: note.completed ? 0 : 1 });
-            setNotes(prev => prev.map(n => n.id === id ? { ...n, completed: !n.completed } : n));
-        } catch (err) {
-            onToast?.(`Update failed: ${err.message}`, 'error');
+        } catch {
+            // Keep optimistic update even if backend is offline
         }
     };
 

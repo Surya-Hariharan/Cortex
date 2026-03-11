@@ -46,6 +46,11 @@ class ModelManager:
         self._embeddings: Optional[EmbeddingModel] = None
         self._llm: Optional[LLMModel] = None
         self._whisper: Optional[WhisperModel] = None
+        self._last_used: dict[str, float] = {}
+
+    def _update_last_used(self, model_name: str) -> None:
+        import time
+        self._last_used[model_name] = time.time()
 
     @property
     def embeddings(self) -> EmbeddingModel:
@@ -54,6 +59,7 @@ class ModelManager:
                 if self._embeddings is None:
                     logger.info("Loading EmbeddingModel…")
                     self._embeddings = EmbeddingModel()
+        self._update_last_used("embeddings")
         return self._embeddings
 
     @property
@@ -63,6 +69,7 @@ class ModelManager:
                 if self._llm is None:
                     logger.info("Loading LLMModel…")
                     self._llm = LLMModel()
+        self._update_last_used("llm")
         return self._llm
 
     @property
@@ -72,7 +79,37 @@ class ModelManager:
                 if self._whisper is None:
                     logger.info("Loading WhisperModel…")
                     self._whisper = WhisperModel()
+        self._update_last_used("whisper")
         return self._whisper
+
+    def unload_model(self, name: str) -> bool:
+        """Explicitly unload a model from RAM."""
+        with self._lock:
+            if name == "embeddings" and self._embeddings:
+                self._embeddings = None
+                logger.info("Unloaded EmbeddingModel")
+                return True
+            if name == "llm" and self._llm:
+                self._llm = None
+                logger.info("Unloaded LLMModel")
+                return True
+            if name == "whisper" and self._whisper:
+                self._whisper = None
+                logger.info("Unloaded WhisperModel")
+                return True
+        return False
+
+    def unload_idle_models(self, ttl_seconds: int = 600) -> list[str]:
+        """Unload models that haven't been used for ttl_seconds."""
+        import time
+        now = time.time()
+        unloaded = []
+        for name in list(self._last_used.keys()):
+            if now - self._last_used[name] > ttl_seconds:
+                if self.unload_model(name):
+                    unloaded.append(name)
+                    del self._last_used[name]
+        return unloaded
 
     def status(self) -> dict:
         return {

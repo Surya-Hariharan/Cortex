@@ -569,12 +569,12 @@ export default function App() {
                     <div className="h-8 w-full absolute top-0 left-0 bg-transparent z-50 pointer-events-none" style={{ WebkitAppRegion: 'drag' }} />
 
                     <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
-                        {activeTab === 'home' && <HomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
-                        {activeTab === 'knowledge' && <Knowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} />}
-                        {activeTab === 'workspace' && <Workspace onToast={showToast} />}
-                        {activeTab === 'campus' && <Campus />}
-                        {activeTab === 'activity' && <Activity />}
-                        {activeTab === 'ai-engine' && <AIEngine />}
+                        {activeTab === 'home' && <MemoHomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
+                        {activeTab === 'knowledge' && <MemoKnowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} />}
+                        {activeTab === 'workspace' && <MemoWorkspace onToast={showToast} />}
+                        {activeTab === 'campus' && <MemoCampus />}
+                        {activeTab === 'activity' && <MemoActivity />}
+                        {activeTab === 'ai-engine' && <MemoAIEngine />}
                         {activeTab === 'project' && (() => {
                             const proj = projects.find(p => p.id === activeProjectId);
                             return proj ? (

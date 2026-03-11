@@ -43,6 +43,7 @@ logger = get_logger(__name__)
 
 # ── Background task handles ──────────────────────────────────────────────────
 _queue_task: asyncio.Task | None = None
+_model_cleanup_task: asyncio.Task | None = None
 
 
 @asynccontextmanager
@@ -143,6 +144,23 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001
         logger.warning("cortex.vs_health_monitor_failed", error=str(exc))
 
+    # 12. Start model cleanup loop (every 5 mins, 10 min TTL)
+    try:
+        from app.ai_models.model_manager import model_manager
+
+        async def _cleanup_loop():
+            while True:
+                await asyncio.sleep(300)  # Check every 5 mins
+                unloaded = model_manager.unload_idle_models(ttl_seconds=600)
+                if unloaded:
+                    logger.info("cortex.models_cleaned", unloaded=unloaded)
+
+        global _model_cleanup_task
+        _model_cleanup_task = asyncio.create_task(_cleanup_loop(), name="model_cleanup")
+        logger.info("cortex.model_cleanup_started")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cortex.model_cleanup_failed", error=str(exc))
+
     logger.info("cortex.ready", host=settings.HOST, port=settings.PORT)
 
     yield  # ── Application running ──────────────────────────────────────────
@@ -209,6 +227,10 @@ async def lifespan(app: FastAPI):
         stop_health_monitor()
     except Exception:  # noqa: BLE001
         pass
+
+    # Stop model cleanup task
+    if _model_cleanup_task and not _model_cleanup_task.done():
+        _model_cleanup_task.cancel()
 
     # Save vector store to disk
     try:

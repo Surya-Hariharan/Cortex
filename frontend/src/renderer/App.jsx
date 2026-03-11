@@ -14,6 +14,7 @@ import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus } from '../services/api.js';
 import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, WifiOff } from 'lucide-react';
+import { useCore } from './context/CoreContext';
 
 const TABS = [
     { id: 'knowledge', label: 'Home', icon: <Home size={18} /> },
@@ -36,36 +37,23 @@ const MOCK_PROJECTS = [];
 const MOCK_INDEPENDENT_CHATS = [];
 
 export default function App() {
+    const {
+        isAuthenticated, username, setUsername, theme, setTheme,
+        isOnline, isNetworkOnline, toast, showToast,
+        userStream, setUserStream, login, logout
+    } = useCore();
+
     const [activeTab, setActiveTab] = useState('knowledge');
     const [stats, setStats] = useState({ documents: 0, embeddings: 0, subjects: [] });
-    const [toast, setToast] = useState(null);
     const [perfProvider, setPerfProvider] = useState('cpu');
     const [wsExpanded, setWsExpanded] = useState({ w1: true, w2: true });
 
     // New UI states
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
-    const [userStream, setUserStream] = useState(localStorage.getItem('cortex-user-stream'));
     const [showStreamSelector, setShowStreamSelector] = useState(!localStorage.getItem('cortex-user-stream'));
     const [showCommandPalette, setShowCommandPalette] = useState(false);
-    const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('cortex-auth-session') === 'active');
-    const [theme, setTheme] = useState(() => {
-        return localStorage.getItem('cortex-theme') || 'system';
-    });
     const [activeChatId, setActiveChatId] = useState('c1');
-    const [username, setUsername] = useState(() => {
-        try {
-            const savedProfile = localStorage.getItem('cortex-auth-profile');
-            if (savedProfile) {
-                const parsed = JSON.parse(savedProfile);
-                return parsed.name || 'Surya Hariharan';
-            }
-        } catch {
-            // Ignore malformed local profile payloads.
-        }
-        return 'Surya Hariharan';
-    });
-
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null, title: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
@@ -74,27 +62,8 @@ export default function App() {
     const [zoom, setZoom] = useState(100);
     const [showZoomBar, setShowZoomBar] = useState(false);
     const zoomHideTimer = useRef(null);
-    const [isOnline, setIsOnline] = useState(true);
-    const [isNetworkOnline, setIsNetworkOnline] = useState(window.navigator.onLine);
-
-    // On mount, sync with the main-process session file so a returning user
-    // who arrives directly (session file exists) is immediately authenticated
-    // even if their localStorage was somehow cleared.
-    useEffect(() => {
-        if (isAuthenticated) return; // already authenticated via localStorage
-        window.electronAPI?.getSession?.().then((profile) => {
-            if (profile) {
-                localStorage.setItem('cortex-auth-session', 'active');
-                localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
-                if (profile.name) setUsername(profile.name);
-                setIsAuthenticated(true);
-            }
-        }).catch(() => { });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     useEffect(() => {
-
         const unsub = window.electronAPI?.onZoomChanged?.(pct => {
             setZoom(pct);
             setShowZoomBar(true);
@@ -122,39 +91,12 @@ export default function App() {
         return () => window.removeEventListener('click', handleClick);
     }, [contextMenu.visible]);
 
-    // Ctrl+K / Ctrl+F / Ctrl+Up / Ctrl+Down
+    // Ctrl+K / Command Palette shortcuts
     useEffect(() => {
-        function getScrollTarget() {
-            let el = document.activeElement;
-            while (el && el !== document.body) {
-                const s = window.getComputedStyle(el);
-                if (['auto', 'scroll'].includes(s.overflowY) && el.scrollHeight > el.clientHeight) return el;
-                el = el.parentElement;
-            }
-            const main = document.querySelector('main');
-            if (main) {
-                for (const node of main.querySelectorAll('*')) {
-                    const s = window.getComputedStyle(node);
-                    if (['auto', 'scroll'].includes(s.overflowY) && node.scrollHeight > node.clientHeight) return node;
-                }
-            }
-            return document.documentElement;
-        }
-
         const handleKeyDown = (e) => {
-            if (!e.ctrlKey && !e.metaKey) return;
-            if (e.key === 'k') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 setShowCommandPalette(prev => !prev);
-            } else if (e.key === 'f') {
-                e.preventDefault();
-                setShowCommandPalette(true);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                getScrollTarget().scrollBy({ top: -120, behavior: 'smooth' });
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                getScrollTarget().scrollBy({ top: 120, behavior: 'smooth' });
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -162,77 +104,6 @@ export default function App() {
     }, []);
 
     const perfPollRef = useRef(null);
-
-    useEffect(() => {
-        console.log('[App] Mounting...');
-        if (window.electronAPI) {
-            console.log('[App] electronAPI found, fetching stats...');
-            window.electronAPI.getStats().then((res) => {
-                console.log('[App] Stats received:', res);
-                setStats(res);
-            }).catch((err) => {
-                console.warn('[App] Stats unavailable (offline?):', err.message);
-            });
-        } else {
-            console.error('[App] window.electronAPI is undefined!');
-        }
-
-        // Subscribe to backend status changes
-        const unsub = backendStatus.subscribe(v => setIsOnline(v));
-        // Initial check + periodic health poll (every 30s)
-        backendStatus.check().then(v => setIsOnline(v));
-        const healthPoll = setInterval(() => backendStatus.check(), 30000);
-
-        // Network connectivity listeners
-        const handleOnline = () => setIsNetworkOnline(true);
-        const handleOffline = () => setIsNetworkOnline(false);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        return () => {
-            unsub();
-            clearInterval(healthPoll);
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, []);
-
-    // Theme toggling logic
-    useEffect(() => {
-        const root = window.document.documentElement;
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-        const updateTheme = () => {
-            const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches);
-            if (isDark) {
-                root.classList.add('dark');
-                if (window.electronAPI?.updateTitleBarOverlay) {
-                    window.electronAPI.updateTitleBarOverlay({
-                        color: '#171717',
-                        symbolColor: '#ececec',
-                        height: 32
-                    });
-                }
-            } else {
-                root.classList.remove('dark');
-                if (window.electronAPI?.updateTitleBarOverlay) {
-                    window.electronAPI.updateTitleBarOverlay({
-                        color: '#FFFFFF',
-                        symbolColor: '#475569',
-                        height: 32
-                    });
-                }
-            }
-        };
-
-        updateTheme();
-        localStorage.setItem('cortex-theme', theme);
-
-        const handleChange = () => { if (theme === 'system') updateTheme(); };
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, [theme]);
-
     useEffect(() => {
         const poll = () => {
             if (window.electronAPI) {
@@ -245,10 +116,6 @@ export default function App() {
         perfPollRef.current = setInterval(poll, 4000);
         return () => clearInterval(perfPollRef.current);
     }, []);
-
-    const showToast = (message, type = 'success') => {
-        setToast({ message, type, id: Date.now() });
-    };
 
     const toggleWs = (id) => {
         setWsExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -288,27 +155,8 @@ export default function App() {
         }
     };
 
-    const handleAuthSuccess = (profile) => {
-        if (profile?.name) {
-            setUsername(profile.name);
-        }
-        localStorage.setItem('cortex-auth-session', 'active');
-        // Persist session to the main-process file so the landing page is
-        // skipped on the next app launch.
-        window.electronAPI?.saveSession?.(profile ?? {});
-        setIsAuthenticated(true);
-        setTimeout(() => showToast('Login successful!', 'success'), 100);
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('cortex-auth-session');
-        localStorage.removeItem('cortex-auth-profile');
-        // Tell main process to delete the session file and reload landing page.
-        window.electronAPI?.logout?.();
-    };
-
     if (!isAuthenticated) {
-        return <AuthPortal onAuthSuccess={handleAuthSuccess} />;
+        return <AuthPortal onAuthSuccess={login} />;
     }
 
     return (

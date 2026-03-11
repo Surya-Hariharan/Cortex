@@ -38,6 +38,15 @@ CREATE TABLE IF NOT EXISTS profiles (
     email        TEXT        UNIQUE
                                  CHECK (email ~* '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$'),
     avatar_url   TEXT        CHECK (avatar_url IS NULL OR char_length(avatar_url) <= 2048),
+    phone        TEXT        UNIQUE CHECK (phone IS NULL OR char_length(phone) <= 20),
+    gender       TEXT        CHECK (gender IS NULL OR char_length(gender) <= 50),
+    location     TEXT        CHECK (location IS NULL OR char_length(location) <= 200),
+    college      TEXT        CHECK (college IS NULL OR char_length(college) <= 500),
+    degree       TEXT        CHECK (degree IS NULL OR char_length(degree) <= 200),
+    course       TEXT        CHECK (course IS NULL OR char_length(course) <= 200),
+    user_type    TEXT        NOT NULL DEFAULT 'Student' 
+                                 CHECK (user_type IN ('Student', 'Alumni')),
+    year_of_study TEXT       CHECK (year_of_study IS NULL OR char_length(year_of_study) <= 50),
     stream       TEXT        CHECK (stream IS NULL OR char_length(stream) <= 200),
     plan         TEXT        NOT NULL DEFAULT 'free'
                                  CHECK (plan IN ('free','pro','enterprise')),

@@ -27,6 +27,8 @@ from app.models.schemas.auth import (
     MessageResponse,
     RegisterRequest,
 )
+from app.sync_engine.event_store import record_event
+from app.models.schemas.sync import SyncEventCreate
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -129,6 +131,23 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.flush()
+
+    # ── Cloud Sync ──────────────────────────────────────────────────────────
+    # Trigger an immediate sync event so Supabase 'profiles' gets metadata.
+    try:
+        await record_event(
+            SyncEventCreate(
+                device_id="local-reg",  # placeholder for registration origin
+                entity_type="user",
+                entity_id=user.id,
+                operation="create",
+                payload=_user_to_profile(user),
+                vector_clock={},
+            ),
+            db
+        )
+    except Exception as exc:
+        log.warning("auth.sync_event_failed", error=str(exc))
 
     log.info("auth.register_success", user_id=user.id, email=user.email)
     return _user_to_profile(user)

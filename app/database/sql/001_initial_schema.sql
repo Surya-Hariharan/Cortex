@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS sync_events (
     id           TEXT PRIMARY KEY,
     device_id    TEXT NOT NULL,
     entity_type  TEXT NOT NULL
-                     CHECK (entity_type IN ('project','document','note','task','chat','message')),
+                     CHECK (entity_type IN ('project','document','note','task','chat','message','user')),
     entity_id    TEXT NOT NULL,
     operation    TEXT NOT NULL CHECK (operation IN ('create','update','delete')),
     payload      TEXT NOT NULL DEFAULT '{}',          -- JSON snapshot of entity

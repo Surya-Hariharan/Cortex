@@ -187,6 +187,8 @@ async def _apply_event(queue_entry, db) -> None:
         await _apply_task(operation, payload, db)
     elif entity_type == "project":
         await _apply_project(operation, payload, db)
+    elif entity_type == "user":
+        await _apply_user(operation, payload, db)
     # Additional entity types can be registered here
 
 
@@ -254,6 +256,34 @@ async def _apply_project(operation: str, payload: dict, db) -> None:
     elif operation in ("create", "update"):
         if existing is None:
             db.add(Project(**{k: v for k, v in payload.items() if hasattr(Project, k)}))
+        else:
+            for k, v in payload.items():
+                if hasattr(existing, k) and k != "id":
+                    setattr(existing, k, v)
+            db.add(existing)
+    await db.flush()
+
+
+async def _apply_user(operation: str, payload: dict, db) -> None:
+    from sqlalchemy import select
+    from app.models.domain.user import User
+
+    user_id = payload.get("id")
+    if not user_id:
+        return
+    existing = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+
+    if operation == "delete":
+        if existing:
+            existing.deleted_at = datetime.utcnow()
+            db.add(existing)
+    elif operation in ("create", "update"):
+        if existing is None:
+            # Map display_name correctly from profile payload if needed
+            data = {k: v for k, v in payload.items() if hasattr(User, k)}
+            if "name" in payload and not data.get("display_name"):
+                data["display_name"] = payload["name"]
+            db.add(User(**data))
         else:
             for k, v in payload.items():
                 if hasattr(existing, k) and k != "id":

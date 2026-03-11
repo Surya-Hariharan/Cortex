@@ -534,7 +534,7 @@ export default function App() {
                     perfProvider={perfProvider}
                     setPerfProvider={setPerfProvider}
                     onToast={showToast}
-                    onLogout={handleLogout}
+                    onLogout={logout}
                 />
                 {/* Delete all chats confirmation */}
                 {showDeleteAllChats && (

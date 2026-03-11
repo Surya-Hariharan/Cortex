@@ -68,6 +68,7 @@ export default function App() {
     const [showZoomBar, setShowZoomBar] = useState(false);
     const zoomHideTimer = useRef(null);
     const [isOnline, setIsOnline] = useState(true);
+    const [isNetworkOnline, setIsNetworkOnline] = useState(window.navigator.onLine);
 
     // On mount, sync with the main-process session file so a returning user
     // who arrives directly (session file exists) is immediately authenticated
@@ -174,7 +175,19 @@ export default function App() {
         // Initial check + periodic health poll (every 30s)
         backendStatus.check().then(v => setIsOnline(v));
         const healthPoll = setInterval(() => backendStatus.check(), 30000);
-        return () => { unsub(); clearInterval(healthPoll); };
+
+        // Network connectivity listeners
+        const handleOnline = () => setIsNetworkOnline(true);
+        const handleOffline = () => setIsNetworkOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            unsub();
+            clearInterval(healthPoll);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
     }, []);
 
     // Theme toggling logic
@@ -294,10 +307,15 @@ export default function App() {
     return (
         <div className="h-screen flex flex-col bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
             {/* Offline Banner */}
-            {!isOnline && (
-                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-500/90 dark:bg-amber-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
+            {!isNetworkOnline ? (
+                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-red-500/90 dark:bg-red-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
                     <WifiOff size={13} />
-                    <span>Offline mode — some features may be limited</span>
+                    <span>No network connection — syncing and AI features are disabled</span>
+                </div>
+            ) : !isOnline && (
+                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-500/90 dark:bg-amber-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <Zap size={13} className="animate-pulse" />
+                    <span>AI features are limited — backend is unreachable</span>
                 </div>
             )}
             <div className="flex flex-1 overflow-hidden">

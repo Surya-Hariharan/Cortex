@@ -39,7 +39,7 @@ class PeerDiscovery:
     ) -> None:
         self._device_id = device_id
         self._display_name = display_name
-        self._port = port or settings.MESH_UDP_PORT
+        self._port = port or settings.MESH_WS_PORT
         self._zeroconf = None
         self._service_info = None
         self._browser = None
@@ -83,32 +83,41 @@ class PeerDiscovery:
             return
 
         if state_change == ServiceStateChange.Added:
-            info = zeroconf.get_service_info(service_type, name)
-            if info:
-                device_id = info.properties.get(b"device_id", b"").decode()
-                display_name = info.properties.get(b"display_name", b"unknown").decode()
-                if device_id and device_id != self._device_id:
-                    addr = socket.inet_ntoa(info.addresses[0]) if info.addresses else "unknown"
-                    peer = PeerInfo(
-                        peer_id=name,
-                        device_id=device_id,
-                        display_name=display_name,
-                        ip_address=addr,
-                        port=info.port,
-                        last_seen=datetime.utcnow(),
-                        is_connected=True,
-                    )
-                    with self._lock:
-                        self._peers[device_id] = peer
-                    logger.info("Peer discovered", device_id=device_id, ip=addr)
+            try:
+                info = zeroconf.get_service_info(service_type, name)
+                if info:
+                    device_id = info.properties.get(b"device_id", b"").decode()
+                    display_name = info.properties.get(b"display_name", b"unknown").decode()
+                    if device_id and device_id != self._device_id:
+                        addr = socket.inet_ntoa(info.addresses[0]) if info.addresses else "unknown"
+                        peer = PeerInfo(
+                            peer_id=name,
+                            device_id=device_id,
+                            display_name=display_name,
+                            ip_address=addr,
+                            port=info.port,
+                            last_seen=datetime.utcnow(),
+                            is_connected=True,
+                        )
+                        with self._lock:
+                            self._peers[device_id] = peer
+                        logger.info("Peer discovered", device_id=device_id, ip=addr)
+            except Exception:
+                # Handle NotRunningException or other errors during shutdown
+                pass
 
         elif state_change == ServiceStateChange.Removed:
-            info = zeroconf.get_service_info(service_type, name)
-            if info:
-                device_id = info.properties.get(b"device_id", b"").decode()
-                with self._lock:
-                    self._peers.pop(device_id, None)
-                logger.info("Peer removed", device_id=device_id)
+            # For removal, we don't strictly need get_service_info if we can extract id from name,
+            # but we'll just handle the potential failure here.
+            try:
+                info = zeroconf.get_service_info(service_type, name)
+                if info:
+                    device_id = info.properties.get(b"device_id", b"").decode()
+                    with self._lock:
+                        self._peers.pop(device_id, None)
+                    logger.info("Peer removed", device_id=device_id)
+            except Exception:
+                pass
 
     def get_peers(self) -> List[PeerInfo]:
         with self._lock:

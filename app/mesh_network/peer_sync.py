@@ -45,7 +45,7 @@ class PeerSyncServer:
 
     def __init__(self, host: str = "0.0.0.0", port: int | None = None) -> None:
         self._host = host
-        self._port = port or settings.MESH_UDP_PORT
+        self._port = port or settings.MESH_WS_PORT
         self._server = None
 
     async def start(self) -> None:

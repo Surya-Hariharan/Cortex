@@ -33,7 +33,22 @@ function findPython() {
     }) || 'python';
 }
 
-function startPythonBackend() {
+async function startPythonBackend() {
+    // Check if something is already running on the port
+    const isRunning = await new Promise(resolve => {
+        const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
+            res.resume();
+            resolve(res.statusCode < 500);
+        });
+        req.on('error', () => resolve(false));
+        req.setTimeout(500, () => { req.destroy(); resolve(false); });
+    });
+
+    if (isRunning) {
+        console.log(`[Cortex] Backend already running on port ${BACKEND_PORT}, skipping spawn.`);
+        return;
+    }
+
     const root = path.join(__dirname, '../../../');
     const py = findPython();
     console.log('[Cortex] Starting Python backend with:', py);

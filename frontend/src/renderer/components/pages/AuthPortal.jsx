@@ -113,6 +113,7 @@ export default function AuthPortal({ onAuthSuccess }) {
     const [signinPassword, setSigninPassword] = useState('');
 
     const [resetEmail, setResetEmail] = useState('');
+    const [resetOtp, setResetOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -264,7 +265,7 @@ export default function AuthPortal({ onAuthSuccess }) {
                         return;
                     }
                 }
-                setError('Backend is offline and no cached credentials found.');
+                setError('Cannot reach the server. Please ensure the app is fully started.');
                 return;
             }
 
@@ -272,22 +273,19 @@ export default function AuthPortal({ onAuthSuccess }) {
                 const profile = res.data;
                 localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
                 localStorage.setItem('cortex-auth-session', 'active');
+                // If backend flagged a required password change, go straight to OTP reset
+                if (profile.must_change_password) {
+                    setResetEmail(signinEmail);
+                    setSuccessMsg('Your password must be changed. Check your email for a reset code.');
+                    switchMode('forgot_otp');
+                    return;
+                }
                 onAuthSuccess?.(profile);
             } else {
                 setError(res.data?.detail || 'Invalid credentials.');
             }
         } catch {
-            // Offline fallback
-            const raw = localStorage.getItem('cortex-auth-profile');
-            if (raw) {
-                const profile = JSON.parse(raw);
-                if (profile.email === signinEmail && profile.password === signinPassword) {
-                    localStorage.setItem('cortex-auth-session', 'active');
-                    onAuthSuccess?.(profile);
-                    return;
-                }
-            }
-            setError('Server unreachable. Please check your connection.');
+            setError('Cannot reach the server. Please ensure the app is fully started.');
         } finally {
             setLoading(false);
         }
@@ -310,53 +308,64 @@ export default function AuthPortal({ onAuthSuccess }) {
             });
 
             if (!res || res.status === 0) {
-                setError('Backend is offline. Cannot reset password without server.');
+                setError('Cannot reach the server. Please ensure the app is fully started.');
                 return;
             }
 
-            if (res.status === 200) {
-                setSuccessMsg(res.data?.message || 'A temporary password has been sent to your email.');
-                setSigninEmail(resetEmail);
-                switchMode('signin');
-            } else {
-                setError(res.data?.detail || 'Could not reset password.');
-            }
+            // Always 200 from backend (enumeration prevention) — move to OTP entry
+            setSuccessMsg(res.data?.message || 'Check your email for the reset code.');
+            switchMode('forgot_otp');
         } catch {
-            setError('Server error. Please try again.');
+            setError('Cannot reach the server. Please try again.');
         } finally {
             setLoading(false);
         }
     }
 
-    // Reset password via manual new-password form (kept for UI flow)
-    function handleResetPassword(e) {
+    async function handleResetWithOtp(e) {
         e.preventDefault();
         setError('');
-        setSuccessMsg('');
 
-        if (!newPassword || !confirmPassword) {
-            setError('Please fill in all fields.');
+        if (!resetOtp || resetOtp.length !== 8) {
+            setError('Please enter the 8-character code from your email.');
             return;
         }
-
+        if (!newPassword || newPassword.length < 8) {
+            setError('Password must be at least 8 characters.');
+            return;
+        }
         if (newPassword !== confirmPassword) {
             setError('Passwords do not match.');
             return;
         }
 
-        const raw = localStorage.getItem('cortex-auth-profile');
-        if (!raw) {
-            setError('Session expired or account not found.');
-            return;
+        setLoading(true);
+        try {
+            const res = await window.electronAPI?.authResetPassword({
+                token: resetOtp.toUpperCase().trim(),
+                new_password: newPassword,
+            });
+
+            if (!res || res.status === 0) {
+                setError('Cannot reach the server. Please ensure the app is fully started.');
+                return;
+            }
+
+            if (res.status === 200) {
+                setResetOtp('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setSuccessMsg(res.data?.message || 'Password reset! You can now log in.');
+                setSigninEmail(resetEmail);
+                switchMode('reset_success');
+            } else {
+                setError(res.data?.detail || 'Reset failed. Check your code and try again.');
+            }
+        } catch {
+            setError('Cannot reach the server. Please try again.');
+        } finally {
+            setLoading(false);
         }
-
-        const profile = JSON.parse(raw);
-        profile.password = newPassword;
-        localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
-
-        setSigninEmail(profile.email);
-        setSigninPassword('');
-        setMode('reset_success');
     }
 
     return (
@@ -471,14 +480,15 @@ export default function AuthPortal({ onAuthSuccess }) {
                                     <Lock size={18} />
                                     Reset Password
                                 </div>
-                                <p className="text-sm text-slate-500 dark:text-dark-400">Enter your registered email address and we'll securely send you a link to reset your password.</p>
+                                <p className="text-sm text-slate-500 dark:text-dark-400">Enter your registered email. We'll send an 8-character reset code valid for 15 minutes.</p>
 
                                 <InputField label="Registered Email" value={resetEmail} onChange={setResetEmail} type="email" placeholder="name@gmail.com" />
 
                                 {error && <p className="text-sm font-medium text-red-500">{error}</p>}
 
-                                <button type="submit" className="w-full mt-2 rounded-xl bg-synapse-600 hover:bg-synapse-700 text-white py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors">
-                                    Send Reset Link <ArrowRight size={16} />
+                                <button type="submit" disabled={loading} className="w-full mt-2 rounded-xl bg-synapse-600 hover:bg-synapse-700 disabled:opacity-60 text-white py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors">
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                    Send Reset Code <ArrowRight size={16} />
                                 </button>
 
                                 <div className="text-center mt-4 pt-2">
@@ -489,22 +499,46 @@ export default function AuthPortal({ onAuthSuccess }) {
                             </form>
                         )}
 
-                        {mode === 'reset_password' && (
-                            <form className="space-y-4" onSubmit={handleResetPassword}>
+                        {mode === 'forgot_otp' && (
+                            <form className="space-y-4" onSubmit={handleResetWithOtp}>
                                 <div className="flex items-center gap-2 text-slate-800 dark:text-dark-100 font-bold text-lg mb-2">
                                     <Lock size={18} />
-                                    Create New Password
+                                    Enter Reset Code
                                 </div>
-                                <p className="text-sm text-slate-500 dark:text-dark-400 mb-2">Enter your new secure password for Cortex.</p>
+                                <p className="text-sm text-slate-500 dark:text-dark-400">
+                                    Enter the 8-character code sent to <strong>{resetEmail || 'your email'}</strong> and choose a new password.
+                                </p>
 
-                                <InputField label="New Password" value={newPassword} onChange={setNewPassword} type="password" placeholder="Create new password" />
-                                <InputField label="Confirm Password" value={confirmPassword} onChange={setConfirmPassword} type="password" placeholder="Confirm new password" />
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-semibold tracking-wide text-slate-500 dark:text-dark-400 uppercase">Reset Code</span>
+                                    <input
+                                        type="text"
+                                        value={resetOtp}
+                                        onChange={e => setResetOtp(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+                                        placeholder="e.g. AB3K9PQR"
+                                        maxLength={8}
+                                        className="w-full rounded-xl border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-900 px-3 py-2.5 text-sm font-mono font-bold tracking-[0.2em] text-slate-800 dark:text-dark-100 placeholder-slate-400 dark:placeholder-dark-500 outline-none focus:ring-2 focus:ring-synapse-500/30 uppercase"
+                                    />
+                                </label>
+
+                                <InputField label="New Password" value={newPassword} onChange={setNewPassword} type="password" placeholder="Min 8 characters" />
+                                <InputField label="Confirm Password" value={confirmPassword} onChange={setConfirmPassword} type="password" placeholder="Repeat new password" />
 
                                 {error && <p className="text-sm font-medium text-red-500">{error}</p>}
 
-                                <button type="submit" className="w-full mt-4 rounded-xl bg-synapse-600 hover:bg-synapse-700 text-white py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors">
-                                    Update Password <ArrowRight size={16} />
+                                <button type="submit" disabled={loading} className="w-full mt-2 rounded-xl bg-synapse-600 hover:bg-synapse-700 disabled:opacity-60 text-white py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors">
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                    Set New Password <ArrowRight size={16} />
                                 </button>
+
+                                <div className="flex justify-between mt-2 text-sm">
+                                    <button type="button" className="font-semibold text-slate-500 hover:text-slate-800 dark:text-dark-400 dark:hover:text-dark-100 transition-colors" onClick={() => switchMode('forgot_password')}>
+                                        ← Resend Code
+                                    </button>
+                                    <button type="button" className="font-semibold text-slate-500 hover:text-slate-800 dark:text-dark-400 dark:hover:text-dark-100 transition-colors" onClick={() => switchMode('signin')}>
+                                        Back to Sign In
+                                    </button>
+                                </div>
                             </form>
                         )}
 

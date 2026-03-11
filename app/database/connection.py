@@ -95,7 +95,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Create all tables (if not exists) on startup."""
     from app.models.domain import (  # noqa: F401 — side-effect imports
-        chat, document, note, project, sync, task, user,
+        chat, document, note, project, sync, task, user,  # user includes PasswordResetToken
     )
     from app.database.schema_bootstrap import bootstrap_operational_schema
 

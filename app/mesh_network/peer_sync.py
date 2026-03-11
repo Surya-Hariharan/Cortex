@@ -141,13 +141,18 @@ async def push_to_peer(peer_ip: str, peer_port: int, events: list) -> bool:
         return False
 
 
-async def _fetch_events_for_peer(sender_id: str, since: Optional[datetime]) -> list:
+async def _fetch_events_for_peer(sender_id: str, since: Optional[datetime], limit: int = 100) -> tuple[list, bool]:
     """Fetch local sync events to send to a requesting peer."""
     from app.database.connection import get_db_context
     from app.sync_engine.event_store import get_events_since
 
     async with get_db_context() as db:
-        events = await get_events_since(since=since, db=db, device_id=sender_id)
+        # Request limit + 1 to check if there are more
+        events = await get_events_since(since=since, db=db, device_id=sender_id, limit=limit + 1)
+        has_more = len(events) > limit
+        if has_more:
+            events = events[:limit]
+
         return [
             {
                 "id": e.id,
@@ -160,7 +165,7 @@ async def _fetch_events_for_peer(sender_id: str, since: Optional[datetime]) -> l
                 "created_at": e.created_at.isoformat(),
             }
             for e in events
-        ]
+        ], has_more
 
 
 async def _ingest_remote_events(raw_events: list) -> None:

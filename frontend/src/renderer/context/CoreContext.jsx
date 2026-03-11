@@ -50,8 +50,18 @@ export const CoreProvider = ({ children }) => {
     // Backend health polling
     useEffect(() => {
         const unsub = backendStatus.subscribe(v => setIsOnline(v));
-        backendStatus.check().then(v => setIsOnline(v));
+
+        // Delay the very first check by 3 s so we don't flash "offline"
+        // before the Python backend has had time to bind its port.
+        const initialCheck = setTimeout(() => backendStatus.check().then(v => setIsOnline(v)), 3000);
         const healthPoll = setInterval(() => backendStatus.check(), 30000);
+
+        // React immediately when Electron's main process confirms backend is up
+        // (fires once after waitForBackend() resolves in main.js).
+        const unsubElectron = window.electronAPI?.onBackendStatus?.(({ ready }) => {
+            setIsOnline(ready);
+            if (ready) backendStatus._set(true);
+        });
 
         const handleOnline = () => setIsNetworkOnline(true);
         const handleOffline = () => setIsNetworkOnline(false);
@@ -60,7 +70,9 @@ export const CoreProvider = ({ children }) => {
 
         return () => {
             unsub();
+            clearTimeout(initialCheck);
             clearInterval(healthPoll);
+            unsubElectron?.();
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };

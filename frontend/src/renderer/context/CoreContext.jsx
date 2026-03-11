@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { backendStatus } from '../services/api.js';
+import { backendStatus } from '../../services/api.js';
 
 const CoreContext = createContext();
 

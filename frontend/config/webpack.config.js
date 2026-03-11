@@ -2,8 +2,10 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
+const isProd = process.env.NODE_ENV === 'production';
+
 module.exports = {
-  mode: 'development',
+  mode: isProd ? 'production' : 'development',
   entry: './src/renderer/index.jsx',
   target: 'web',
   output: {
@@ -58,5 +60,5 @@ module.exports = {
       filename: 'styles.css',
     }),
   ],
-  devtool: 'source-map',
+  devtool: isProd ? false : 'source-map',
 };

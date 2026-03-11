@@ -35,7 +35,7 @@ export const backendStatus = {
     },
     async check() {
         try {
-            const res = await fetch(`${BASE}/system/health`, { signal: AbortSignal.timeout(2000) });
+            const res = await fetch(`${BASE}/system/health`, { signal: AbortSignal.timeout(5000) });
             this._set(res.ok);
         } catch {
             this._set(false);

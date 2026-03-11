@@ -307,15 +307,10 @@ export default function App() {
     return (
         <div className="h-screen flex flex-col bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
             {/* Offline Banner */}
-            {!isNetworkOnline ? (
-                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-red-500/90 dark:bg-red-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
-                    <WifiOff size={13} />
-                    <span>No network connection — syncing and AI features are disabled</span>
-                </div>
-            ) : !isOnline && (
+            {(!isNetworkOnline || !isOnline) && (
                 <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-500/90 dark:bg-amber-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
-                    <Zap size={13} className="animate-pulse" />
-                    <span>AI features are limited — backend is unreachable</span>
+                    <WifiOff size={13} />
+                    <span>Offline mode — check your connectivity</span>
                 </div>
             )}
             <div className="flex flex-1 overflow-hidden">

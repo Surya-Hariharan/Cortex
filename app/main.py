@@ -4,6 +4,7 @@ Team SynapseX | Offline-first AI operating layer for AMD Ryzen AI edge devices.
 """
 
 # ── Bcrypt monkeypatch for passlib 1.7.4 compatibility ───────────────────────
+# Must run BEFORE any passlib import so the patched hashpw is seen everywhere.
 import bcrypt
 
 if not hasattr(bcrypt, "__about__"):
@@ -12,15 +13,28 @@ if not hasattr(bcrypt, "__about__"):
         __version__ = getattr(bcrypt, "__version__", "4.0.0")
     bcrypt.__about__ = BcryptAbout()
 
-# bcrypt 4.x throws ValueError for passwords > 72 bytes.
-# passlib 1.7.4's internal bug detection triggers this.
-# We wrap hashpw to truncate to 72 bytes, restoring legacy behavior.
+# bcrypt 4.x raises ValueError for passwords > 72 bytes.
+# passlib's detect_wrap_bug() AND our own hash/verify both hit this path.
+# Patch hashpw AND checkpw to silently truncate, restoring bcrypt 3.x behaviour.
 _orig_hashpw = bcrypt.hashpw
-def _patched_hashpw(password, salt):
-    if len(password) > 72:
-        password = password[:72]
-    return _orig_hashpw(password, salt)
+_orig_checkpw = bcrypt.checkpw
+
+def _patched_hashpw(password: bytes, salt: bytes) -> bytes:
+    return _orig_hashpw(password[:72], salt)
+
+def _patched_checkpw(password: bytes, hashed: bytes) -> bool:
+    return _orig_checkpw(password[:72], hashed)
+
 bcrypt.hashpw = _patched_hashpw
+bcrypt.checkpw = _patched_checkpw
+
+# Also patch the reference that passlib's bcrypt handler already captured at
+# import time — passlib stores a module-level alias to bcrypt.hashpw.
+try:
+    import passlib.handlers.bcrypt as _passlib_bcrypt
+    _passlib_bcrypt._bcrypt = bcrypt  # type: ignore[attr-defined]
+except Exception:
+    pass
 
 import asyncio
 import time

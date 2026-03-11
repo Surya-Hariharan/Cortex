@@ -1,6 +1,6 @@
 """FAISS vector store wrapper.
 
-Manages a flat IndexFlatIP (inner-product / cosine when vectors are L2-normalised)
+Manages an IndexHNSWFlat (inner-product / cosine when vectors are L2-normalised)
 index persisted to disk alongside chunk-ID → FAISS-row-id mappings.
 
 Usage::
@@ -45,7 +45,12 @@ class VectorStore:
     def _ensure_index(self) -> None:
         if self._index is None:
             import faiss  # type: ignore
-            self._index = faiss.IndexFlatIP(self._dim)
+            # HNSW (Hierarchical Navigable Small World) for sub-millisecond search at scale.
+            # M=32: Number of neighbors for each node.
+            # Metric: Inner Product (IP), assumes vectors are L2-normalized.
+            self._index = faiss.IndexHNSWFlat(self._dim, 32, faiss.METRIC_INNER_PRODUCT)
+            self._index.hnsw.efConstruction = 40
+            self._index.hnsw.efSearch = 32
 
     def load(self) -> None:
         """Load index + map from disk (no-op if files absent)."""
@@ -145,7 +150,8 @@ class VectorStore:
 
         keep_ids = [self._row_to_chunk[r] for r in rows_to_keep]
         with self._lock:
-            self._index = faiss.IndexFlatIP(self._dim)
+            self._index = None
+            self._ensure_index()
             self._row_to_chunk = {}
             self._chunk_to_row = {}
             self.add(existing_vecs, keep_ids)

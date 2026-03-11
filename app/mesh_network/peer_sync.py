@@ -100,12 +100,13 @@ class PeerSyncServer:
 
         elif msg.type == MessageType.SYNC_REQUEST:
             since_str = msg.payload.get("since")
+            limit = msg.payload.get("limit", 100)
             since = datetime.fromisoformat(since_str) if since_str else None
-            events = await _fetch_events_for_peer(msg.sender_id, since)
+            events, has_more = await _fetch_events_for_peer(msg.sender_id, since, limit)
             response = MeshMessage(
                 type=MessageType.SYNC_RESPONSE,
                 sender_id="local",
-                payload={"events": events},
+                payload={"events": events, "has_more": has_more},
             )
             await websocket.send(response.to_json())
 

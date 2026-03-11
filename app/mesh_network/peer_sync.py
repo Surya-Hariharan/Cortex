@@ -304,25 +304,42 @@ async def _sync_with_peer(peer, our_events: list) -> None:
 
     try:
         async with websockets.connect(uri, open_timeout=5, close_timeout=5) as ws:
-            # 1. Request events from peer since our last cursor
-            req = MeshMessage(
-                type=MessageType.SYNC_REQUEST,
-                sender_id="local",
-                payload={"since": since.isoformat() if since else None},
-            )
-            await ws.send(req.to_json())
-            raw = await asyncio.wait_for(ws.recv(), timeout=10)
-            resp = MeshMessage.from_json(raw)
+            # 1. Pull events from peer in batches
+            while True:
+                req = MeshMessage(
+                    type=MessageType.SYNC_REQUEST,
+                    sender_id="local",
+                    payload={
+                        "since": since.isoformat() if since else None,
+                        "limit": 100
+                    },
+                )
+                await ws.send(req.to_json())
+                raw = await asyncio.wait_for(ws.recv(), timeout=10)
+                resp = MeshMessage.from_json(raw)
 
-            if resp.type == MessageType.SYNC_RESPONSE:
-                remote_events = resp.payload.get("events", [])
-                if remote_events:
-                    await _ingest_remote_events(remote_events)
-                    logger.debug("Pulled from peer", peer_id=peer_id, count=len(remote_events))
-                ack = MeshMessage(type=MessageType.SYNC_ACK, sender_id="local")
-                await ws.send(ack.to_json())
+                if resp.type == MessageType.SYNC_RESPONSE:
+                    remote_events = resp.payload.get("events", [])
+                    has_more = resp.payload.get("has_more", False)
+                    if remote_events:
+                        await _ingest_remote_events(remote_events)
+                        logger.debug("Pulled batch from peer", peer_id=peer_id, count=len(remote_events))
+                        # Update local 'since' for the next loop iteration
+                        try:
+                            last_ts = remote_events[-1]["created_at"]
+                            since = datetime.fromisoformat(last_ts)
+                        except Exception:
+                            break
+                    
+                    ack = MeshMessage(type=MessageType.SYNC_ACK, sender_id="local")
+                    await ws.send(ack.to_json())
+                    
+                    if not has_more:
+                        break
+                else:
+                    break
 
-            # 2. Push our own pending events
+            # 2. Push our own pending events (one batch)
             if our_events:
                 push_msg = MeshMessage(
                     type=MessageType.SYNC_RESPONSE,
@@ -335,7 +352,7 @@ async def _sync_with_peer(peer, our_events: list) -> None:
                 if ack2.type == MessageType.SYNC_ACK:
                     logger.debug("Pushed to peer", peer_id=peer_id, count=len(our_events))
 
-            # Update cursor
+            # Update final cursor
             _peer_cursors[peer_id] = datetime.now(timezone.utc)
 
     except Exception as exc:

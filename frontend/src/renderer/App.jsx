@@ -24,6 +24,13 @@ const TABS = [
     { id: 'ai-engine', label: 'AI Engine', icon: <Cpu size={18} /> },
 ];
 
+const MemoHomePage = React.memo(HomePage);
+const MemoKnowledge = React.memo(Knowledge);
+const MemoWorkspace = React.memo(Workspace);
+const MemoCampus = React.memo(Campus);
+const MemoActivity = React.memo(Activity);
+const MemoAIEngine = React.memo(AIEngine);
+
 const MOCK_PROJECTS = [];
 
 const MOCK_INDEPENDENT_CHATS = [];

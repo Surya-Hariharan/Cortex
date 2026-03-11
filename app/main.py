@@ -49,9 +49,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.limiter import limiter, _rate_limit_exceeded_handler
 from app.database.connection import close_db, init_db
 from app.rag.vector_store import vector_store
 from app.api.v1.router import api_router
+from slowapi.errors import RateLimitExceeded
 
 logger = get_logger(__name__)
 
@@ -279,6 +281,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Rate Limiter ──────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(api_router)

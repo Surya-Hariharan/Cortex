@@ -339,6 +339,14 @@ function registerIpcHandlers() {
         }
     });
 
+    ipcMain.handle('auth-reset-password', async (_e, body) => {
+        try {
+            return await postToBackend('/api/v1/auth/reset-password', body);
+        } catch (err) {
+            return { status: 0, data: { detail: 'Backend is not running.' } };
+        }
+    });
+
     ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
     ipcMain.on('zoom-out', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
     ipcMain.on('zoom-reset', () => { if (!mainWindow) return; broadcastZoom(1.0); });

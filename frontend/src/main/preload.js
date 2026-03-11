@@ -47,4 +47,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     authRegister: (data) => ipcRenderer.invoke('auth-register', data),
     authLogin: (data) => ipcRenderer.invoke('auth-login', data),
     authForgotPassword: (data) => ipcRenderer.invoke('auth-forgot-password', data),
+    authResetPassword: (data) => ipcRenderer.invoke('auth-reset-password', data),
 });

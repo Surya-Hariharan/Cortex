@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
         from app.mesh_network.peer_sync import mesh_server
 
         await mesh_server.start()
-        logger.info("cortex.mesh_ws_started", port=settings.MESH_WS_PORT)
+        logger.info("cortex.mesh_ws_started", port=mesh_server._port)
     except Exception as exc:  # noqa: BLE001
         logger.warning("cortex.mesh_ws_failed", error=str(exc))
 

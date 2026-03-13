@@ -55,10 +55,21 @@ class PeerSyncServer:
             logger.warning("websockets not installed — mesh server disabled")
             return
 
-        self._server = await websockets.serve(
-            self._handle_connection, self._host, self._port
-        )
-        logger.info("MeshSyncServer listening", host=self._host, port=self._port)
+        last_exc: Exception | None = None
+        for attempt in range(10):
+            port = self._port + attempt
+            try:
+                self._server = await websockets.serve(
+                    self._handle_connection, self._host, port
+                )
+                self._port = port  # remember the actual port in use
+                logger.info("MeshSyncServer listening", host=self._host, port=port)
+                return
+            except OSError as exc:
+                last_exc = exc
+                logger.debug("Mesh WS port in use, trying next", port=port)
+
+        raise OSError(f"Could not bind mesh WebSocket after 10 attempts: {last_exc}") from last_exc
 
     async def stop(self) -> None:
         if self._server:

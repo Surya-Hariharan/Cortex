@@ -48,61 +48,62 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
     const fileInputRef = useRef(null);
 
     useEffect(() => {
-        if (step === 4 && uploadData.type === 'Handwritten Scan') {
-            simulateOCR();
-        } else if (step === 4) {
-            // Skip OCR for typed notes but show "Analyzing"
-            simulateAnalysis();
+        if (step === 4) {
+            runUpload();
         }
     }, [step]);
 
-    const simulateOCR = () => {
+    const runUpload = async () => {
+        if (!uploadData.file) return;
         setIsProcessing(true);
         setOcrProgress(0);
         setOcrText('');
+        setUploadError(null);
 
+        // Show progress while backend processes
         const lines = [
-            'Detecting handwriting zones...',
-            'Normalizing contrast...',
-            'Extracting core features: [Kernel, Scheduling, Priority]',
-            'Mapping to Subject: Operating Systems',
-            'Finalizing text extraction...'
+            'Sending to ingestion pipeline...',
+            'Extracting text content...',
+            'Generating embeddings...',
+            'Building vector index...',
+            'Finalizing...',
         ];
-
-        let currentLine = 0;
-        const interval = setInterval(() => {
+        let lineIdx = 0;
+        const progressInterval = setInterval(() => {
             setOcrProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(interval);
-                    setIsProcessing(false);
-                    return 100;
-                }
-                return prev + 2;
-            });
-
-            if (currentLine < lines.length && Math.random() > 0.7) {
-                setOcrText(prev => prev + '\n' + lines[currentLine]);
-                currentLine++;
-            }
-        }, 100);
-    };
-
-    const simulateAnalysis = () => {
-        setIsProcessing(true);
-        setOcrProgress(0);
-        const interval = setInterval(() => {
-            setOcrProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(interval);
-                    setIsProcessing(false);
-                    return 100;
-                }
+                if (prev >= 90) return prev; // Hold at 90% until API responds
                 return prev + 5;
             });
-        }, 100);
+            if (lineIdx < lines.length) {
+                setOcrText(prev => prev + (prev ? '\n' : '') + lines[lineIdx]);
+                lineIdx++;
+            }
+        }, 400);
+
+        try {
+            const userId = getUserId() || 'local-user';
+            await documentsApi.upload(uploadData.file, userId);
+            clearInterval(progressInterval);
+            setOcrProgress(100);
+            setIsProcessing(false);
+            onUploadSuccess?.();
+        } catch (err) {
+            clearInterval(progressInterval);
+            setOcrProgress(0);
+            setIsProcessing(false);
+            setUploadError(err.message || 'Upload failed. Please check the backend is running.');
+        }
     };
 
     if (!isOpen) return null;
+
+    const handleFileSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setUploadData({ ...uploadData, file, title: file.name.replace(/\.[^/.]+$/, '') });
+            setStep(2);
+        }
+    };
 
     const handleFileDrop = (e) => {
         e.preventDefault();
@@ -120,6 +121,15 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-white dark:bg-dark-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200/60 dark:border-dark-800/60 overflow-hidden animate-scale-in">
+
+                {/* Hidden file input */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                />
 
                 {/* Modal Header */}
                 <div className="px-8 py-6 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between bg-slate-50/50 dark:bg-dark-950/30">
@@ -174,7 +184,9 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
                                 <p className="text-sm text-slate-500 dark:text-dark-400 text-center mb-8 max-w-xs">
                                     Support PDF and DOCX files. Handwritten scans are automatically processed with OCR.
                                 </p>
-                                <button className="px-6 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-100 dark:shadow-none">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-6 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-100 dark:shadow-none">
                                     Browse Files
                                 </button>
                             </div>
@@ -289,7 +301,11 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
                         <div className="h-full flex flex-col items-center justify-center animate-fade-in">
                             <div className="relative mb-8">
                                 <div className="w-24 h-24 rounded-3xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-synapse-600 dark:text-synapse-400">
-                                    {isProcessing ? <Loader2 size={40} className="animate-spin" /> : <CheckCircle2 size={40} className="text-emerald-500" />}
+                                    {isProcessing
+                                        ? <Loader2 size={40} className="animate-spin" />
+                                        : uploadError
+                                            ? <AlertCircle size={40} className="text-red-500" />
+                                            : <CheckCircle2 size={40} className="text-emerald-500" />}
                                 </div>
                                 {isProcessing && (
                                     <div className="absolute -bottom-2 -right-2 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-lg px-2 py-1 shadow-sm">
@@ -299,10 +315,10 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
                             </div>
 
                             <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-2">
-                                {isProcessing ? 'On-Device Processing...' : 'Analysis Complete'}
+                                {isProcessing ? 'On-Device Processing...' : uploadError ? 'Upload Failed' : 'Analysis Complete'}
                             </h3>
                             <p className="text-sm text-slate-500 dark:text-dark-400 mb-8 max-w-xs text-center">
-                                Cortex is currently {uploadData.type === 'Handwritten Scan' ? 'extracting text using OCR' : 'analyzing semantics'} and generating embeddings.
+                                {uploadError ? 'Check that the backend server is running and try again.' : `Cortex is currently ${uploadData.type === 'Handwritten Scan' ? 'extracting text using OCR' : 'analyzing semantics'} and generating embeddings.`}
                             </p>
 
                             <div className="w-full max-w-sm space-y-4">
@@ -313,7 +329,14 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
                                     />
                                 </div>
 
-                                {uploadData.type === 'Handwritten Scan' && (
+                                {uploadError && (
+                                    <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                                        <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                                        <p className="text-xs text-red-600 dark:text-red-400">{uploadError}</p>
+                                    </div>
+                                )}
+
+                                {ocrText && (
                                     <div className="bg-dark-950 p-4 rounded-xl border border-dark-800 font-mono text-[10px] text-emerald-400/80 max-h-32 overflow-y-auto w-full">
                                         <div className="flex items-center gap-2 mb-2 text-dark-500 font-bold border-b border-dark-800 pb-2">
                                             <AlertCircle size={10} /> LOCAL_ENGINE_LOGS
@@ -337,7 +360,7 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
                             </p>
 
                             <div className="flex gap-3">
-                                <button className="px-6 py-2.5 bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-700 dark:text-dark-200 text-sm font-bold rounded-xl transition-all">
+                                <button onClick={onClose} className="px-6 py-2.5 bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-700 dark:text-dark-200 text-sm font-bold rounded-xl transition-all">
                                     View Note
                                 </button>
                                 <button
@@ -364,11 +387,11 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
 
                     {step !== 1 && step !== 5 && (
                         <button
-                            onClick={nextStep}
-                            disabled={isProcessing}
+                            onClick={step === 4 && uploadError ? runUpload : nextStep}
+                            disabled={isProcessing || (step === 4 && !uploadError && ocrProgress < 100)}
                             className="flex items-center gap-2 pl-6 pr-4 py-2 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-synapse-100 dark:shadow-none disabled:opacity-50"
                         >
-                            {step === 4 ? 'Finalize' : 'Continue'} <ChevronRight size={16} />
+                            {step === 4 ? (uploadError ? 'Retry' : 'Finalize') : 'Continue'} <ChevronRight size={16} />
                         </button>
                     )}
                 </div>

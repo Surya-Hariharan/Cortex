@@ -71,9 +71,26 @@ export default function DocumentStatus() {
             setIndexedDocs(docs.filter(d => d.status === 'indexed' || d.status === 'completed'));
             setQueueDocs(docs.filter(d => d.status === 'processing' || d.status === 'pending'));
             setFailedDocs(docs.filter(d => d.status === 'failed' || d.status === 'error'));
+            // Sync paused state from backend
+            const sched = h?.subsystems?.task_scheduler;
+            if (sched?.paused !== undefined) setIsPaused(sched.paused);
         } catch (_) {}
         setLoading(false);
     }, []);
+
+    const togglePause = async () => {
+        try {
+            if (isPaused) {
+                await systemApi.resumeScheduler();
+            } else {
+                await systemApi.pauseScheduler();
+            }
+            setIsPaused(p => !p);
+        } catch (err) {
+            console.warn('Failed to toggle pipeline pause:', err);
+            setIsPaused(p => !p); // optimistic anyway
+        }
+    };
 
     useEffect(() => { loadData(); }, [loadData]);
 
@@ -100,7 +117,7 @@ export default function DocumentStatus() {
                             <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
                         </button>
                         <button
-                            onClick={() => setIsPaused(!isPaused)}
+                            onClick={togglePause}
                             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${isPaused
                                 ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
                                 : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'

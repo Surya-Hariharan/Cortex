@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Zap, Activity, Shield, Cpu, Monitor, Globe, BarChart3, Clock, CheckCircle2, AlertCircle, Play, Square, Terminal, Network, Droplets, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { system as systemApi } from '../../services/api.js';
 import { useCore } from '../context/CoreContext.jsx';
-
-// Realistic baselines for comparison
 const CLOUD_API_MS = 847;
 const CPU_BASELINE_MS = 41;
 
@@ -126,6 +124,8 @@ export default function PerformanceTab() {
         ocr: [],
         embed: []
     });
+    // Holds latest real resource values from backend (updated every 2s)
+    const realResRef = useRef({ cpu: 7, mem: 450 });
 
     // Poll system health for live perf stats
     useEffect(() => {

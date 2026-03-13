@@ -56,6 +56,9 @@ const VisibilityBadge = ({ type }) => {
 
 export default function MyContributions() {
     const [contributions, setContributions] = useState([]);
+    const [activeRange, setActiveRange] = useState('7d');
+    const [stats, setStats] = useState({ total_uploads: 0, total_chunks: 0, total_shared: 0, total_notes: 0 });
+    const [chartData, setChartData] = useState({ labels: [], values: [], max: 0, total: 0 });
 
     useEffect(() => {
         const userId = getUserId();
@@ -74,7 +77,14 @@ export default function MyContributions() {
                 date: n.created_at ? new Date(n.created_at).toLocaleDateString() : '—',
             })));
         }).catch(() => {});
+        activityApi.stats(userId).then(s => setStats(s)).catch(() => {});
     }, []);
+
+    useEffect(() => {
+        const userId = getUserId();
+        if (!userId) return;
+        activityApi.chart(userId, activeRange).then(d => setChartData(d)).catch(() => {});
+    }, [activeRange]);
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2 overflow-y-auto scrollbar-thin">
             {/* Header */}
@@ -104,10 +114,10 @@ export default function MyContributions() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard label="Total Uploads" value={contributions.length} icon={FileText} color="bg-synapse-500" />
+                        <StatCard label="Total Uploads" value={stats.total_uploads} icon={FileText} color="bg-synapse-500" />
                         <StatCard label="Total Downloads" value={contributions.reduce((s, n) => s + (n.downloads || 0), 0)} icon={Download} color="bg-emerald-500" />
                         <StatCard label="Total Views" value={contributions.reduce((s, n) => s + (n.views || 0), 0)} icon={Eye} color="bg-blue-500" />
-                        <StatCard label="Avg Rating" value="—" icon={Star} color="bg-amber-500" />
+                        <StatCard label="AI Chunks" value={stats.total_chunks} icon={Star} color="bg-amber-500" />
                     </div>
 
                     {/* Simple Chart Section */}

@@ -189,6 +189,8 @@ async def _apply_event(queue_entry, db) -> None:
         await _apply_project(operation, payload, db)
     elif entity_type == "user":
         await _apply_user(operation, payload, db)
+    elif entity_type == "document":
+        await _apply_document(operation, payload, db)
     # Additional entity types can be registered here
 
 
@@ -288,6 +290,30 @@ async def _apply_user(operation: str, payload: dict, db) -> None:
             for k, v in payload.items():
                 if hasattr(existing, k) and k != "id":
                     setattr(existing, k, v)
+            db.add(existing)
+    await db.flush()
+
+
+async def _apply_document(operation: str, payload: dict, db) -> None:
+    from sqlalchemy import select
+    from app.models.domain.document import Document
+
+    doc_id = payload.get("id")
+    if not doc_id:
+        return
+    existing = (await db.execute(select(Document).where(Document.id == doc_id))).scalar_one_or_none()
+
+    if operation == "delete":
+        if existing:
+            existing.deleted_at = datetime.utcnow()
+            db.add(existing)
+    elif operation in ("create", "update", "share"):
+        if existing:
+            for k, v in payload.items():
+                if hasattr(existing, k) and k not in ("id", "user_id", "created_at"):
+                    setattr(existing, k, v)
+            if operation == "share":
+                existing.is_shared = 1
             db.add(existing)
     await db.flush()
 

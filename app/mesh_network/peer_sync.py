@@ -92,9 +92,11 @@ class PeerSyncServer:
         # Verify peer signature if the message carries one
         if "signature" in msg.payload:
             try:
+                import base64 as _b64
                 from app.mesh_network.peer_identity import identity
+                raw_bytes = _b64.b64decode(msg.payload.get("payload", b""))
                 identity.verify_message(
-                    raw_message=msg.payload.get("payload", ""),
+                    raw_message=raw_bytes,
                     signature_b64=msg.payload["signature"],
                     sender_peer_id=msg.sender_id,
                     sender_pub_key_b64=msg.payload.get("public_key"),
@@ -105,7 +107,34 @@ class PeerSyncServer:
                 await websocket.send(error.to_json())
                 return
 
-        if msg.type == MessageType.PING:
+        if msg.type == MessageType.HELLO:
+            # TOFU: trust the sender using the public key they announced
+            pub_key = msg.payload.get("public_key", "")
+            if pub_key:
+                try:
+                    from app.mesh_network.peer_identity import identity
+                    identity.trust_peer(msg.sender_id, pub_key)
+                    logger.info("Peer TOFU-trusted via HELLO", peer_id=msg.sender_id)
+                except Exception as exc:
+                    logger.debug("Could not trust peer from HELLO", error=str(exc))
+            # Reply with our own HELLO
+            try:
+                from app.mesh_network.peer_identity import identity
+                from app.mesh_network.peer_discovery import get_discovery
+                device_id = get_discovery()._device_id if get_discovery() else "local"
+                reply = MeshMessage(
+                    type=MessageType.HELLO,
+                    sender_id=device_id,
+                    payload={"public_key": identity.public_key_b64},
+                )
+                await websocket.send(reply.to_json())
+            except Exception as exc:
+                logger.debug("Failed to send HELLO reply", error=str(exc))
+
+        elif msg.type == MessageType.BYE:
+            logger.debug("Peer said BYE", sender=msg.sender_id)
+
+        elif msg.type == MessageType.PING:
             pong = MeshMessage(type=MessageType.PONG, sender_id="local")
             await websocket.send(pong.to_json())
 
@@ -114,10 +143,22 @@ class PeerSyncServer:
             limit = msg.payload.get("limit", 100)
             since = datetime.fromisoformat(since_str) if since_str else None
             events, has_more = await _fetch_events_for_peer(msg.sender_id, since, limit)
+            # Sign the response so receiver can verify authenticity
+            try:
+                import json as _json
+                from app.mesh_network.peer_identity import identity
+                from app.mesh_network.peer_discovery import get_discovery
+                device_id = get_discovery()._device_id if get_discovery() else "local"
+                content = _json.dumps({"events": events, "has_more": has_more}).encode()
+                signed = identity.sign_message(content)
+                payload = {**signed, "events": events, "has_more": has_more}
+            except Exception:
+                device_id = "local"
+                payload = {"events": events, "has_more": has_more}
             response = MeshMessage(
                 type=MessageType.SYNC_RESPONSE,
-                sender_id="local",
-                payload={"events": events, "has_more": has_more},
+                sender_id=device_id,
+                payload=payload,
             )
             await websocket.send(response.to_json())
 
@@ -137,11 +178,35 @@ async def push_to_peer(peer_ip: str, peer_port: int, events: list) -> bool:
 
     uri = f"ws://{peer_ip}:{peer_port}{WS_PATH}"
     try:
+        from app.mesh_network.peer_identity import identity
+        from app.mesh_network.peer_discovery import get_discovery
+        import json as _json
+        device_id = get_discovery()._device_id if get_discovery() else "local"
+
         async with websockets.connect(uri, open_timeout=5) as ws:
+            # HELLO exchange for TOFU trust
+            hello = MeshMessage(
+                type=MessageType.HELLO, sender_id=device_id,
+                payload={"public_key": identity.public_key_b64},
+            )
+            await ws.send(hello.to_json())
+            try:
+                raw_h = await asyncio.wait_for(ws.recv(), timeout=2)
+                h_msg = MeshMessage.from_json(raw_h)
+                if h_msg.type == MessageType.HELLO:
+                    pk = h_msg.payload.get("public_key", "")
+                    if pk:
+                        identity.trust_peer(h_msg.sender_id, pk)
+            except Exception:
+                pass  # Proceed without HELLO reply if peer doesn't support it
+
+            # Sign and send events
+            content = _json.dumps({"events": events}).encode()
+            signed = identity.sign_message(content)
             msg = MeshMessage(
                 type=MessageType.SYNC_RESPONSE,
-                sender_id="local",
-                payload={"events": events},
+                sender_id=device_id,
+                payload={**signed, "events": events},
             )
             await ws.send(msg.to_json())
             raw = await asyncio.wait_for(ws.recv(), timeout=5)
@@ -314,12 +379,33 @@ async def _sync_with_peer(peer, our_events: list) -> None:
     since = _peer_cursors.get(peer_id)
 
     try:
+        from app.mesh_network.peer_identity import identity
+        from app.mesh_network.peer_discovery import get_discovery
+        import json as _json
+        device_id = get_discovery()._device_id if get_discovery() else "local"
+
         async with websockets.connect(uri, open_timeout=5, close_timeout=5) as ws:
+            # HELLO exchange for TOFU trust before sync
+            hello = MeshMessage(
+                type=MessageType.HELLO, sender_id=device_id,
+                payload={"public_key": identity.public_key_b64},
+            )
+            await ws.send(hello.to_json())
+            try:
+                raw_h = await asyncio.wait_for(ws.recv(), timeout=2)
+                h_msg = MeshMessage.from_json(raw_h)
+                if h_msg.type == MessageType.HELLO:
+                    pk = h_msg.payload.get("public_key", "")
+                    if pk:
+                        identity.trust_peer(h_msg.sender_id, pk)
+            except Exception:
+                pass  # Proceed without HELLO reply if peer doesn't support it
+
             # 1. Pull events from peer in batches
             while True:
                 req = MeshMessage(
                     type=MessageType.SYNC_REQUEST,
-                    sender_id="local",
+                    sender_id=device_id,
                     payload={
                         "since": since.isoformat() if since else None,
                         "limit": 100
@@ -341,21 +427,23 @@ async def _sync_with_peer(peer, our_events: list) -> None:
                             since = datetime.fromisoformat(last_ts)
                         except Exception:
                             break
-                    
-                    ack = MeshMessage(type=MessageType.SYNC_ACK, sender_id="local")
+
+                    ack = MeshMessage(type=MessageType.SYNC_ACK, sender_id=device_id)
                     await ws.send(ack.to_json())
-                    
+
                     if not has_more:
                         break
                 else:
                     break
 
-            # 2. Push our own pending events (one batch)
+            # 2. Push our own pending events (signed)
             if our_events:
+                content = _json.dumps({"events": our_events}).encode()
+                signed = identity.sign_message(content)
                 push_msg = MeshMessage(
                     type=MessageType.SYNC_RESPONSE,
-                    sender_id="local",
-                    payload={"events": our_events},
+                    sender_id=device_id,
+                    payload={**signed, "events": our_events},
                 )
                 await ws.send(push_msg.to_json())
                 raw2 = await asyncio.wait_for(ws.recv(), timeout=10)

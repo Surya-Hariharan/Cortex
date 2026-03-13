@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { notes as notesApi, getUserId } from '../../services/api.js';
+import { Share2 } from 'lucide-react';
+import { notes as notesApi, mesh, getUserId } from '../../services/api.js';
 
 // Encode/decode note type and due_date as tags on the backend
 function encodeNoteTags(type, dueDate, extraTags = []) {
@@ -68,6 +69,8 @@ export default function NotesTab({ onToast }) {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('newest'); // newest | oldest | deadline
+    const [meshPeers, setMeshPeers] = useState([]);
+    const [shareNoteMenu, setShareNoteMenu] = useState(null); // noteId or null
 
     const loadNotes = async () => {
         try {
@@ -111,6 +114,21 @@ export default function NotesTab({ onToast }) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Load mesh peers for sharing
+    useEffect(() => {
+        mesh.peers().then(res => {
+            const list = Array.isArray(res) ? res : (res?.peers ?? []);
+            setMeshPeers(list);
+        }).catch(() => { });
+    }, []);
+
+    // Close share menu on outside click
+    useEffect(() => {
+        const close = () => setShareNoteMenu(null);
+        document.addEventListener('click', close);
+        return () => document.removeEventListener('click', close);
+    }, []);
+
     const handleAdd = async (e) => {
         e.preventDefault();
         if (!title.trim()) return;
@@ -148,8 +166,7 @@ export default function NotesTab({ onToast }) {
         }
     };
 
-    const handleDelete = async (id) => {
-        try {
+    const handleDelete = async (id) => {        try {
             await notesApi.delete(id);
             setNotes(prev => prev.filter(n => n.id !== id));
         } catch {
@@ -167,6 +184,16 @@ export default function NotesTab({ onToast }) {
             await notesApi.update(id, { is_completed: note.completed ? 0 : 1 });
         } catch {
             // Keep optimistic update even if backend is offline
+        }
+    };
+
+    const handleShareNote = async (peerId) => {
+        setShareNoteMenu(null);
+        try {
+            await mesh.sync(peerId);
+            onToast?.('Synced to peer');
+        } catch {
+            onToast?.('Sync failed', 'error');
         }
     };
 
@@ -401,6 +428,30 @@ export default function NotesTab({ onToast }) {
 
                                         {/* Hover Actions */}
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                                            {meshPeers.filter(p => !p.isMe).length > 0 && (
+                                                <div className="relative" onClick={e => e.stopPropagation()}>
+                                                    <button
+                                                        onClick={() => setShareNoteMenu(shareNoteMenu === note.id ? null : note.id)}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg text-dark-400 hover:text-synapse-500 hover:bg-synapse-50 dark:hover:bg-synapse-500/10 transition-all"
+                                                        title="Share to peer"
+                                                    >
+                                                        <Share2 size={15} />
+                                                    </button>
+                                                    {shareNoteMenu === note.id && (
+                                                        <div className="absolute right-0 top-9 bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 rounded-xl shadow-xl z-50 min-w-[160px] py-1">
+                                                            {meshPeers.filter(p => !p.isMe).map(peer => (
+                                                                <button
+                                                                    key={peer.device_id || peer.peer_id}
+                                                                    onClick={() => handleShareNote(peer.device_id || peer.peer_id)}
+                                                                    className="w-full text-left px-3 py-2 text-xs font-bold text-dark-700 dark:text-dark-200 hover:bg-dark-50 dark:hover:bg-dark-800 truncate"
+                                                                >
+                                                                    {peer.display_name || peer.name || peer.device_id}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             <button
                                                 onClick={() => handleDelete(note.id)}
                                                 className="w-8 h-8 flex items-center justify-center rounded-lg text-dark-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"

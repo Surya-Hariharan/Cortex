@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import socket
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from app.core.config import settings
@@ -44,6 +44,7 @@ class PeerDiscovery:
         self._service_info = None
         self._browser = None
         self._peers: Dict[str, PeerInfo] = {}
+        self._peer_last_seen: Dict[str, datetime] = {}
         self._lock = threading.Lock()
 
     async def start(self) -> None:
@@ -101,6 +102,7 @@ class PeerDiscovery:
                         )
                         with self._lock:
                             self._peers[device_id] = peer
+                            self._peer_last_seen[device_id] = datetime.utcnow()
                         logger.info("Peer discovered", device_id=device_id, ip=addr)
             except Exception:
                 # Handle NotRunningException or other errors during shutdown
@@ -120,7 +122,12 @@ class PeerDiscovery:
                 pass
 
     def get_peers(self) -> List[PeerInfo]:
+        cutoff = datetime.utcnow() - timedelta(seconds=60)
         with self._lock:
+            stale = [did for did, ts in self._peer_last_seen.items() if ts < cutoff]
+            for did in stale:
+                self._peers.pop(did, None)
+                self._peer_last_seen.pop(did, None)
             return list(self._peers.values())
 
     def get_peer(self, device_id: str) -> Optional[PeerInfo]:

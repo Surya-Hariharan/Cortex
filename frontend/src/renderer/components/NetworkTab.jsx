@@ -17,6 +17,8 @@ export default function NetworkTab() {
     const [isAutoDiscovery, setIsAutoDiscovery] = useState(true);
     const [recentDocs, setRecentDocs] = useState(MOCK_SHARED_DOCS);
     const [simulatedEvent, setSimulatedEvent] = useState(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [syncingPeer, setSyncingPeer] = useState(null);
 
     // Poll peers
     useEffect(() => {
@@ -29,8 +31,8 @@ export default function NetworkTab() {
                     { id: 'me', name: 'This Device (You)', status: 'online', isMe: true, ip: '127.0.0.1', strength: 100 },
                     ...list.filter(p => p.id !== 'me').map(p => ({
                         ...p,
-                        strength: Math.floor(Math.random() * 40) + 60,
-                        ip: p.ip || `192.168.1.${Math.floor(Math.random() * 254)}`,
+                        strength: 85,
+                        ip: p.ip_address || p.ip || `192.168.1.${Math.floor(Math.random() * 254)}`,
                     })),
                 ];
                 setPeers(updatedPeers);
@@ -41,6 +43,17 @@ export default function NetworkTab() {
         const interval = setInterval(fetchPeers, 5000);
         return () => clearInterval(interval);
     }, [isAutoDiscovery]);
+
+    const handleShareToPeer = async (peer) => {
+        setSyncingPeer(peer.device_id || peer.peer_id);
+        try {
+            await mesh.sync(peer.device_id || peer.peer_id);
+            setSimulatedEvent({ type: 'sync', peer: peer.display_name || peer.name });
+            setTimeout(() => setSimulatedEvent(null), 2000);
+        } catch (_) { }
+        setSyncingPeer(null);
+        setShowShareModal(false);
+    };
 
 
 
@@ -69,7 +82,7 @@ export default function NetworkTab() {
                             <span className="text-[11px] font-bold text-dark-700 dark:text-dark-200 uppercase tracking-tight">{statusLabel}</span>
                         </div>
 
-                        <button className="flex items-center gap-2.5 px-6 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-synapse-500/20 active:scale-95 transition-all group relative overflow-hidden">
+                        <button onClick={() => setShowShareModal(true)} className="flex items-center gap-2.5 px-6 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-synapse-500/20 active:scale-95 transition-all group relative overflow-hidden">
                             <Share size={18} className="group-hover:translate-y-[-1px] transition-transform" />
                             <span>Share File</span>
                             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity animate-glow-pulse" />
@@ -315,6 +328,55 @@ export default function NetworkTab() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Share Modal ─────────────────────────────────────────── */}
+            {showShareModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => setShowShareModal(false)}
+                >
+                    <div
+                        className="bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 rounded-2xl shadow-2xl w-[360px] p-6 space-y-4"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-black text-dark-800 dark:text-dark-50 uppercase tracking-widest">Sync to Peer</h3>
+                            <button onClick={() => setShowShareModal(false)} className="text-dark-400 hover:text-dark-700 dark:hover:text-dark-200 transition-colors">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                            </button>
+                        </div>
+
+                        {peers.filter(p => !p.isMe).length === 0 ? (
+                            <div className="py-8 text-center space-y-2">
+                                <p className="text-xs font-bold text-dark-500 dark:text-dark-400">No peers discovered yet.</p>
+                                <p className="text-[10px] text-dark-400 dark:text-dark-600">Make sure Auto Discovery is on and peers are on the same network.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                                {peers.filter(p => !p.isMe).map(peer => (
+                                    <button
+                                        key={peer.device_id || peer.peer_id || peer.id}
+                                        onClick={() => handleShareToPeer(peer)}
+                                        disabled={!!syncingPeer}
+                                        className="w-full flex items-center gap-3 px-4 py-3 bg-dark-50 dark:bg-dark-800 hover:bg-synapse-50 dark:hover:bg-synapse-900/20 hover:border-synapse-300 dark:hover:border-synapse-700 border border-dark-200 dark:border-dark-700 rounded-xl transition-all text-left group disabled:opacity-50"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-dark-700 border border-dark-200 dark:border-dark-600 flex items-center justify-center text-base flex-shrink-0">💻</div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-black text-dark-800 dark:text-dark-50 truncate">{peer.display_name || peer.name || peer.device_id}</p>
+                                            <p className="text-[10px] font-mono text-dark-400 dark:text-dark-500 truncate">{peer.ip_address || peer.ip}</p>
+                                        </div>
+                                        {syncingPeer === (peer.device_id || peer.peer_id) ? (
+                                            <div className="w-4 h-4 border-2 border-synapse-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                                        ) : (
+                                            <Share size={14} className="text-dark-400 group-hover:text-synapse-500 transition-colors flex-shrink-0" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -41,10 +41,11 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
         tags: '',
         description: ''
     });
-
+    const [uploadError, setUploadError] = useState(null);
     const [ocrProgress, setOcrProgress] = useState(0);
     const [ocrText, setOcrText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (step === 4 && uploadData.type === 'Handwritten Scan') {

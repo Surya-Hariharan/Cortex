@@ -429,7 +429,7 @@ export default function App() {
                         {activeTab === 'home' && <MemoHomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
                         {activeTab === 'knowledge' && <MemoKnowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} />}
                         {activeTab === 'workspace' && <MemoWorkspace onToast={showToast} />}
-                        {activeTab === 'campus' && <MemoCampus />}
+                        {activeTab === 'campus' && <MemoCampus onToast={showToast} />}
                         {activeTab === 'activity' && <MemoActivity />}
                         {activeTab === 'ai-engine' && <MemoAIEngine />}
                         {activeTab === 'project' && (() => {

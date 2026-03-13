@@ -13,6 +13,7 @@ from app.api.v1.endpoints.chats import router as chats_router
 from app.api.v1.endpoints.mesh import router as mesh_router
 from app.api.v1.endpoints.sync import router as sync_router
 from app.api.v1.endpoints.system import router as system_router
+from app.api.v1.endpoints.groups import router as groups_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -28,4 +29,5 @@ api_router.include_router(chats_router)
 api_router.include_router(mesh_router)
 api_router.include_router(sync_router)
 api_router.include_router(system_router)
+api_router.include_router(groups_router)
 

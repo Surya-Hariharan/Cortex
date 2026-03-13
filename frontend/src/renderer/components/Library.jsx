@@ -73,7 +73,10 @@ export default function Library({ onUploadPdf, onToast }) {
     const userId = getUserId();
 
     useEffect(() => {
-        if (isOnline) loadDocuments();
+        if (!isOnline) return;
+        loadDocuments();
+        const timer = setInterval(loadDocuments, 30000);
+        return () => clearInterval(timer);
     }, [isOnline]);
 
     async function loadDocuments() {
@@ -352,7 +355,20 @@ export default function Library({ onUploadPdf, onToast }) {
                         </div>
                     )}
 
-                    {filteredFiles.length === 0 && (
+                    {!loading && files.length === 0 && (
+                        <div className="text-center py-20">
+                            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-dark-600">
+                                <BookOpen size={32} />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-800 dark:text-dark-50 mb-2">No data available</h3>
+                            <p className="text-sm text-slate-500 dark:text-dark-400 mb-4">Upload your first document to build your knowledge base.</p>
+                            <button onClick={onUploadPdf} className="inline-flex items-center gap-2 px-5 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all">
+                                <Plus size={16} /> Upload File
+                            </button>
+                        </div>
+                    )}
+
+                    {!loading && files.length > 0 && filteredFiles.length === 0 && (
                         <div className="text-center py-20">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-dark-600">
                                 <Search size={32} />

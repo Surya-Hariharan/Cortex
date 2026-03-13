@@ -8,7 +8,7 @@ const SUB_TABS = [
     { id: 'nearby-mesh', label: 'Nearby Mesh', icon: <Globe size={16} /> },
 ];
 
-export default function Campus() {
+export default function Campus({ onToast }) {
     const [activeTab, setActiveTab] = useState('study-groups');
 
     return (
@@ -35,7 +35,7 @@ export default function Campus() {
 
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden">
-                {activeTab === 'study-groups' && <StudyGroups />}
+                {activeTab === 'study-groups' && <StudyGroups onToast={onToast} />}
                 {activeTab === 'nearby-mesh' && <NetworkTab />}
             </div>
         </div>

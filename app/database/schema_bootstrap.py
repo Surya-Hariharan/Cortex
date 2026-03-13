@@ -75,6 +75,11 @@ POSTGRES_BOOTSTRAP_SQL: list[str] = [
     "CREATE INDEX IF NOT EXISTS idx_background_jobs_type_status ON background_jobs(job_type, status)",
     "CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_created ON audit_logs(entity_type, entity_id, created_at)",
     "CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_created ON audit_logs(actor_id, created_at)",
+    # Study group indexes.
+    "CREATE INDEX IF NOT EXISTS idx_study_groups_creator ON study_groups(creator_id)",
+    "CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id)",
+    "CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_group_messages_group_channel ON group_messages(group_id, channel, created_at)",
 ]
 
 

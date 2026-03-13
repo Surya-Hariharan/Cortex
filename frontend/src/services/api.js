@@ -369,3 +369,54 @@ export const transcription = {
 export async function isBackendReady() {
     return backendStatus.check();
 }
+
+// ── Groups ────────────────────────────────────────────────────────────────────
+
+export const groups = {
+    create(data) {
+        return req('/groups/', { method: 'POST', body: JSON.stringify(data) });
+    },
+
+    list(userId) {
+        return req(`/groups/${qs({ user_id: userId })}`);
+    },
+
+    get(groupId) {
+        return req(`/groups/${groupId}`);
+    },
+
+    delete(groupId, userId) {
+        return req(`/groups/${groupId}${qs({ user_id: userId })}`, { method: 'DELETE' });
+    },
+
+    join(inviteCode, userId, userName) {
+        return req(`/groups/join${qs({ invite_code: inviteCode, user_id: userId, user_name: userName })}`, { method: 'POST' });
+    },
+
+    leave(groupId, userId) {
+        return req(`/groups/${groupId}/leave${qs({ user_id: userId })}`, { method: 'DELETE' });
+    },
+
+    updateSettings(groupId, adminId, data) {
+        return req(`/groups/${groupId}/settings${qs({ admin_id: adminId })}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    },
+
+    blockMember(groupId, memberUserId, adminId) {
+        return req(`/groups/${groupId}/members/${memberUserId}/block${qs({ admin_id: adminId })}`, { method: 'PATCH' });
+    },
+
+    removeMember(groupId, memberUserId, adminId) {
+        return req(`/groups/${groupId}/members/${memberUserId}${qs({ admin_id: adminId })}`, { method: 'DELETE' });
+    },
+
+    getMessages(groupId, channel = 'general', limit = 100) {
+        return req(`/groups/${groupId}/messages${qs({ channel, limit })}`);
+    },
+
+    sendMessage(groupId, data) {
+        return req(`/groups/${groupId}/messages`, { method: 'POST', body: JSON.stringify(data) });
+    },
+};

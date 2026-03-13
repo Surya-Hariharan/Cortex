@@ -91,7 +91,18 @@ class Settings(BaseSettings):
 
     # ── Security ─────────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production"
-    CORS_ORIGINS: list[str] = ["http://localhost", "http://127.0.0.1"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",
+        "file://",  # For Electron apps
+        "*"  # Allow all origins for development - remove in production
+    ]
 
     # ── SMTP (for forgot-password email) ─────────────────────────────────────
     SMTP_HOST: str = "smtp.gmail.com"

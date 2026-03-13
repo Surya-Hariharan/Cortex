@@ -18,16 +18,17 @@ const SEARCH_STAGES = [
     'Synthesizing answer…',
 ];
 
-export default function SearchTab({ onToast, onUploadPdf }) {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState(null);
+export default function SearchTab({ onToast, onUploadPdf, savedState, onFirstSearch, onSearchComplete }) {
+    const [query, setQuery] = useState(savedState?.query || '');
+    const [results, setResults] = useState(savedState?.results ?? null);
     const [isSearching, setIsSearching] = useState(false);
-    const [searchMeta, setSearchMeta] = useState(null);
+    const [searchMeta, setSearchMeta] = useState(savedState?.searchMeta ?? null);
     const [searchStage, setSearchStage] = useState(-1);
-    const [synthesizedAnswer, setSynthesizedAnswer] = useState(null);
+    const [synthesizedAnswer, setSynthesizedAnswer] = useState(savedState?.synthesizedAnswer ?? null);
     const inputRef = useRef(null);
     const streamAbortRef = useRef(null);
     const stageTimerRef = useRef(null);
+    const firstSearchReportedRef = useRef(!!savedState?.query); // skip reporting for restored chats
 
     useEffect(() => {
         // Auto-focus search input
@@ -46,6 +47,12 @@ export default function SearchTab({ onToast, onUploadPdf }) {
         setResults(null);
         setSynthesizedAnswer(null);
         setSearchStage(0);
+
+        // Report first search for auto-titling the chat session
+        if (!firstSearchReportedRef.current) {
+            firstSearchReportedRef.current = true;
+            onFirstSearch?.(query.trim());
+        }
 
         // Advance stage label for visual effect
         let stage = 0;
@@ -78,6 +85,7 @@ export default function SearchTab({ onToast, onUploadPdf }) {
             }));
             setResults(uiResults);
             setSearchMeta({ time: 0, total: res.total || uiResults.length, query: res.query });
+            onSearchComplete?.({ query: query.trim(), results: uiResults.slice(0, 3), searchMeta: { total: res.total || uiResults.length } });
 
             // If we have results, start streaming the synthesized answer
             if (uiResults.length > 0) {

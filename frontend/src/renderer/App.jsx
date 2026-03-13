@@ -34,12 +34,10 @@ const MemoAIEngine = React.memo(AIEngine);
 
 const MOCK_PROJECTS = [];
 
-const MOCK_INDEPENDENT_CHATS = [];
-
 export default function App() {
     const {
         isAuthenticated, username, setUsername, theme, setTheme,
-        isOnline, isNetworkOnline, toast, showToast,
+        isOnline, isNetworkOnline, toast, setToast, showToast,
         userStream, setUserStream, login, logout
     } = useCore();
 
@@ -60,6 +58,20 @@ export default function App() {
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null, title: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
+
+    // ── Chat Session Management ──────────────────────────────────────────
+    const [chatSessions, setChatSessions] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('cortex-chat-sessions') || '[]'); } catch { return []; }
+    });
+    const [currentChatKey, setCurrentChatKey] = useState(1);
+    const [currentChatId, setCurrentChatId] = useState(() => `chat-${Date.now()}`);
+    const [savedChatState, setSavedChatState] = useState(null);
+    const currentSessionTitleRef = useRef('');
+
+    // Persist sessions whenever they change
+    useEffect(() => {
+        localStorage.setItem('cortex-chat-sessions', JSON.stringify(chatSessions.slice(0, 50)));
+    }, [chatSessions]);
 
     // ── Zoom bar ─────────────────────────────────────────────────────────────
     const [zoom, setZoom] = useState(100);
@@ -169,6 +181,58 @@ export default function App() {
         }
     };
 
+    const handleFirstSearch = (query) => {
+        const title = query.length > 45 ? query.substring(0, 45) + '…' : query;
+        currentSessionTitleRef.current = title;
+    };
+
+    const handleSearchComplete = ({ query }) => {
+        if (!currentSessionTitleRef.current) {
+            const title = query.length > 45 ? query.substring(0, 45) + '…' : query;
+            currentSessionTitleRef.current = title;
+        }
+    };
+
+    const saveCurrentSession = () => {
+        if (!currentSessionTitleRef.current) return;
+        const session = { id: currentChatId, title: currentSessionTitleRef.current, createdAt: new Date().toISOString() };
+        setChatSessions(prev => {
+            const filtered = prev.filter(s => s.id !== currentChatId);
+            return [session, ...filtered];
+        });
+    };
+
+    const handleNewChat = () => {
+        saveCurrentSession();
+        currentSessionTitleRef.current = '';
+        const newId = `chat-${Date.now()}`;
+        setCurrentChatId(newId);
+        setSavedChatState(null);
+        setCurrentChatKey(k => k + 1);
+        setActiveTab('knowledge');
+    };
+
+    const handleSelectChat = (session) => {
+        saveCurrentSession();
+        currentSessionTitleRef.current = session.title;
+        setCurrentChatId(session.id);
+        const saved = (() => { try { return JSON.parse(localStorage.getItem(`cortex-chat-state-${session.id}`) || 'null'); } catch { return null; } })();
+        setSavedChatState(saved || { query: session.title });
+        setCurrentChatKey(k => k + 1);
+        setActiveTab('knowledge');
+    };
+
+    const handleDeleteChat = (chatId) => {
+        setChatSessions(prev => prev.filter(s => s.id !== chatId));
+        if (chatId === currentChatId) {
+            currentSessionTitleRef.current = '';
+            const newId = `chat-${Date.now()}`;
+            setCurrentChatId(newId);
+            setSavedChatState(null);
+            setCurrentChatKey(k => k + 1);
+        }
+    };
+
     if (!isAuthenticated) {
         return <AuthPortal onAuthSuccess={login} />;
     }
@@ -201,7 +265,7 @@ export default function App() {
                     <div className="px-3 pb-3" style={{ WebkitAppRegion: 'no-drag' }}>
                         {isSidebarCollapsed ? (
                             <button
-                                onClick={() => setActiveTab('search')}
+                                onClick={handleNewChat}
                                 className="w-full flex justify-center items-center py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white rounded-xl transition-all duration-200 shadow-sm border border-synapse-700 dark:border-synapse-500 mt-1"
                                 title="New Chat"
                             >
@@ -210,7 +274,7 @@ export default function App() {
                         ) : (
                             <div className="flex gap-2.5 mt-1">
                                 <button
-                                    onClick={() => setActiveTab('search')}
+                                    onClick={handleNewChat}
                                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-700 dark:text-dark-100 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700 text-[13px]"
                                 >
                                     <span className="text-synapse-600 dark:text-synapse-500"><Plus size={18} /></span>
@@ -359,22 +423,31 @@ export default function App() {
 
                             {/* Your Chats Section */}
                             {!isSidebarCollapsed && (
-                                <div className="sidebar-header">
+                                <div className="sidebar-header group">
                                     <span>Your Chats</span>
+                                    {chatSessions.length > 0 && (
+                                        <button
+                                            onClick={() => setShowDeleteAllChats(true)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500"
+                                            title="Clear all chats"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    )}
                                 </div>
                             )}
                             <div className="relative">
-                                {MOCK_INDEPENDENT_CHATS.map((chat) => {
-                                    const isActive = activeTab === 'search' && activeChatId === chat.id;
+                                {chatSessions.map((chat) => {
+                                    const isActive = activeTab === 'knowledge' && currentChatId === chat.id;
                                     return (
                                         <button
                                             key={chat.id}
-                                            onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
+                                            onClick={() => handleSelectChat(chat)}
                                             onContextMenu={(e) => {
                                                 e.preventDefault();
                                                 setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
                                             }}
-                                            className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                                            className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''} group`}
                                             title={isSidebarCollapsed ? chat.title : ''}
                                         >
                                             <div className="sidebar-accent-container">
@@ -387,21 +460,22 @@ export default function App() {
                                                     <div className="sidebar-icon-container">
                                                         <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-synapse-500' : 'bg-slate-400 dark:bg-dark-600'}`} />
                                                     </div>
-                                                    <span className="sidebar-label">{chat.title}</span>
-                                                    <div
-                                                        className="sidebar-menu-trigger"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
-                                                        }}
+                                                    <span className="sidebar-label truncate">{chat.title}</span>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteChat(chat.id); }}
+                                                        className="sidebar-menu-trigger opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
+                                                        title="Delete chat"
                                                     >
-                                                        <MoreHorizontal size={14} />
-                                                    </div>
+                                                        <Trash2 size={13} />
+                                                    </button>
                                                 </>
                                             )}
                                         </button>
                                     );
                                 })}
+                                {chatSessions.length === 0 && !isSidebarCollapsed && (
+                                    <p className="text-[11px] text-slate-400 dark:text-dark-600 px-4 py-2 font-medium">No saved chats yet</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -432,7 +506,7 @@ export default function App() {
 
                     <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
                         {activeTab === 'home' && <MemoHomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
-                        {activeTab === 'knowledge' && <MemoKnowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} />}
+                        {activeTab === 'knowledge' && <MemoKnowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} chatKey={currentChatKey} savedChatState={savedChatState} onFirstSearch={handleFirstSearch} onSearchComplete={handleSearchComplete} />}
                         {activeTab === 'workspace' && <MemoWorkspace onToast={showToast} />}
                         {activeTab === 'campus' && <MemoCampus onToast={showToast} />}
                         {activeTab === 'activity' && <MemoActivity />}
@@ -494,7 +568,8 @@ export default function App() {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            showToast(`Deleted ${deleteConfirm.title}`, 'success');
+                                            if (deleteConfirm.targetId) handleDeleteChat(deleteConfirm.targetId);
+                                            showToast(`Deleted "${deleteConfirm.title}"`, 'success');
                                             setDeleteConfirm({ ...deleteConfirm, visible: false });
                                         }}
                                         className="px-6 py-2 text-sm font-bold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors shadow-sm"
@@ -576,7 +651,16 @@ export default function App() {
                             <div className="flex gap-3 justify-end">
                                 <button onClick={() => setShowDeleteAllChats(false)} className="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-xl transition-colors">Cancel</button>
                                 <button
-                                    onClick={() => { showToast('All chats deleted', 'success'); setShowDeleteAllChats(false); }}
+                                    onClick={() => {
+                                        setChatSessions([]);
+                                        currentSessionTitleRef.current = '';
+                                        const newId = `chat-${Date.now()}`;
+                                        setCurrentChatId(newId);
+                                        setSavedChatState(null);
+                                        setCurrentChatKey(k => k + 1);
+                                        showToast('All chats deleted', 'success');
+                                        setShowDeleteAllChats(false);
+                                    }}
                                     className="px-5 py-2 text-sm font-bold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors shadow-sm"
                                 >Delete</button>
                             </div>

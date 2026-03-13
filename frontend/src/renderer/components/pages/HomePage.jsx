@@ -4,26 +4,19 @@ import {
     Home,
     Search,
     FileText,
-    Upload,
     Users,
     Globe,
-    Download,
-    Star,
     ArrowUpRight,
     Activity,
     Zap,
-    Plus,
     TrendingUp,
     BookOpen,
-    MessageSquare,
-    Bell
 } from 'lucide-react';
 
 const MOCK_ACTIVITY_FEED = [];
 
 const QUICK_ACTIONS = [
     { id: 'search', label: 'New Search', icon: Search, color: 'from-synapse-500 to-synapse-700', shadow: 'shadow-synapse-200/40' },
-    { id: 'upload', label: 'Upload PDF', icon: Upload, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-200/40' },
     { id: 'note', label: 'Create Note', icon: FileText, color: 'from-amber-500 to-amber-600', shadow: 'shadow-amber-200/40' },
     { id: 'group', label: 'Study Group', icon: Users, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-200/40' },
 ];
@@ -45,7 +38,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color, accent }) => (
     </div>
 );
 
-export default function HomePage({ onTabChange, onUploadPdf }) {
+export default function HomePage({ onTabChange }) {
     const [stats, setStats] = useState({ docs: 0, peers: 0, contributions: 0 });
 
     useEffect(() => {
@@ -93,8 +86,7 @@ export default function HomePage({ onTabChange, onUploadPdf }) {
                             <button
                                 key={action.id}
                                 onClick={() => {
-                                    if (action.id === 'upload') onUploadPdf?.();
-                                    else if (action.id === 'search') onTabChange?.('knowledge');
+                                    if (action.id === 'search') onTabChange?.('knowledge');
                                     else if (action.id === 'note') onTabChange?.('workspace');
                                     else if (action.id === 'group') onTabChange?.('campus');
                                 }}

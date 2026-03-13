@@ -178,13 +178,10 @@ export default function PerformanceTab() {
     const handleRuntimeChange = async (newRuntime) => {
         setRuntime(newRuntime);
         showToast(`Runtime changed to ${newRuntime.toUpperCase()}`, 'info');
-
         try {
-            // Refresh performance data after runtime change
-            const healthData = await systemApi.health();
-            setPerf(healthData);
+            await systemApi.setRuntime(newRuntime, precision);
         } catch (err) {
-            console.warn('Failed to refresh after runtime change:', err);
+            console.warn('Failed to apply runtime change:', err);
         }
     };
 
@@ -192,13 +189,10 @@ export default function PerformanceTab() {
     const handlePrecisionChange = async (newPrecision) => {
         setPrecision(newPrecision);
         showToast(`Precision changed to ${newPrecision.toUpperCase()}`, 'info');
-
         try {
-            // Refresh model data after precision change
-            const modelData = await systemApi.models();
-            setModelStatus(modelData);
+            await systemApi.setRuntime(runtime, newPrecision);
         } catch (err) {
-            console.warn('Failed to refresh after precision change:', err);
+            console.warn('Failed to apply precision change:', err);
         }
     };
 

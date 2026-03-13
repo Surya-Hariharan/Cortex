@@ -15,6 +15,8 @@ from app.api.v1.endpoints.sync import router as sync_router
 from app.api.v1.endpoints.system import router as system_router
 from app.api.v1.endpoints.groups import router as groups_router
 from app.api.v1.endpoints.activity import router as activity_router
+from app.api.v1.endpoints.notifications import router as notifications_router
+from app.api.v1.endpoints.engagement import router as engagement_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -32,4 +34,6 @@ api_router.include_router(sync_router)
 api_router.include_router(system_router)
 api_router.include_router(groups_router)
 api_router.include_router(activity_router)
+api_router.include_router(notifications_router)
+api_router.include_router(engagement_router)
 

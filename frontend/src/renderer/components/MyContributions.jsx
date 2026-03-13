@@ -57,7 +57,7 @@ const VisibilityBadge = ({ type }) => {
 export default function MyContributions() {
     const [contributions, setContributions] = useState([]);
     const [activeRange, setActiveRange] = useState('7d');
-    const [stats, setStats] = useState({ total_uploads: 0, total_chunks: 0, total_shared: 0, total_notes: 0 });
+    const [stats, setStats] = useState({ total_uploads: 0, total_chunks: 0, total_shared: 0, total_notes: 0, total_views: 0, total_downloads: 0, avg_rating: 0 });
     const [chartData, setChartData] = useState({ labels: [], values: [], max: 0, total: 0 });
 
     useEffect(() => {
@@ -115,53 +115,74 @@ export default function MyContributions() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <StatCard label="Total Uploads" value={stats.total_uploads} icon={FileText} color="bg-synapse-500" />
-                        <StatCard label="Total Downloads" value={contributions.reduce((s, n) => s + (n.downloads || 0), 0)} icon={Download} color="bg-emerald-500" />
-                        <StatCard label="Total Views" value={contributions.reduce((s, n) => s + (n.views || 0), 0)} icon={Eye} color="bg-blue-500" />
-                        <StatCard label="AI Chunks" value={stats.total_chunks} icon={Star} color="bg-amber-500" />
+                        <StatCard label="Total Downloads" value={stats.total_downloads} icon={Download} color="bg-emerald-500" />
+                        <StatCard label="Total Views" value={stats.total_views} icon={Eye} color="bg-blue-500" />
+                        <StatCard label="Avg Rating" value={stats.avg_rating > 0 ? `${stats.avg_rating.toFixed(1)}★` : '—'} icon={Star} color="bg-amber-500" />
                     </div>
 
-                    {/* Simple Chart Section */}
+                    {/* Chart Section */}
                     <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6">
                         <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-sm font-black uppercase text-slate-400 dark:text-dark-500 tracking-widest pl-1">Download Activity</h3>
+                            <div>
+                                <h3 className="text-sm font-black uppercase text-slate-400 dark:text-dark-500 tracking-widest pl-1">Upload Activity</h3>
+                                <p className="text-[11px] text-slate-400 dark:text-dark-600 pl-1 mt-0.5">{chartData.total} uploads in selected range</p>
+                            </div>
                             <div className="flex gap-2">
-                                {['7D', '1M', '3M', 'All'].map(t => (
-                                    <button key={t} className={`px-3 py-1 text-[10px] font-bold rounded-lg border transition-all ${t === '1M' ? 'bg-synapse-600 text-white border-synapse-500' : 'bg-slate-50 dark:bg-dark-950 text-slate-400 border-slate-200 dark:border-dark-800 hover:bg-slate-100'}`}>
-                                        {t}
+                                {[['7D', '7d'], ['1M', '1m'], ['3M', '3m']].map(([label, val]) => (
+                                    <button key={val} onClick={() => setActiveRange(val)} className={`px-3 py-1 text-[10px] font-bold rounded-lg border transition-all ${activeRange === val ? 'bg-synapse-600 text-white border-synapse-500' : 'bg-slate-50 dark:bg-dark-950 text-slate-400 border-slate-200 dark:border-dark-800 hover:bg-slate-100'}`}>
+                                        {label}
                                     </button>
                                 ))}
                             </div>
                         </div>
-                        <div className="h-48 w-full relative group">
-                            {/* Simple SVG Chart Visualization */}
-                            <svg className="w-full h-full overflow-visible" viewBox="0 0 1000 100" preserveAspectRatio="none">
-                                <defs>
-                                    <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="rgba(99, 102, 241, 0.2)" />
-                                        <stop offset="100%" stopColor="rgba(99, 102, 241, 0)" />
-                                    </linearGradient>
-                                </defs>
-                                <path
-                                    d="M0 80 Q 100 70, 200 40 T 400 30 T 600 60 T 800 20 T 1000 10"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                    className="text-synapse-500 transition-all duration-1000 ease-out"
-                                />
-                                <path
-                                    d="M0 80 Q 100 70, 200 40 T 400 30 T 600 60 T 800 20 T 1000 10 V 100 H 0 Z"
-                                    fill="url(#chartGradient)"
-                                />
-                                {/* Data Points */}
-                                {[0, 200, 400, 600, 800, 1000].map((x, i) => (
-                                    <circle key={i} cx={x} cy={i % 2 === 0 ? 80 - i * 10 : 20 + i * 5} r="4" className="text-synapse-600 fill-white dark:fill-dark-900 stroke-[2px] cursor-pointer hover:r-6 hover:stroke-synapse-400 transition-all" />
-                                ))}
-                            </svg>
-                            {/* Grid Lines */}
+                        <div className="h-48 w-full relative">
+                            {chartData.values.length === 0 ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <p className="text-xs text-slate-400 dark:text-dark-600">No data for this range</p>
+                                </div>
+                            ) : (
+                                <svg className="w-full h-full" viewBox={`0 0 1000 100`} preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stopColor="rgba(99,102,241,0.9)" />
+                                            <stop offset="100%" stopColor="rgba(99,102,241,0.4)" />
+                                        </linearGradient>
+                                    </defs>
+                                    {chartData.values.map((v, i) => {
+                                        const n = chartData.values.length;
+                                        const slotW = 1000 / n;
+                                        const barW = Math.max(slotW - 4, 2);
+                                        const barH = chartData.max > 0 ? (v / chartData.max) * 88 : 0;
+                                        return (
+                                            <rect
+                                                key={i}
+                                                x={i * slotW + 2}
+                                                y={98 - barH}
+                                                width={barW}
+                                                height={Math.max(barH, 1)}
+                                                rx="2"
+                                                fill="url(#barGradient)"
+                                                opacity={v === 0 ? 0.2 : 1}
+                                            />
+                                        );
+                                    })}
+                                    {/* Baseline */}
+                                    <line x1="0" y1="99" x2="1000" y2="99" stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-dark-800" />
+                                </svg>
+                            )}
+                            {/* Grid lines */}
                             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-10">
                                 {[1, 2, 3, 4].map(i => <div key={i} className="w-full h-px bg-slate-400" />)}
                             </div>
                         </div>
+                        {/* X-axis labels — show first, middle, last */}
+                        {chartData.labels.length > 0 && (
+                            <div className="flex justify-between mt-2 px-0.5">
+                                <span className="text-[9px] font-bold text-slate-400 dark:text-dark-600">{chartData.labels[0]}</span>
+                                {chartData.labels.length > 2 && <span className="text-[9px] font-bold text-slate-400 dark:text-dark-600">{chartData.labels[Math.floor(chartData.labels.length / 2)]}</span>}
+                                <span className="text-[9px] font-bold text-slate-400 dark:text-dark-600">{chartData.labels[chartData.labels.length - 1]}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Notes Table */}

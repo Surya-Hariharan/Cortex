@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
 from app.models.domain.document import Document
+from app.models.domain.engagement import FileDownload, FileRating, FileView
 from app.models.domain.note import Note
 from app.models.domain.sync import SyncEvent
 
@@ -51,22 +52,44 @@ async def get_stats(user_id: str, db: AsyncSession = Depends(get_db)) -> dict:
         )
     ).scalar_one()
 
+    total_views = (
+        await db.execute(
+            select(func.count()).where(FileView.owner_id == user_id)
+        )
+    ).scalar_one()
+
+    total_downloads = (
+        await db.execute(
+            select(func.count()).where(FileDownload.owner_id == user_id)
+        )
+    ).scalar_one()
+
+    avg_rating_raw = (
+        await db.execute(
+            select(func.avg(FileRating.score)).where(FileRating.owner_id == user_id)
+        )
+    ).scalar_one()
+    avg_rating = round(float(avg_rating_raw or 0), 2)
+
     return {
         "total_uploads": doc_count,
         "total_chunks": int(chunk_sum),
         "total_shared": shared_count,
         "total_notes": note_count,
+        "total_views": total_views,
+        "total_downloads": total_downloads,
+        "avg_rating": avg_rating,
     }
 
 
 @router.get("/chart")
 async def get_chart(
     user_id: str,
-    range: str = Query("7d", pattern="^(7d|1m|3m)$"),
+    time_range: str = Query("7d", alias="range", pattern="^(7d|1m|3m)$"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Daily upload counts for the activity chart."""
-    days = {"7d": 7, "1m": 30, "3m": 90}[range]
+    days = {"7d": 7, "1m": 30, "3m": 90}[time_range]
     now = datetime.utcnow()
     since = now - timedelta(days=days)
 
@@ -94,14 +117,14 @@ async def get_chart(
     labels = list(counts.keys())
     values = list(counts.values())
 
-    # Friendly short labels for display (e.g. "Mar 13")
+    # Friendly short labels for display (e.g. "Mar 13") — avoid %-d (Linux-only)
     short_labels = []
     for lbl in labels:
         dt = datetime.strptime(lbl, "%Y-%m-%d")
-        short_labels.append(dt.strftime("%b %-d") if range == "7d" else dt.strftime("%b %d"))
+        short_labels.append(f"{dt.strftime('%b')} {dt.day}")
 
     return {
-        "range": range,
+        "range": time_range,
         "days": days,
         "labels": short_labels,
         "values": values,

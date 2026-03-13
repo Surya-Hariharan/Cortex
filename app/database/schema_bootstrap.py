@@ -80,6 +80,15 @@ POSTGRES_BOOTSTRAP_SQL: list[str] = [
     "CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id)",
     "CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_group_messages_group_channel ON group_messages(group_id, channel, created_at)",
+    # Engagement / notification indexes.
+    "CREATE INDEX IF NOT EXISTS idx_file_views_entity ON file_views(entity_type, entity_id)",
+    "CREATE INDEX IF NOT EXISTS idx_file_views_owner ON file_views(owner_id, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_file_downloads_entity ON file_downloads(entity_type, entity_id)",
+    "CREATE INDEX IF NOT EXISTS idx_file_downloads_owner ON file_downloads(owner_id)",
+    "CREATE INDEX IF NOT EXISTS idx_file_ratings_entity ON file_ratings(entity_type, entity_id)",
+    "CREATE INDEX IF NOT EXISTS idx_file_ratings_owner ON file_ratings(owner_id)",
+    "CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_deleted = FALSE",
 ]
 
 

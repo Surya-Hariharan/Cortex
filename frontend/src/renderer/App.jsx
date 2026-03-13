@@ -551,8 +551,6 @@ export default function App() {
                     </div>
                     <WindowControls />
                 </div>
-                    <WindowControls />
-                </div>
 
                 {/* ── Settings Modal ──────────────────────────────── */}
                 <Settings

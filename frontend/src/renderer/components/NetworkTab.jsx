@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Share, Shield, Globe, Cpu, Zap, Activity, Monitor, ChevronRight, MoreHorizontal, FileText, Code, File, Search } from 'lucide-react';
-import { mesh } from '../../services/api.js';
-
-const MOCK_SHARED_DOCS = [];
+import { mesh, activity as activityApi } from '../../services/api.js';
 
 const FILE_TYPE_CONFIG = {
     pdf: { icon: <FileText size={18} />, color: 'accent-pdf', label: 'PDF' },
@@ -15,10 +13,31 @@ export default function NetworkTab() {
     const [peers, setPeers] = useState([]);
     const [viewMode, setViewMode] = useState('list'); // list | graph
     const [isAutoDiscovery, setIsAutoDiscovery] = useState(true);
-    const [recentDocs, setRecentDocs] = useState(MOCK_SHARED_DOCS);
+    const [recentDocs, setRecentDocs] = useState([]);
     const [simulatedEvent, setSimulatedEvent] = useState(null);
     const [showShareModal, setShowShareModal] = useState(false);
     const [syncingPeer, setSyncingPeer] = useState(null);
+
+    // Fetch real activity feed
+    useEffect(() => {
+        const fetchFeed = () => {
+            activityApi.feed(30).then(res => {
+                const events = res?.feed ?? [];
+                setRecentDocs(events.map(ev => ({
+                    id: ev.id,
+                    title: `${ev.operation ?? 'sync'} — ${ev.entity_type ?? 'item'}/${String(ev.entity_id ?? '').slice(0, 8)}`,
+                    type: ev.entity_type === 'document' ? 'pdf' : 'doc',
+                    from: ev.device_id ? String(ev.device_id).slice(0, 12) : 'Remote Node',
+                    size: '—',
+                    time: ev.created_at ? new Date(ev.created_at).toLocaleTimeString() : '—',
+                    encrypted: true,
+                })));
+            }).catch(() => {});
+        };
+        fetchFeed();
+        const interval = setInterval(fetchFeed, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Poll peers
     useEffect(() => {
@@ -223,7 +242,13 @@ export default function NetworkTab() {
 
                         {viewMode === 'list' ? (
                             <div className="space-y-4 max-w-[950px]">
-                                {recentDocs.map((doc, idx) => (
+                                {recentDocs.length === 0 ? (
+                                    <div className="py-16 text-center bg-white dark:bg-dark-900 border border-dark-100 dark:border-dark-800 rounded-2xl">
+                                        <Activity size={32} className="text-dark-300 dark:text-dark-600 mx-auto mb-3" />
+                                        <p className="text-xs font-black text-dark-400 dark:text-dark-500 uppercase tracking-widest">No Network Events Yet</p>
+                                        <p className="text-[10px] text-dark-400 dark:text-dark-600 mt-1">Activity will appear here as peers sync</p>
+                                    </div>
+                                ) : recentDocs.map((doc, idx) => (
                                     <div
                                         key={doc.id}
                                         className="bg-white dark:bg-dark-900 border border-dark-100 dark:border-dark-800 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-synapse-300/50 dark:hover:border-synapse-800/50 transition-all duration-300 flex items-center gap-5 group relative overflow-hidden animate-slide-up"

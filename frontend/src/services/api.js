@@ -434,3 +434,45 @@ export const activity = {
         return req(`/activity/feed${qs({ limit })}`);
     },
 };
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export const notifications = {
+    list(userId, limit = 100) {
+        return req(`/notifications${qs({ user_id: userId, limit })}`);
+    },
+    create(userId, payload) {
+        return req(`/notifications${qs({ user_id: userId })}`, { method: 'POST', body: JSON.stringify(payload) });
+    },
+    markRead(notifId, userId) {
+        return req(`/notifications/${notifId}/read${qs({ user_id: userId })}`, { method: 'PATCH' });
+    },
+    markAllRead(userId) {
+        return req(`/notifications/read-all${qs({ user_id: userId })}`, { method: 'PATCH' });
+    },
+    deleteOne(notifId, userId) {
+        return req(`/notifications/${notifId}${qs({ user_id: userId })}`, { method: 'DELETE' });
+    },
+    deleteAll(userId, type = null) {
+        const params = type ? qs({ user_id: userId, type }) : qs({ user_id: userId });
+        return req(`/notifications${params}`, { method: 'DELETE' });
+    },
+};
+
+// ── Engagement ────────────────────────────────────────────────────────────────
+
+export const engagement = {
+    recordView(viewerId, entityType, entityId, ownerId) {
+        return req('/engagement/view', { method: 'POST', body: JSON.stringify({ viewer_id: viewerId, entity_type: entityType, entity_id: entityId, owner_id: ownerId }) });
+    },
+    recordDownload(downloaderId, entityType, entityId, ownerId, entityTitle = '') {
+        return req('/engagement/download', { method: 'POST', body: JSON.stringify({ downloader_id: downloaderId, entity_type: entityType, entity_id: entityId, owner_id: ownerId, entity_title: entityTitle }) });
+    },
+    rate(raterId, entityType, entityId, ownerId, score, entityTitle = '') {
+        return req('/engagement/rate', { method: 'POST', body: JSON.stringify({ rater_id: raterId, entity_type: entityType, entity_id: entityId, owner_id: ownerId, score, entity_title: entityTitle }) });
+    },
+    entityStats(entityType, entityId) {
+        return req(`/engagement/stats/${entityType}/${entityId}`);
+    },
+};
+

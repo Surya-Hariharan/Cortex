@@ -19,7 +19,7 @@ import {
     Filter
 } from 'lucide-react';
 
-import { notes as notesApi, getUserId } from '../../services/api.js';
+import { notes as notesApi, activity as activityApi, getUserId } from '../../services/api.js';
 
 const MOCK_CONTRIBUTIONS = [];
 

@@ -81,6 +81,7 @@ class AITaskScheduler:
         self._history: List[dict] = []
         self._worker_task: asyncio.Task | None = None
         self._running = False
+        self._paused = False
 
     async def start(self) -> None:
         """Start the scheduler worker loop."""
@@ -143,6 +144,9 @@ class AITaskScheduler:
     async def _worker_loop(self) -> None:
         """Continuously dequeue and dispatch tasks respecting the semaphore."""
         while self._running:
+            if self._paused:
+                await asyncio.sleep(0.5)
+                continue
             try:
                 task: _Task = await asyncio.wait_for(self._queue.get(), timeout=1.0)
             except asyncio.TimeoutError:
@@ -185,10 +189,21 @@ class AITaskScheduler:
                 if len(self._history) > 200:
                     self._history = self._history[-200:]
 
+    def pause(self) -> None:
+        """Pause task processing — queued tasks accumulate but don't execute."""
+        self._paused = True
+        logger.info("AITaskScheduler paused")
+
+    def resume(self) -> None:
+        """Resume task processing after a pause."""
+        self._paused = False
+        logger.info("AITaskScheduler resumed")
+
     def status(self) -> dict:
         """Return scheduler state for the health endpoint."""
         return {
             "max_concurrent": self._max,
+            "paused": self._paused,
             "queue_depth": self._queue.qsize(),
             "active_tasks": [
                 {"task_id": t.task_id, "name": t.name, "priority": t.priority}

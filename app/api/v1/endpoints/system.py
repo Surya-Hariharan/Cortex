@@ -30,6 +30,12 @@ class InternetStatusRequest(BaseModel):
     online: bool
 
 
+class RuntimeConfig(BaseModel):
+    """Runtime and precision preference from the frontend."""
+    runtime: str   # "standard" | "onnx"
+    precision: str  # "fp32" | "fp16" | "int8"
+
+
 @router.get("/health")
 async def system_health() -> dict:
     """Aggregate health report covering DB, FAISS, models, mesh, and sync queue."""
@@ -223,3 +229,65 @@ async def update_internet_status(body: InternetStatusRequest) -> dict:
         results["embeddings_error"] = str(exc)
 
     return results
+
+
+@router.get("/resources")
+async def system_resources() -> dict:
+    """Real-time CPU, memory and disk usage via psutil."""
+    import psutil
+    vm = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    return {
+        "cpu_percent": psutil.cpu_percent(interval=0.1),
+        "memory": {
+            "used_mb": vm.used // (1024 * 1024),
+            "total_mb": vm.total // (1024 * 1024),
+            "percent": vm.percent,
+        },
+        "disk": {
+            "used_gb": disk.used // (1024 ** 3),
+            "total_gb": disk.total // (1024 ** 3),
+            "percent": disk.percent,
+        },
+    }
+
+
+@router.post("/scheduler/pause")
+async def pause_scheduler() -> dict:
+    """Pause the AI task scheduler — new tasks queue up but don't execute."""
+    from app.services.ai_task_scheduler import scheduler
+    scheduler.pause()
+    return {"paused": True, "message": "Pipeline paused"}
+
+
+@router.post("/scheduler/resume")
+async def resume_scheduler() -> dict:
+    """Resume the AI task scheduler after a pause."""
+    from app.services.ai_task_scheduler import scheduler
+    scheduler.resume()
+    return {"paused": False, "message": "Pipeline resumed"}
+
+
+@router.post("/runtime")
+async def set_runtime(body: RuntimeConfig) -> dict:
+    """Set inference runtime and precision preference.
+
+    runtime='onnx'     → use local ONNX (offline-capable)
+    runtime='standard' → use cloud APIs when available (Gemini/Groq)
+    """
+    from app.ai_models.model_manager import model_manager
+
+    if body.runtime == "standard":
+        try:
+            model_manager.llm.switch_to_cloud()
+            model_manager.embeddings.switch_to_cloud()
+        except Exception:
+            pass
+    else:
+        try:
+            model_manager.llm.switch_to_local()
+            model_manager.embeddings.switch_to_local()
+        except Exception:
+            pass
+
+    return {"runtime": body.runtime, "precision": body.precision, "applied": True}

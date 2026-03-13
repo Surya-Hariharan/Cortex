@@ -85,9 +85,13 @@ export const system = {
     health: () => req('/system/health'),
     models: () => req('/system/models'),
     scheduler: () => req('/system/scheduler'),
+    resources: () => req('/system/resources'),
     benchmark: () => req('/system/benchmark', { method: 'POST' }),
     loadModel: (modelName) => req(`/system/models/${modelName}/load`, { method: 'POST' }),
     unloadModel: (modelName) => req(`/system/models/${modelName}/unload`, { method: 'POST' }),
+    pauseScheduler: () => req('/system/scheduler/pause', { method: 'POST' }),
+    resumeScheduler: () => req('/system/scheduler/resume', { method: 'POST' }),
+    setRuntime: (runtime, precision) => req('/system/runtime', { method: 'POST', body: JSON.stringify({ runtime, precision }) }),
 };
 
 // ── Documents ─────────────────────────────────────────────────────────────────
@@ -119,7 +123,7 @@ export const documents = {
     },
 
     reindex(id) {
-        return req(`/documents/${id}/reindex`, { method: 'POST' });
+        return req(`/documents/${id}/ingest`, { method: 'POST' });
     },
 };
 

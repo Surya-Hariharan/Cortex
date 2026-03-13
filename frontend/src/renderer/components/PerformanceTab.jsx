@@ -202,13 +202,30 @@ export default function PerformanceTab() {
         // Future: Could open a model console or system logs
     };
 
-    // Simulate real-time monitoring data
+    // Poll real system resources every 2s for live monitor graphs
+    useEffect(() => {
+        const fetchResources = async () => {
+            try {
+                const data = await systemApi.resources();
+                realResRef.current = {
+                    cpu: data.cpu_percent ?? 7,
+                    mem: data.memory?.used_mb ?? 450,
+                };
+            } catch (_) {}
+        };
+        fetchResources();
+        const t = setInterval(fetchResources, 2000);
+        return () => clearInterval(t);
+    }, []);
+
+    // Live monitor — real CPU/memory base + tiny jitter for smooth animation
     useEffect(() => {
         const t = setInterval(() => {
+            const { cpu, mem } = realResRef.current;
             setLiveData(prev => ({
                 latency: [...prev.latency, 2 + Math.random() * (precision === 'fp32' ? 5 : 2)].slice(-40),
-                cpu: [...prev.cpu, 5 + Math.random() * 8].slice(-40),
-                mem: [...prev.mem, (precision === 'fp32' ? 620 : 412) + Math.random() * 20].slice(-40),
+                cpu: [...prev.cpu, Math.max(0, cpu + (Math.random() - 0.5) * 2)].slice(-40),
+                mem: [...prev.mem, Math.max(0, mem + (Math.random() - 0.5) * 20)].slice(-40),
                 ocr: [...prev.ocr, 12 + Math.random() * 4].slice(-40),
                 embed: [...prev.embed, 85 + Math.random() * 10].slice(-40),
             }));

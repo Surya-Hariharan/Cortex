@@ -80,10 +80,23 @@ POSTGRES_BOOTSTRAP_SQL: list[str] = [
 
 async def bootstrap_operational_schema(conn: AsyncConnection, dialect: str) -> None:
     """Apply extra schema bits that ORM models intentionally do not manage."""
-    if dialect != "postgresql":
-        return
+    if dialect == "postgresql":
+        for stmt in POSTGRES_BOOTSTRAP_SQL:
+            await conn.execute(text(stmt))
+        log.info("database.bootstrap_ready", dialect=dialect)
 
-    for stmt in POSTGRES_BOOTSTRAP_SQL:
-        await conn.execute(text(stmt))
+    # SQLite column migrations — idempotent: skip if column already exists
+    if dialect == "sqlite":
+        await _sqlite_add_column_if_missing(conn, "documents", "stream", "TEXT")
+        await _sqlite_add_column_if_missing(conn, "documents", "subject", "TEXT")
 
-    log.info("database.bootstrap_ready", dialect=dialect)
+
+async def _sqlite_add_column_if_missing(
+    conn: AsyncConnection, table: str, column: str, col_type: str
+) -> None:
+    """ALTER TABLE … ADD COLUMN only when the column doesn't exist yet."""
+    result = await conn.execute(text(f"PRAGMA table_info({table})"))
+    existing = {row[1] for row in result.fetchall()}
+    if column not in existing:
+        await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+        log.info("database.column_added", table=table, column=column)

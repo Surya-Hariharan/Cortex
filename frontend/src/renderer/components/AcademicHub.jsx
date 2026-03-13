@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Search,
     Filter,
@@ -160,28 +160,50 @@ export default function AcademicHub({ userStream }) {
     const [sortBy, setSortBy] = useState('Recent');
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [publicNotes, setPublicNotes] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        setIsLoading(true);
         notesApi.browsePublic({ limit: 100 }).then(res => {
             const raw = Array.isArray(res) ? res : (res?.notes ?? []);
-            setPublicNotes(raw.map(n => ({
-                id: n.id,
-                title: n.title || 'Untitled',
-                subject: (n.tags ? (typeof n.tags === 'string' ? JSON.parse(n.tags) : n.tags) : []).find(t => t.startsWith('subject:'))?.split(':')[1] || 'General',
-                stream: (n.tags ? (typeof n.tags === 'string' ? JSON.parse(n.tags) : n.tags) : []).find(t => t.startsWith('stream:'))?.split(':')[1] || 'All',
-                type: 'Typed PDF',
-                isHandwritten: false,
-                isOCR: false,
-                uploadedBy: n.user_id ?? 'Anonymous',
-                batch: '2024',
-                downloads: n.share_info?.download_count ?? 0,
-                rating: 4.5,
-                size: '—',
-                date: n.created_at ? new Date(n.created_at).toLocaleDateString() : '—',
-                noteId: n.id,
-            })));
-        }).catch(() => {});
+            setPublicNotes(raw.map(n => {
+                const parsedTags = n.tags
+                    ? (typeof n.tags === 'string' ? JSON.parse(n.tags) : n.tags)
+                    : [];
+                const subject = parsedTags.find(t => t.startsWith('subject:'))?.split(':')[1] || 'General';
+                const stream = parsedTags.find(t => t.startsWith('stream:'))?.split(':')[1] || 'All';
+                const type = parsedTags.find(t => t.startsWith('type:'))?.split(':')[1] || 'Typed PDF';
+                const isHandwritten = type === 'Handwritten Scan';
+                return {
+                    id: n.id,
+                    title: n.title || 'Untitled',
+                    subject,
+                    stream,
+                    type,
+                    isHandwritten,
+                    isOCR: isHandwritten,
+                    uploadedBy: n.user_id ?? 'Anonymous',
+                    batch: '2024',
+                    downloads: n.share_info?.download_count ?? 0,
+                    rating: 4.5,
+                    size: '—',
+                    date: n.created_at ? new Date(n.created_at).toLocaleDateString() : '—',
+                    noteId: n.id,
+                };
+            }));
+        }).catch(() => {}).finally(() => setIsLoading(false));
     }, []);
+
+    // Compute real stream counts from fetched notes
+    const streamCounts = useMemo(() => {
+        const counts = {};
+        publicNotes.forEach(n => {
+            if (n.stream && n.stream !== 'All') {
+                counts[n.stream] = (counts[n.stream] || 0) + 1;
+            }
+        });
+        return counts;
+    }, [publicNotes]);
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2">
@@ -257,11 +279,11 @@ export default function AcademicHub({ userStream }) {
                         <div className="flex-1 overflow-y-auto px-4 scrollbar-thin">
                             <FilterSection title="Stream">
                                 <FilterItem label="All Streams" active={activeStream === 'All'} onClick={() => setActiveStream('All')} />
-                                <FilterItem label="AI & ML" count={12} active={activeStream === 'AI & ML'} onClick={() => setActiveStream('AI & ML')} />
-                                <FilterItem label="Computer Science" count={28} active={activeStream === 'Computer Science'} onClick={() => setActiveStream('Computer Science')} />
-                                <FilterItem label="Mechanical" count={8} active={activeStream === 'Mechanical'} onClick={() => setActiveStream('Mechanical')} />
-                                <FilterItem label="Electronics" count={15} active={activeStream === 'Electronics'} onClick={() => setActiveStream('Electronics')} />
-                                <FilterItem label="Civil" count={4} active={activeStream === 'Civil'} onClick={() => setActiveStream('Civil')} />
+                                <FilterItem label="AI & ML" count={streamCounts['AI & ML']} active={activeStream === 'AI & ML'} onClick={() => setActiveStream('AI & ML')} />
+                                <FilterItem label="Computer Science" count={streamCounts['Computer Science']} active={activeStream === 'Computer Science'} onClick={() => setActiveStream('Computer Science')} />
+                                <FilterItem label="Mechanical" count={streamCounts['Mechanical']} active={activeStream === 'Mechanical'} onClick={() => setActiveStream('Mechanical')} />
+                                <FilterItem label="Electronics" count={streamCounts['Electronics']} active={activeStream === 'Electronics'} onClick={() => setActiveStream('Electronics')} />
+                                <FilterItem label="Civil" count={streamCounts['Civil']} active={activeStream === 'Civil'} onClick={() => setActiveStream('Civil')} />
                             </FilterSection>
 
                             <FilterSection title="Year">
@@ -312,6 +334,14 @@ export default function AcademicHub({ userStream }) {
 
                     {/* Right Notes Grid */}
                     <main className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
+                        {isLoading ? (
+                            <div className="h-full flex items-center justify-center text-slate-400 dark:text-dark-600">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="w-8 h-8 border-2 border-synapse-500 border-t-transparent rounded-full animate-spin" />
+                                    <span className="text-sm font-medium">Loading notes…</span>
+                                </div>
+                            </div>
+                        ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                             {publicNotes
                                 .filter(note => {
@@ -325,19 +355,23 @@ export default function AcademicHub({ userStream }) {
                                 ))
                             }
                         </div>
+                        )}
 
                         {/* Empty State */}
-                        {publicNotes.length === 0 && (
+                        {!isLoading && publicNotes.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center text-center p-12">
                                 <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-dark-900 flex items-center justify-center text-slate-300 dark:text-dark-800 mb-6">
                                     <Search size={40} />
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-2">Nothing found</h3>
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-2">No public notes yet</h3>
                                 <p className="text-sm text-slate-500 dark:text-dark-400 max-w-xs mx-auto">
-                                    Try adjusting your filters or search query to discover more shared notes.
+                                    Be the first to contribute! Upload a note and set visibility to <b>Academic Hub</b>.
                                 </p>
-                                <button className="mt-6 px-6 py-2 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-200 dark:shadow-none">
-                                    Clear all filters
+                                <button
+                                    onClick={() => setIsUploadOpen(true)}
+                                    className="mt-6 px-6 py-2 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-200 dark:shadow-none"
+                                >
+                                    Contribute a Note
                                 </button>
                             </div>
                         )}

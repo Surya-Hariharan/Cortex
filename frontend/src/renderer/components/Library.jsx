@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useCore } from '../context/CoreContext';
 import {
     BookOpen,
     FileText,
@@ -62,6 +63,7 @@ const STATUS_CONFIG = {
 const FILTERS = ['All', 'PDFs', 'Scans', 'Research', 'Recordings'];
 
 export default function Library({ onUploadPdf, onToast }) {
+    const { isOnline } = useCore();
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('list');
@@ -71,8 +73,8 @@ export default function Library({ onUploadPdf, onToast }) {
     const userId = getUserId();
 
     useEffect(() => {
-        loadDocuments();
-    }, []);
+        if (isOnline) loadDocuments();
+    }, [isOnline]);
 
     async function loadDocuments() {
         setLoading(true);

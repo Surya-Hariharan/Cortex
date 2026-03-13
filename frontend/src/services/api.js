@@ -48,12 +48,20 @@ export const backendStatus = {
 
 async function req(path, options = {}) {
     const url = `${BASE}${path}`;
+    const { headers: extraHeaders = {}, signal, ...restOptions } = options;
+    // Only set Content-Type when there is a body — GET/DELETE requests without a body
+    // must NOT send this header because it triggers a CORS preflight from Electron's
+    // file:// renderer (Origin: null) which can fail in some Chromium builds.
+    const hasBody = restOptions.body !== undefined;
     let res;
     try {
         res = await fetch(url, {
-            headers: { 'Content-Type': 'application/json', ...options.headers },
-            signal: options.signal || AbortSignal.timeout(5000),
-            ...options,
+            headers: {
+                ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+                ...extraHeaders,
+            },
+            signal: signal || AbortSignal.timeout(5000),
+            ...restOptions,
         });
     } catch (err) {
         backendStatus._set(false);

@@ -34,6 +34,8 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     user_id: str = Form(...),
     project_id: Optional[str] = Form(None),
+    subject: Optional[str] = Form(None),
+    stream: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentRead:
@@ -58,10 +60,10 @@ async def upload_document(
         file_size=len(content),
         mime_type=file.content_type or "application/pdf",
         title=Path(original_name).stem.replace("_", " ").replace("-", " "),
+        subject=subject,
+        stream=stream,
     )
     doc = await create_document(data, db)
-    # trigger_ingestion creates its own DB session — do NOT pass the
-    # request-scoped `db` here (it will be closed when the response sends).
     background_tasks.add_task(trigger_ingestion, doc.id)
     return DocumentRead.model_validate(doc)
 

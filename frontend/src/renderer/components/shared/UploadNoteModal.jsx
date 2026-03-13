@@ -17,7 +17,13 @@ import {
     Tags as TagsIcon,
     AlertCircle
 } from 'lucide-react';
-import { documents as documentsApi, getUserId } from '../../../services/api.js';
+import { documents as documentsApi, notes as notesApi, getUserId } from '../../../services/api.js';
+
+const VISIBILITY_MAP = {
+    'Private': 'private',
+    'Mesh Network': 'link_only',
+    'Academic Hub': 'public',
+};
 
 const STEPS = [
     { id: 1, label: 'Upload' },
@@ -83,6 +89,26 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
         try {
             const userId = getUserId() || 'local-user';
             await documentsApi.upload(uploadData.file, userId);
+
+            // Build tags for the note so it appears correctly in Campus Hub filters
+            const tags = [
+                `stream:${uploadData.stream}`,
+                `year:${uploadData.year}`,
+                `type:${uploadData.type}`,
+            ];
+            if (uploadData.subject) tags.push(`subject:${uploadData.subject}`);
+            if (uploadData.tags) {
+                uploadData.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => tags.push(t));
+            }
+
+            await notesApi.create({
+                user_id: userId,
+                title: uploadData.title || uploadData.file.name.replace(/\.[^/.]+$/, ''),
+                content: uploadData.description || null,
+                tags,
+                visibility: VISIBILITY_MAP[uploadData.visibility] || 'private',
+            });
+
             clearInterval(progressInterval);
             setOcrProgress(100);
             setIsProcessing(false);

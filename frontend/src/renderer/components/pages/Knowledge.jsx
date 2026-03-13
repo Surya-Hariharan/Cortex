@@ -17,7 +17,7 @@ export default function Knowledge({ onToast, onUploadPdf, userStream }) {
         <div className="h-full flex flex-col bg-white dark:bg-dark-950">
             {/* Sub-Tab Bar */}
             <div className="flex-shrink-0 px-6 pt-5 pb-0 bg-white dark:bg-dark-950 z-30">
-                <div className="max-w-[1240px] mx-auto">
+                <div className="max-w-[1240px] mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-dark-900/80 rounded-2xl w-fit">
                         {SUB_TABS.map(tab => (
                             <button
@@ -32,6 +32,12 @@ export default function Knowledge({ onToast, onUploadPdf, userStream }) {
                             </button>
                         ))}
                     </div>
+                    <button
+                        onClick={onUploadPdf}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-synapse-600 hover:bg-synapse-700 active:scale-95 text-white text-[13px] font-bold rounded-xl transition-all shadow-lg shadow-synapse-200/40 dark:shadow-synapse-900/30"
+                    >
+                        <Upload size={16} /> Upload PDF
+                    </button>
                 </div>
             </div>
 

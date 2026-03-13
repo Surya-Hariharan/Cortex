@@ -129,30 +129,55 @@ function postToBackend(apiPath, body) {
 // ── Internet Connectivity Check ──────────────────────────────────────────────
 let isInternetOnline = false;
 let internetCheckInterval = null;
+let _consecutiveFailures = 0;
+const OFFLINE_THRESHOLD = 3;
 
-// Pings a lightweight external endpoint (Google connectivity check).
-// Returns true if we get any HTTP response (even 204/301/etc).
-function checkInternetConnectivity() {
-    return new Promise(resolve => {
-        const req = http.get('http://connectivitycheck.gstatic.com/generate_204', res => {
-            res.resume();
-            resolve(true);
-        });
-        req.on('error', () => resolve(false));
-        req.setTimeout(4000, () => { req.destroy(); resolve(false); });
-    });
+const PROBE_ENDPOINTS = [
+    'https://1.1.1.1',
+    'https://cloudflare.com',
+    'https://www.google.com',
+];
+
+// Tries each endpoint via HEAD request; returns true if ANY responds successfully.
+// AbortController enforces a 5 s per-probe timeout.
+async function checkInternetConnectivity() {
+    for (const url of PROBE_ENDPOINTS) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        try {
+            const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+            clearTimeout(timer);
+            // Any non-server-error response confirms connectivity
+            if (res.status < 500) return true;
+        } catch (_err) {
+            clearTimeout(timer);
+            console.log(`[CORTEX-CONNECTIVITY] probe failed: ${url}`);
+        }
+    }
+    return false;
 }
 
 async function updateInternetStatus() {
-    const online = await checkInternetConnectivity();
-    if (online !== isInternetOnline) {
-        isInternetOnline = online;
-        console.log(`[Cortex] Internet status changed: ${online ? 'online' : 'offline'}`);
-        mainWindow?.webContents.send('internet-status', { online });
+    const probeResult = await checkInternetConnectivity();
+
+    let newStatus;
+    if (probeResult) {
+        _consecutiveFailures = 0;
+        newStatus = true;
+    } else {
+        _consecutiveFailures++;
+        // Stay ONLINE until OFFLINE_THRESHOLD consecutive failures are reached
+        newStatus = (_consecutiveFailures >= OFFLINE_THRESHOLD) ? false : isInternetOnline;
+    }
+
+    if (newStatus !== isInternetOnline) {
+        isInternetOnline = newStatus;
+        console.log(`[CORTEX-CONNECTIVITY] status changed: ${isInternetOnline ? 'ONLINE' : 'OFFLINE'}`);
+        mainWindow?.webContents.send('internet-status', { online: isInternetOnline });
 
         // Notify the Python backend so it can switch AI model modes
         try {
-            await postToBackend('/api/v1/system/internet-status', { online });
+            await postToBackend('/api/v1/system/internet-status', { online: isInternetOnline });
         } catch (_) { /* backend may not be up yet */ }
     }
 }

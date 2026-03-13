@@ -167,8 +167,8 @@ body {
   /* ── Sidebar Nav ─────────────────────────────────────────── */
   /* ── Sidebar Nav ─────────────────────────────────────────── */
   .sidebar-header {
-    @apply text-[10px] font-bold text-slate-400 dark:text-dark-500/60 uppercase tracking-[0.08em] px-3 select-none flex items-center justify-between mb-2;
-    margin-top: 16px;
+    @apply text-[10px] font-bold text-slate-400 dark:text-dark-500/60 uppercase tracking-[0.08em] px-3 select-none flex items-center justify-between mb-1.5;
+    margin-top: 10px;
   }
 
   /* First header doesn't need top margin */
@@ -178,10 +178,10 @@ body {
 
   /* Base class — ALWAYS applied to every sidebar item */
   .sidebar-nav-item {
-    @apply flex items-center w-full rounded-xl text-[13px] font-bold transition-colors duration-150 relative;
-    height: 40px;
+    @apply flex items-center w-full rounded-xl text-[12px] font-bold transition-colors duration-150 relative;
+    height: 34px;
     padding: 0;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     box-sizing: border-box;
   }
 
@@ -208,13 +208,13 @@ body {
 
   .sidebar-icon-container {
     @apply flex-shrink-0 flex items-center justify-center;
-    width: 32px;
+    width: 26px;
     margin-left: 2px;
   }
 
   .sidebar-label {
     @apply truncate flex-1 text-left;
-    margin-left: 8px;
+    margin-left: 6px;
   }
 
   .sidebar-child-item {

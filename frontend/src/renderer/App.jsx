@@ -17,12 +17,12 @@ import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, Panel
 import { useCore } from './context/CoreContext';
 
 const TABS = [
-    { id: 'knowledge', label: 'Home', icon: <Home size={18} /> },
-    { id: 'home', label: 'Knowledge', icon: <BookOpen size={18} /> },
-    { id: 'workspace', label: 'Workspace', icon: <FileText size={18} /> },
-    { id: 'campus', label: 'Campus', icon: <Users size={18} /> },
-    { id: 'activity', label: 'Activity', icon: <ActivityIcon size={18} /> },
-    { id: 'ai-engine', label: 'AI Engine', icon: <Cpu size={18} /> },
+    { id: 'knowledge', label: 'Home', icon: <Home size={16} /> },
+    { id: 'home', label: 'Knowledge', icon: <BookOpen size={16} /> },
+    { id: 'workspace', label: 'Workspace', icon: <FileText size={16} /> },
+    { id: 'campus', label: 'Campus', icon: <Users size={16} /> },
+    { id: 'activity', label: 'Activity', icon: <ActivityIcon size={16} /> },
+    { id: 'ai-engine', label: 'AI Engine', icon: <Cpu size={16} /> },
 ];
 
 const MemoHomePage = React.memo(HomePage);
@@ -55,6 +55,7 @@ export default function App() {
     const [showStreamSelector, setShowStreamSelector] = useState(!localStorage.getItem('cortex-user-stream'));
     const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [activeChatId, setActiveChatId] = useState('c1');
+    const [activeProjectId, setActiveProjectId] = useState(null);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null, title: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
@@ -241,12 +242,12 @@ export default function App() {
         <div className="h-screen flex flex-col bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
             <div className="flex flex-1 overflow-hidden">
                 {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-                <div className={`bg-dark-50 dark:bg-dark-900 flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-in-out relative ${isSidebarCollapsed ? 'w-[68px]' : 'w-[260px] border-r border-dark-200 dark:border-dark-800'}`}>
+                <div className={`bg-dark-50 dark:bg-dark-900 flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-in-out relative ${isSidebarCollapsed ? 'w-[68px]' : 'w-[240px] border-r border-dark-200 dark:border-dark-800'}`}>
                     {/* Drag Handle & Collapse Button */}
-                    <div className={`flex items-center p-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ WebkitAppRegion: 'drag' }}>
+                    <div className={`flex items-center p-2 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ WebkitAppRegion: 'drag' }}>
                         {!isSidebarCollapsed && (
                             <div className="flex items-center gap-2 px-1" style={{ WebkitAppRegion: 'no-drag' }}>
-                                <span className="text-lg font-black tracking-tight text-dark-800 dark:text-dark-50">
+                                <span className="text-[14px] font-black tracking-tight text-dark-800 dark:text-dark-50">
                                     Cor<span className="text-synapse-600 dark:text-synapse-500">tex</span>
                                 </span>
                             </div>
@@ -262,35 +263,35 @@ export default function App() {
                     </div>
 
                     {/* Primary Actions */}
-                    <div className="px-3 pb-3" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <div className="px-2.5 pb-2" style={{ WebkitAppRegion: 'no-drag' }}>
                         {isSidebarCollapsed ? (
                             <button
                                 onClick={handleNewChat}
-                                className="w-full flex justify-center items-center py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white rounded-xl transition-all duration-200 shadow-sm border border-synapse-700 dark:border-synapse-500 mt-1"
+                                className="w-full flex justify-center items-center py-2 bg-synapse-600 hover:bg-synapse-700 text-white rounded-xl transition-all duration-200 shadow-sm border border-synapse-700 dark:border-synapse-500 mt-0.5"
                                 title="New Chat"
                             >
-                                <Plus size={20} />
+                                <Plus size={18} />
                             </button>
                         ) : (
-                            <div className="flex gap-2.5 mt-1">
+                            <div className="flex gap-2 mt-0.5">
                                 <button
                                     onClick={handleNewChat}
-                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-700 dark:text-dark-100 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700 text-[13px]"
+                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-700 dark:text-dark-100 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700 text-[12px]"
                                 >
-                                    <span className="text-synapse-600 dark:text-synapse-500"><Plus size={18} /></span>
+                                    <span className="text-synapse-600 dark:text-synapse-500"><Plus size={16} /></span>
                                     New Chat
                                 </button>
                                 <button
-                                    className="px-3 py-2 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-400 dark:text-dark-400 hover:text-slate-600 dark:hover:text-dark-200 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700"
+                                    className="px-2.5 py-1.5 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-700/50 text-slate-400 dark:text-dark-400 hover:text-slate-600 dark:hover:text-dark-200 font-bold rounded-xl transition-all duration-200 shadow-sm border border-slate-200 dark:border-dark-700 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-dark-700"
                                     title="New Project"
                                 >
-                                    <Monitor size={18} />
+                                    <Monitor size={16} />
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto px-3 space-y-6 mt-2 pb-4" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <div className="flex-1 overflow-y-auto px-2.5 space-y-4 mt-1 pb-3" style={{ WebkitAppRegion: 'no-drag' }}>
                         {/* Tools Section (Moved up) */}
                         <div>
                             {!isSidebarCollapsed && (
@@ -481,7 +482,7 @@ export default function App() {
                     </div>
 
                     {/* Profile Panel (Footer) */}
-                    <div className="p-3 mt-auto border-t border-dark-200/50 dark:border-dark-800/50 bg-dark-50/50 dark:bg-dark-900/50" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <div className="p-2.5 mt-auto border-t border-dark-200/50 dark:border-dark-800/50 bg-dark-50/50 dark:bg-dark-900/50" style={{ WebkitAppRegion: 'no-drag' }}>
                         <button
                             onClick={() => setShowProfileModal(true)}
                             className={`w-full flex items-center p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-dark-800/60 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-dark-700 hover:shadow-sm ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}
@@ -512,7 +513,7 @@ export default function App() {
                         {activeTab === 'activity' && <MemoActivity />}
                         {activeTab === 'ai-engine' && <MemoAIEngine />}
                         {activeTab === 'project' && (() => {
-                            const proj = projects.find(p => p.id === activeProjectId);
+                            const proj = MOCK_PROJECTS.find(p => p.id === activeProjectId);
                             return proj ? (
                                 <ProjectView
                                     project={proj}

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUpRight, Plus, Zap, X, Check } from 'lucide-react';
+import { ArrowUpRight, Plus, Zap, X, Check, Paperclip } from 'lucide-react';
 import ResultCard from './shared/ResultCard';
-import { search as searchApi, chat as chatApi, getUserId } from '../../services/api.js';
+import { search as searchApi, chat as chatApi, documents as docsApi, getUserId } from '../../services/api.js';
 import { useCore } from '../context/CoreContext.jsx';
 
 const SEARCH_STAGES = [
@@ -33,6 +33,7 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
     const [searchStage, setSearchStage] = useState(-1);
     const [selectedModel, setSelectedModel] = useState(null);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const [attachedFile, setAttachedFile] = useState(null); // { name, status: 'uploading'|'ready'|'error' }
 
     const inputRef = useRef(null);
     const messagesEndRef = useRef(null);
@@ -40,6 +41,7 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
     const stageTimerRef = useRef(null);
     const firstSearchReportedRef = useRef(!!savedState?.query);
     const dropdownRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     const models = isInternetOnline ? ONLINE_MODELS : OFFLINE_MODELS;
 
@@ -176,6 +178,22 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
         submitQuery(q);
     };
 
+    const handleFileSelect = useCallback(async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';                    // allow re-selecting the same file
+        setAttachedFile({ name: file.name, status: 'uploading' });
+        try {
+            const userId = getUserId();
+            await docsApi.upload(file, userId);
+            setAttachedFile({ name: file.name, status: 'ready' });
+            onToast?.(`"${file.name}" uploaded successfully`, 'success');
+        } catch (err) {
+            setAttachedFile({ name: file.name, status: 'error' });
+            onToast?.(`Upload failed: ${err.message}`, 'error');
+        }
+    }, [onToast]);
+
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div className="h-full w-full bg-white dark:bg-dark-950 flex flex-col overflow-hidden">
@@ -282,20 +300,44 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
             <div className="flex-shrink-0 px-6 pb-6 pt-3 bg-white dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800/60">
                 <div className="max-w-[860px] mx-auto space-y-2">
 
-                    {/* Active model badge */}
-                    {selectedModel && (
-                        <div className="flex items-center animate-fade-in">
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl text-blue-700 dark:text-blue-300 text-[12px] font-bold shadow-sm">
-                                <Zap size={11} className="text-blue-500" />
-                                <span>{models.find(m => m.id === selectedModel)?.label ?? selectedModel}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedModel(null)}
-                                    className="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
+                    {/* Active model badge + attached file badge */}
+                    {(selectedModel || attachedFile) && (
+                        <div className="flex items-center gap-2 flex-wrap animate-fade-in">
+                            {selectedModel && (
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl text-blue-700 dark:text-blue-300 text-[12px] font-bold shadow-sm">
+                                    <Zap size={11} className="text-blue-500" />
+                                    <span>{models.find(m => m.id === selectedModel)?.label ?? selectedModel}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedModel(null)}
+                                        className="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
+                                    >
+                                        <X size={11} />
+                                    </button>
+                                </div>
+                            )}
+                            {attachedFile && (
+                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-xl text-[12px] font-bold shadow-sm
+                                    ${attachedFile.status === 'uploading' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-300' :
+                                      attachedFile.status === 'error'    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/50 text-red-700 dark:text-red-300' :
+                                                                           'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700/50 text-emerald-700 dark:text-emerald-300'}`}
                                 >
-                                    <X size={11} />
-                                </button>
-                            </div>
+                                    {attachedFile.status === 'uploading'
+                                        ? <div className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin flex-shrink-0" />
+                                        : <Paperclip size={11} />
+                                    }
+                                    <span className="max-w-[140px] truncate">{attachedFile.name}</span>
+                                    {attachedFile.status !== 'uploading' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setAttachedFile(null)}
+                                            className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity"
+                                        >
+                                            <X size={11} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -303,20 +345,38 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
                     <form onSubmit={handleSearch} className="relative group">
                         <div className={`bg-white dark:bg-dark-900 shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.28)] flex items-center gap-3 pl-2 pr-2 py-3 rounded-[28px] transition-all duration-300 border ${isSearching ? 'border-synapse-400 dark:border-synapse-500/50' : 'border-slate-200 dark:border-dark-800 group-hover:border-synapse-300 dark:group-hover:border-dark-700'}`}>
 
-                            {/* Plus → model dropdown */}
+                            {/* Plus → upload + model dropdown */}
                             <div className="relative flex-shrink-0" ref={dropdownRef}>
                                 <button
                                     type="button"
                                     onClick={() => setShowModelDropdown(prev => !prev)}
                                     className={`rounded-2xl w-12 h-12 flex items-center justify-center transition-colors ${showModelDropdown ? 'bg-synapse-100 dark:bg-synapse-900/30 text-synapse-600' : 'bg-slate-50 dark:bg-dark-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 hover:text-slate-600 dark:hover:text-dark-200'}`}
-                                    title="Select model"
+                                    title="Attach file or select model"
                                 >
                                     <Plus size={22} />
                                 </button>
 
                                 {showModelDropdown && (
                                     <div className="absolute bottom-[58px] left-0 z-50 w-60 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+
+                                        {/* ── Attach section ── */}
                                         <div className="px-4 py-2.5 border-b border-slate-100 dark:border-dark-800">
+                                            <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest">Attach</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowModelDropdown(false); fileInputRef.current?.click(); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+                                        >
+                                            <Paperclip size={15} className="text-slate-400 flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[13px] font-bold text-slate-700 dark:text-dark-200">Upload File</p>
+                                                <p className="text-[11px] text-slate-400 dark:text-dark-500">PDF, DOCX, TXT…</p>
+                                            </div>
+                                        </button>
+
+                                        {/* ── Models section ── */}
+                                        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-dark-800">
                                             <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest">
                                                 {isInternetOnline ? 'Cloud Models' : 'Local Stream Models'}
                                             </p>
@@ -340,6 +400,15 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
                                         ))}
                                     </div>
                                 )}
+
+                                {/* Hidden file input */}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf,.doc,.docx,.txt,.md"
+                                    className="hidden"
+                                    onChange={handleFileSelect}
+                                />
                             </div>
 
                             <input

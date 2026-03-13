@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, GraduationCap } from 'lucide-react';
+import { Search, BookOpen, GraduationCap, Upload } from 'lucide-react';
 import SearchTab from '../SearchTab';
 import Library from '../Library';
 import AcademicHub from '../AcademicHub';

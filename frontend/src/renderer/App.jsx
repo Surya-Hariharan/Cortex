@@ -13,7 +13,7 @@ import StreamSelectorModal from './components/layout/StreamSelectorModal';
 import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus } from '../services/api.js';
-import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, WifiOff } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
 const TABS = [
@@ -47,6 +47,9 @@ export default function App() {
     const [stats, setStats] = useState({ documents: 0, embeddings: 0, subjects: [] });
     const [perfProvider, setPerfProvider] = useState('cpu');
     const [wsExpanded, setWsExpanded] = useState({ w1: true, w2: true });
+
+    // 'checking' | 'online' | 'offline'
+    const [connStatus, setConnStatus] = useState('checking');
 
     // New UI states
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -90,6 +93,17 @@ export default function App() {
         window.addEventListener('click', handleClick);
         return () => window.removeEventListener('click', handleClick);
     }, [contextMenu.visible]);
+
+    // Connectivity status: do an immediate check on mount, then track changes
+    useEffect(() => {
+        // First real check — resolves 'checking' state regardless of cached value
+        backendStatus.check().then(online => setConnStatus(online ? 'online' : 'offline'));
+        // Subscribe to all future status flips
+        const unsub = backendStatus.subscribe(online =>
+            setConnStatus(online ? 'online' : 'offline')
+        );
+        return () => unsub();
+    }, []);
 
     // Ctrl+K / Command Palette shortcuts
     useEffect(() => {
@@ -161,15 +175,6 @@ export default function App() {
 
     return (
         <div className="h-screen flex flex-col bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
-            {/* Offline Banner — only show when backend is genuinely unreachable.
-                navigator.onLine is NOT used here because Electron loads the
-                renderer via file:// which always reports onLine=false. */}
-            {!isOnline && (
-                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-500/90 dark:bg-amber-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
-                    <WifiOff size={13} />
-                    <span>Offline mode — check your connectivity</span>
-                </div>
-            )}
             <div className="flex flex-1 overflow-hidden">
                 {/* ── Sidebar ──────────────────────────────────────────────────────── */}
                 <div className={`bg-dark-50 dark:bg-dark-900 flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-in-out relative ${isSidebarCollapsed ? 'w-[68px]' : 'w-[260px] border-r border-dark-200 dark:border-dark-800'}`}>
@@ -518,8 +523,34 @@ export default function App() {
                     />
                 )}
 
-                {/* ── Window Controls (fixed top-right) ──────────────────────── */}
-                <div className="fixed top-0 right-0 z-[9999]">
+                {/* ── Window Controls + Connectivity (fixed top-right) ───────────── */}
+                <div className="fixed top-0 right-0 z-[9999] flex items-center">
+                    {/* Connectivity status chip */}
+                    <div className="flex items-center h-8 pr-2" style={{ WebkitAppRegion: 'no-drag' }}>
+                        {connStatus === 'online' && (
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700/60 mr-2 shadow-sm">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 shadow-[0_0_4px_rgba(16,185,129,0.6)]" />
+                                <Wifi size={13} className="text-emerald-500 flex-shrink-0" />
+                                <span className="text-[12px] font-bold text-emerald-600 dark:text-emerald-400 leading-none">Connected</span>
+                            </div>
+                        )}
+                        {connStatus === 'offline' && (
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700/60 mr-2 shadow-sm">
+                                <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 shadow-[0_0_4px_rgba(239,68,68,0.6)]" />
+                                <WifiOff size={13} className="text-red-500 flex-shrink-0" />
+                                <span className="text-[12px] font-bold text-red-600 dark:text-red-400 leading-none">Offline</span>
+                            </div>
+                        )}
+                        {connStatus === 'checking' && (
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/60 mr-2 shadow-sm animate-pulse">
+                                <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                <Wifi size={13} className="text-amber-500 flex-shrink-0" />
+                                <span className="text-[12px] font-bold text-amber-600 dark:text-amber-400 leading-none">Connecting</span>
+                            </div>
+                        )}
+                    </div>
+                    <WindowControls />
+                </div>
                     <WindowControls />
                 </div>
 

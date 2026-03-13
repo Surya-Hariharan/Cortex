@@ -420,3 +420,17 @@ export const groups = {
         return req(`/groups/${groupId}/messages`, { method: 'POST', body: JSON.stringify(data) });
     },
 };
+
+// ── Activity / Analytics ──────────────────────────────────────────────────────
+
+export const activity = {
+    stats(userId) {
+        return req(`/activity/stats${qs({ user_id: userId })}`);
+    },
+    chart(userId, range = '7d') {
+        return req(`/activity/chart${qs({ user_id: userId, range })}`);
+    },
+    feed(limit = 30) {
+        return req(`/activity/feed${qs({ limit })}`);
+    },
+};

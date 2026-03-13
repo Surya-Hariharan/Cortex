@@ -116,17 +116,18 @@ export default function PerformanceTab() {
     const [modelStatus, setModelStatus] = useState(null);
     const [runtime, setRuntime] = useState('onnx'); // standard | onnx
     const [precision, setPrecision] = useState('fp16'); // fp32 | fp16 | int8
-    const [hardware, setHardware] = useState({ cpu: true, gpu: true, npu: true });
+    const [hardware, setHardware] = useState({ cpu: true, gpu: false, npu: false });
     const [currentMode, setCurrentMode] = useState({ llm_mode: 'local', privacy_mode: false, internet_online: false });
     const [liveData, setLiveData] = useState({
         latency: [],
         cpu: [],
         mem: [],
         ocr: [],
-        embed: []
+        embed: [],
+        disk: [],
     });
     // Holds latest real resource values from backend (updated every 2s)
-    const realResRef = useRef({ cpu: 7, mem: 450 });
+    const realResRef = useRef({ cpu: 7, mem: 450, disk_percent: 0, disk_used_gb: 0, disk_total_gb: 0, mem_total_mb: 8192 });
 
     // Poll system health for live perf stats
     useEffect(() => {
@@ -221,7 +222,18 @@ export default function PerformanceTab() {
                 realResRef.current = {
                     cpu: data.cpu_percent ?? 7,
                     mem: data.memory?.used_mb ?? 450,
+                    disk_percent: data.disk?.percent ?? 0,
+                    disk_used_gb: data.disk?.used_gb ?? 0,
+                    disk_total_gb: data.disk?.total_gb ?? 0,
+                    mem_total_mb: data.memory?.total_mb ?? 8192,
                 };
+                if (data.hardware) {
+                    setHardware({
+                        cpu: true,
+                        gpu: data.hardware.directml || data.hardware.cuda,
+                        npu: data.hardware.npu,
+                    });
+                }
             } catch (_) {}
         };
         fetchResources();
@@ -232,13 +244,14 @@ export default function PerformanceTab() {
     // Live monitor — real CPU/memory base + tiny jitter for smooth animation
     useEffect(() => {
         const t = setInterval(() => {
-            const { cpu, mem } = realResRef.current;
+            const { cpu, mem, disk_percent } = realResRef.current;
             setLiveData(prev => ({
                 latency: [...prev.latency, 2 + Math.random() * (precision === 'fp32' ? 5 : 2)].slice(-40),
                 cpu: [...prev.cpu, Math.max(0, cpu + (Math.random() - 0.5) * 2)].slice(-40),
                 mem: [...prev.mem, Math.max(0, mem + (Math.random() - 0.5) * 20)].slice(-40),
                 ocr: [...prev.ocr, 12 + Math.random() * 4].slice(-40),
                 embed: [...prev.embed, 85 + Math.random() * 10].slice(-40),
+                disk: [...prev.disk, disk_percent].slice(-40),
             }));
         }, 800);
         return () => clearInterval(t);
@@ -380,14 +393,25 @@ export default function PerformanceTab() {
                     />
                     <PerformanceTile
                         label="System RAM"
-                        value={(systemRAM / 1024).toFixed(1)}
-                        unit="GB"
-                        sub="Available memory"
-                        trend="STABLE"
+                        value={(realResRef.current.mem / 1024).toFixed(1)}
+                        unit={`/ ${(realResRef.current.mem_total_mb / 1024).toFixed(0)} GB`}
+                        sub={`${(realResRef.current.mem_total_mb > 0 ? (realResRef.current.mem / realResRef.current.mem_total_mb * 100).toFixed(0) : 0)}% used`}
+                        trend="LIVE"
                         trendDir="down"
-                        history={Array(6).fill(systemRAM / 1024)}
+                        history={liveData.mem.map(v => v / 1024)}
                         icon={<Droplets size={16} />}
                         accentColor="amber"
+                    />
+                    <PerformanceTile
+                        label="Disk Usage"
+                        value={realResRef.current.disk_used_gb}
+                        unit={`/ ${realResRef.current.disk_total_gb} GB`}
+                        sub={`${realResRef.current.disk_percent ?? 0}% used`}
+                        trend="LIVE"
+                        trendDir="down"
+                        history={liveData.disk}
+                        icon={<BarChart3 size={16} />}
+                        accentColor="indigo"
                     />
                 </div>
 
@@ -467,9 +491,9 @@ export default function PerformanceTab() {
                             <div className="space-y-6">
                                 <h3 className="text-xs font-black text-dark-800 dark:text-dark-50 uppercase tracking-[0.2em] px-1">Architectural Benchmarks</h3>
                                 <div className="flex gap-6">
-                                    <ComparisonCard type="cloud" latency="840.0 ms" network="REQUIRED" privacy="EXTERNAL" energy="HIGH" />
-                                    <ComparisonCard type="cpu" latency="42.0 ms" network="NONE" privacy="LOCAL" energy="MEDIUM" />
-                                    <ComparisonCard type="onnx" latency="2.4 ms" network="NONE (AIR-GAPPED)" privacy="ULTRA-LOCAL" energy="ULTRA-LOW" isRecommended />
+                                    <ComparisonCard type="cloud" latency={`${CLOUD_API_MS.toFixed(1)} ms`} network="REQUIRED" privacy="EXTERNAL" energy="HIGH" />
+                                    <ComparisonCard type="cpu" latency={`${CPU_BASELINE_MS.toFixed(1)} ms`} network="NONE" privacy="LOCAL" energy="MEDIUM" />
+                                    <ComparisonCard type="onnx" latency={`${typeof avgMs === 'number' ? avgMs.toFixed(1) : avgMs} ms`} network="NONE (AIR-GAPPED)" privacy="ULTRA-LOCAL" energy="ULTRA-LOW" isRecommended />
                                 </div>
                             </div>
                         </div>

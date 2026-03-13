@@ -252,10 +252,24 @@ async def update_internet_status(body: InternetStatusRequest) -> dict:
 
 @router.get("/resources")
 async def system_resources() -> dict:
-    """Real-time CPU, memory and disk usage via psutil."""
+    """Real-time CPU, memory, disk, and hardware accelerator detection."""
     import psutil
     vm = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
+
+    # Detect ONNX Runtime execution providers (DirectML = AMD GPU/NPU, CUDA = NVIDIA)
+    hardware: dict = {"cpu": True, "directml": False, "cuda": False, "npu": False, "providers": []}
+    try:
+        import onnxruntime as ort
+        providers = ort.get_available_providers()
+        hardware["providers"] = providers
+        hardware["directml"] = "DmlExecutionProvider" in providers
+        hardware["cuda"] = "CUDAExecutionProvider" in providers
+        # AMD NPU is exposed through DirectML on Ryzen AI hardware
+        hardware["npu"] = hardware["directml"]
+    except Exception:
+        pass
+
     return {
         "cpu_percent": psutil.cpu_percent(interval=0.1),
         "memory": {
@@ -268,6 +282,7 @@ async def system_resources() -> dict:
             "total_gb": disk.total // (1024 ** 3),
             "percent": disk.percent,
         },
+        "hardware": hardware,
     }
 
 

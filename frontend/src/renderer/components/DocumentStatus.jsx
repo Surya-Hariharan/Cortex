@@ -57,25 +57,37 @@ export default function DocumentStatus() {
     const [queueDocs, setQueueDocs] = useState([]);
     const [failedDocs, setFailedDocs] = useState([]);
     const [health, setHealth] = useState(null);
+    const [resources, setResources] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showAllDocs, setShowAllDocs] = useState(false);
+    const [showHealthModal, setShowHealthModal] = useState(false);
 
     const loadData = useCallback(async () => {
         const userId = getUserId();
         try {
-            const [h, all] = await Promise.all([
+            const [h, all, res] = await Promise.all([
                 systemApi.health(),
                 docsApi.list(userId),
+                systemApi.resources(),
             ]);
             const docs = Array.isArray(all) ? all : (all?.documents ?? []);
             setHealth(h);
+            setResources(res);
             setIndexedDocs(docs.filter(d => d.status === 'indexed' || d.status === 'completed'));
             setQueueDocs(docs.filter(d => d.status === 'processing' || d.status === 'pending'));
             setFailedDocs(docs.filter(d => d.status === 'failed' || d.status === 'error'));
-            // Sync paused state from backend
             const sched = h?.subsystems?.task_scheduler;
             if (sched?.paused !== undefined) setIsPaused(sched.paused);
         } catch (_) {}
         setLoading(false);
+    }, []);
+
+    // Poll resources every 5 s for live hardware stats
+    useEffect(() => {
+        const t = setInterval(() => {
+            systemApi.resources().then(setResources).catch(() => {});
+        }, 5000);
+        return () => clearInterval(t);
     }, []);
 
     const togglePause = async () => {
@@ -187,7 +199,12 @@ export default function DocumentStatus() {
                             <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden shadow-sm">
                                 <div className="px-6 py-5 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
                                     <h3 className="text-xs font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Recently Indexed</h3>
-                                    <button className="text-[10px] font-black text-synapse-600 uppercase tracking-widest hover:underline">View All</button>
+                                    <button
+                                        onClick={() => setShowAllDocs(v => !v)}
+                                        className="text-[10px] font-black text-synapse-600 uppercase tracking-widest hover:underline"
+                                    >
+                                        {showAllDocs ? 'Show Less' : `View All (${indexedDocs.length})`}
+                                    </button>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
@@ -199,7 +216,7 @@ export default function DocumentStatus() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-                                            {indexedDocs.map(doc => (
+                                            {(showAllDocs ? indexedDocs : indexedDocs.slice(0, 5)).map(doc => (
                                                 <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
@@ -258,7 +275,7 @@ export default function DocumentStatus() {
                                 </div>
                             </div>
 
-                            {/* Resource Usage Info (Static/Decorative) */}
+                            {/* Resource Usage — real data from systemApi.resources() */}
                             <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative group">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-synapse-500/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
                                 <div className="relative z-10">
@@ -267,28 +284,58 @@ export default function DocumentStatus() {
                                             <Cpu size={18} className="text-synapse-400" />
                                         </div>
                                         <h3 className="text-xs font-black uppercase tracking-[0.2em]">Hardware Insight</h3>
+                                        <div className="ml-auto flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+                                        </div>
                                     </div>
                                     <div className="space-y-4">
                                         <div>
                                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
-                                                <span>GPU Acceleration</span>
-                                                <span className="text-synapse-400">Active</span>
+                                                <span>CPU Usage</span>
+                                                <span className={resources ? 'text-synapse-400' : 'text-slate-500'}>
+                                                    {resources ? `${resources.cpu_percent.toFixed(1)}%` : '—'}
+                                                </span>
                                             </div>
                                             <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-synapse-500 w-[45%]" />
+                                                <div className="h-full bg-synapse-500 transition-all duration-500" style={{ width: `${resources?.cpu_percent ?? 0}%` }} />
                                             </div>
                                         </div>
                                         <div>
                                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
-                                                <span>Embedding RAM</span>
-                                                <span className="text-emerald-400">1.2 GB</span>
+                                                <span>Memory Used</span>
+                                                <span className={resources ? 'text-emerald-400' : 'text-slate-500'}>
+                                                    {resources ? `${(resources.memory.used_mb / 1024).toFixed(1)} GB / ${(resources.memory.total_mb / 1024).toFixed(0)} GB` : '—'}
+                                                </span>
                                             </div>
                                             <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-emerald-500 w-[20%]" />
+                                                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${resources?.memory?.percent ?? 0}%` }} />
                                             </div>
                                         </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                                <span>Disk</span>
+                                                <span className={resources ? 'text-amber-400' : 'text-slate-500'}>
+                                                    {resources ? `${resources.disk.used_gb} / ${resources.disk.total_gb} GB` : '—'}
+                                                </span>
+                                            </div>
+                                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${resources?.disk?.percent ?? 0}%` }} />
+                                            </div>
+                                        </div>
+                                        {resources?.hardware && (
+                                            <div className="pt-2 flex items-center gap-2 flex-wrap">
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Accelerators:</span>
+                                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-synapse-500/20 text-synapse-400 font-bold">CPU</span>
+                                                {resources.hardware.directml && <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-bold">DirectML GPU</span>}
+                                                {resources.hardware.cuda && <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">CUDA GPU</span>}
+                                                {resources.hardware.npu && <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold">NPU</span>}
+                                            </div>
+                                        )}
                                     </div>
-                                    <button className="mt-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+                                    <button
+                                        onClick={() => setShowHealthModal(true)}
+                                        className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+                                    >
                                         View System Logs <ArrowUpRight size={14} />
                                     </button>
                                 </div>
@@ -298,6 +345,29 @@ export default function DocumentStatus() {
                     </div>
                 </div>
             </div>
+
+            {/* System Health Modal */}
+            {showHealthModal && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+                    onClick={() => setShowHealthModal(false)}
+                >
+                    <div
+                        className="bg-white dark:bg-dark-900 rounded-3xl w-full max-w-2xl max-h-[80vh] overflow-auto shadow-2xl border border-slate-200 dark:border-dark-800"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-dark-800">
+                            <h3 className="text-sm font-black text-slate-800 dark:text-dark-50 uppercase tracking-wider">System Health Report</h3>
+                            <button onClick={() => setShowHealthModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <Search size={18} className="rotate-45" />
+                            </button>
+                        </div>
+                        <pre className="text-[11px] font-mono text-slate-600 dark:text-dark-300 p-6 whitespace-pre-wrap overflow-auto leading-relaxed">
+                            {JSON.stringify({ health, resources }, null, 2)}
+                        </pre>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -85,6 +85,9 @@ export const system = {
     health: () => req('/system/health'),
     models: () => req('/system/models'),
     scheduler: () => req('/system/scheduler'),
+    benchmark: () => req('/system/benchmark', { method: 'POST' }),
+    loadModel: (modelName) => req(`/system/models/${modelName}/load`, { method: 'POST' }),
+    unloadModel: (modelName) => req(`/system/models/${modelName}/unload`, { method: 'POST' }),
 };
 
 // ── Documents ─────────────────────────────────────────────────────────────────

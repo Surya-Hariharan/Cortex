@@ -3,13 +3,25 @@
 GET /system/health   — comprehensive status of all subsystems
 GET /system/models   — model manager health detail
 GET /system/scheduler — AI task scheduler status
+POST /system/benchmark — run benchmark and preload models
+POST /system/models/{model_name}/load — load specific model
+POST /system/models/{model_name}/unload — unload specific model
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/system", tags=["System"])
+
+
+class BenchmarkResult(BaseModel):
+    """Benchmark execution result."""
+    success: bool
+    loaded_models: dict[str, bool]
+    execution_time_ms: float
+    message: str
 
 
 @router.get("/health")
@@ -90,3 +102,80 @@ async def scheduler_status() -> dict:
     """AI task scheduler queue depth and active tasks."""
     from app.services.ai_task_scheduler import scheduler
     return scheduler.status()
+
+
+@router.post("/benchmark")
+async def run_benchmark() -> BenchmarkResult:
+    """Run AI model benchmark - preloads all models and measures performance."""
+    import time
+    from app.ai_models.model_manager import model_manager
+
+    start_time = time.time()
+
+    try:
+        # Preload all models (this serves as our benchmark)
+        loaded_models = model_manager.load_by_available_memory()
+
+        # Simple embedding benchmark test
+        if loaded_models.get("embeddings"):
+            test_text = "This is a benchmark test for the embedding model performance."
+            _ = model_manager.embeddings.encode([test_text])
+
+        execution_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+
+        return BenchmarkResult(
+            success=True,
+            loaded_models=loaded_models,
+            execution_time_ms=execution_time,
+            message=f"Benchmark completed successfully in {execution_time:.1f}ms"
+        )
+    except Exception as exc:
+        execution_time = (time.time() - start_time) * 1000
+        return BenchmarkResult(
+            success=False,
+            loaded_models={},
+            execution_time_ms=execution_time,
+            message=f"Benchmark failed: {str(exc)}"
+        )
+
+
+@router.post("/models/{model_name}/load")
+async def load_model(model_name: str) -> dict:
+    """Load a specific AI model."""
+    from app.ai_models.model_manager import model_manager
+
+    valid_models = ["embeddings", "llm", "whisper"]
+    if model_name not in valid_models:
+        raise HTTPException(status_code=400, detail=f"Invalid model name. Must be one of: {valid_models}")
+
+    try:
+        # Trigger lazy loading by accessing the property
+        if model_name == "embeddings":
+            _ = model_manager.embeddings
+        elif model_name == "llm":
+            _ = model_manager.llm
+        elif model_name == "whisper":
+            _ = model_manager.whisper
+
+        return {"success": True, "message": f"{model_name} model loaded successfully"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load {model_name}: {str(exc)}")
+
+
+@router.post("/models/{model_name}/unload")
+async def unload_model(model_name: str) -> dict:
+    """Unload a specific AI model from memory."""
+    from app.ai_models.model_manager import model_manager
+
+    valid_models = ["embeddings", "llm", "whisper"]
+    if model_name not in valid_models:
+        raise HTTPException(status_code=400, detail=f"Invalid model name. Must be one of: {valid_models}")
+
+    try:
+        success = model_manager.unload_model(model_name)
+        if success:
+            return {"success": True, "message": f"{model_name} model unloaded successfully"}
+        else:
+            return {"success": False, "message": f"{model_name} model was not loaded"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to unload {model_name}: {str(exc)}")

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Zap, Activity, Shield, Cpu, Monitor, Globe, BarChart3, Clock, CheckCircle2, AlertCircle, Play, Square, Terminal, Network, Droplets, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { system as systemApi } from '../../services/api.js';
+import { useCore } from '../context/CoreContext.jsx';
 
 // Realistic baselines for comparison
 const CLOUD_API_MS = 847;
@@ -109,9 +110,12 @@ function ComparisonCard({ type, latency, network, privacy, energy, isRecommended
 }
 
 export default function PerformanceTab() {
+    const { showToast } = useCore();
     const [viewMode, setViewMode] = useState('overview'); // overview | monitor
     const [benchmarkActive, setBenchmarkActive] = useState(false);
+    const [benchmarkResult, setBenchmarkResult] = useState(null);
     const [perf, setPerf] = useState(null);
+    const [modelStatus, setModelStatus] = useState(null);
     const [runtime, setRuntime] = useState('onnx'); // standard | onnx
     const [precision, setPrecision] = useState('fp16'); // fp32 | fp16 | int8
     const [hardware, setHardware] = useState({ cpu: true, gpu: true, npu: true });
@@ -127,14 +131,82 @@ export default function PerformanceTab() {
     useEffect(() => {
         const fetchPerf = async () => {
             try {
-                const data = await systemApi.health();
-                if (data) setPerf(data);
-            } catch (_) { }
+                const [healthData, modelData] = await Promise.all([
+                    systemApi.health(),
+                    systemApi.models()
+                ]);
+                if (healthData) setPerf(healthData);
+                if (modelData) setModelStatus(modelData);
+            } catch (err) {
+                console.warn('Failed to fetch performance data:', err);
+            }
         };
         fetchPerf();
         const interval = setInterval(fetchPerf, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    // Handle benchmark execution
+    const runBenchmark = async () => {
+        setBenchmarkActive(true);
+        setBenchmarkResult(null);
+
+        try {
+            showToast('Starting AI model benchmark...', 'info');
+            const result = await systemApi.benchmark();
+
+            setBenchmarkResult(result);
+
+            if (result.success) {
+                showToast(`Benchmark completed in ${result.execution_time_ms.toFixed(1)}ms`, 'success');
+
+                // Refresh model status after benchmark
+                const modelData = await systemApi.models();
+                setModelStatus(modelData);
+            } else {
+                showToast(`Benchmark failed: ${result.message}`, 'error');
+            }
+        } catch (err) {
+            console.error('Benchmark failed:', err);
+            showToast('Benchmark failed to execute', 'error');
+        } finally {
+            setBenchmarkActive(false);
+        }
+    };
+
+    // Handle runtime changes
+    const handleRuntimeChange = async (newRuntime) => {
+        setRuntime(newRuntime);
+        showToast(`Runtime changed to ${newRuntime.toUpperCase()}`, 'info');
+
+        try {
+            // Refresh performance data after runtime change
+            const healthData = await systemApi.health();
+            setPerf(healthData);
+        } catch (err) {
+            console.warn('Failed to refresh after runtime change:', err);
+        }
+    };
+
+    // Handle precision changes
+    const handlePrecisionChange = async (newPrecision) => {
+        setPrecision(newPrecision);
+        showToast(`Precision changed to ${newPrecision.toUpperCase()}`, 'info');
+
+        try {
+            // Refresh model data after precision change
+            const modelData = await systemApi.models();
+            setModelStatus(modelData);
+        } catch (err) {
+            console.warn('Failed to refresh after precision change:', err);
+        }
+    };
+
+    // Handle terminal button click
+    const openTerminal = () => {
+        showToast('Terminal functionality coming soon...', 'info');
+        // Future: Could open a model console or system logs
+    };
 
     // Simulate real-time monitoring data
     useEffect(() => {
@@ -150,9 +222,12 @@ export default function PerformanceTab() {
         return () => clearInterval(t);
     }, [precision]);
 
-    const avgMs = perf?.avgEmbedTimeMs || 2.4;
+    // Extract real performance data from backend
+    const avgMs = perf?.subsystems?.models?.embeddings?.latency || 2.4;
     const history = perf?.embedHistory || [2.5, 2.3, 2.7, 2.4, 2.2, 2.4, 2.3, 2.5, 2.4];
     const totalOps = perf?.subsystems?.vector_store?.db_chunks || perf?.embedHistory?.length || 142;
+    const systemRAM = modelStatus?.system_free_ram_mb || 0;
+    const modelsLoaded = modelStatus ? Object.values(modelStatus.models).filter(m => m.loaded).length : 0;
 
     return (
         <div className="h-full overflow-y-auto bg-white dark:bg-dark-950 scroll-smooth">
@@ -187,10 +262,11 @@ export default function PerformanceTab() {
                                 </span>
                             </div>
                             <button
-                                onClick={() => setBenchmarkActive(!benchmarkActive)}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-xl ${benchmarkActive ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-dark-500/20 dark:shadow-dark-950/50 hover:-translate-y-1'}`}
+                                onClick={runBenchmark}
+                                disabled={benchmarkActive}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-xl ${benchmarkActive ? 'bg-amber-500 text-white shadow-amber-500/20 cursor-not-allowed' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-dark-500/20 dark:shadow-dark-950/50 hover:-translate-y-1'}`}
                             >
-                                {benchmarkActive ? 'Stop Engine' : 'Run Benchmark'}
+                                {benchmarkActive ? 'Running...' : 'Run Benchmark'}
                             </button>
                             <div className="h-10 w-px bg-dark-100 dark:bg-dark-800 mx-1" />
                             <div className="flex gap-1.5">
@@ -198,7 +274,11 @@ export default function PerformanceTab() {
                                 {hardware.gpu && <div className="p-2 rounded-xl bg-synapse-500/10 text-synapse-500 border border-synapse-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]" title="GPU (DirectML) Detected"><Activity size={14} /></div>}
                                 {hardware.npu && <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]" title="NPU Accelerator Ready"><Zap size={14} /></div>}
                             </div>
-                            <button className="p-2 rounded-xl border border-dark-200 dark:border-dark-800 bg-white dark:bg-dark-900 text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors shadow-sm">
+                            <button
+                                onClick={openTerminal}
+                                className="p-2 rounded-xl border border-dark-200 dark:border-dark-800 bg-white dark:bg-dark-900 text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors shadow-sm hover:-translate-y-1"
+                                title="Open System Console"
+                            >
                                 <Terminal size={16} />
                             </button>
                         </div>
@@ -215,7 +295,36 @@ export default function PerformanceTab() {
                     </div>
                 </div>
 
-                {/* ── 3. Metric Tiles ────────────────────────────────────── */}
+                {/* ── 3. Benchmark Results Display ──────────────────────── */}
+                {benchmarkResult && (
+                    <div className={`rounded-2xl p-6 border transition-all duration-500 ${benchmarkResult.success ? 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-400/40' : 'bg-red-50/30 dark:bg-red-900/10 border-red-400/40'}`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-xl ${benchmarkResult.success ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                                    {benchmarkResult.success ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-dark-800 dark:text-dark-50">
+                                        {benchmarkResult.success ? 'Benchmark Completed' : 'Benchmark Failed'}
+                                    </h3>
+                                    <p className="text-xs text-dark-500 dark:text-dark-400 mt-1">
+                                        {benchmarkResult.message}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-lg font-black text-dark-800 dark:text-dark-50">
+                                    {benchmarkResult.execution_time_ms.toFixed(1)}ms
+                                </div>
+                                <div className="text-xs text-dark-500 dark:text-dark-400">
+                                    {Object.values(benchmarkResult.loaded_models || {}).filter(Boolean).length} models loaded
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── 4. Metric Tiles ────────────────────────────────────── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                     <PerformanceTile
                         label="Avg Latency"
@@ -229,35 +338,24 @@ export default function PerformanceTab() {
                         accentColor="blue"
                     />
                     <PerformanceTile
-                        label="Throughput"
-                        value={(CPU_BASELINE_MS / avgMs).toFixed(1)}
-                        unit="x"
-                        sub="Vs Cloud API"
-                        trend="↑ 21.4"
+                        label="Models Active"
+                        value={modelsLoaded}
+                        unit="/ 3"
+                        sub="Loaded in memory"
+                        trend={`↑ ${modelsLoaded}`}
                         trendDir="up"
-                        history={[1, 5, 12, 18, 20.4, 21.4]}
+                        history={[0, 1, 2, 3, 3, 3]}
                         icon={<Activity size={16} />}
                         accentColor="purple"
                     />
                     <PerformanceTile
-                        label="Compute Flow"
-                        value={totalOps}
-                        unit="ops"
-                        sub="Embeds processed"
-                        trend="↑ 4.2k"
-                        trendDir="up"
-                        history={[10, 20, 45, 80, 110, 142]}
-                        icon={<BarChart3 size={16} />}
-                        accentColor="emerald"
-                    />
-                    <PerformanceTile
-                        label="Engine VRAM"
-                        value="22"
-                        unit="MB"
-                        sub="Memory footprint"
+                        label="System RAM"
+                        value={(systemRAM / 1024).toFixed(1)}
+                        unit="GB"
+                        sub="Available memory"
                         trend="STABLE"
                         trendDir="down"
-                        history={[22, 22, 22, 22, 22, 22]}
+                        history={Array(6).fill(systemRAM / 1024)}
                         icon={<Droplets size={16} />}
                         accentColor="amber"
                     />
@@ -284,8 +382,9 @@ export default function PerformanceTab() {
                                 {['standard', 'onnx'].map(r => (
                                     <button
                                         key={r}
-                                        onClick={() => setRuntime(r)}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${runtime === r ? 'bg-white dark:bg-dark-800 text-synapse-600 dark:text-synapse-400 shadow-sm' : 'text-dark-400 hover:text-dark-500'}`}
+                                        onClick={() => handleRuntimeChange(r)}
+                                        disabled={benchmarkActive}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${runtime === r ? 'bg-white dark:bg-dark-800 text-synapse-600 dark:text-synapse-400 shadow-sm' : 'text-dark-400 hover:text-dark-500'} ${benchmarkActive ? 'cursor-not-allowed opacity-50' : ''}`}
                                     >
                                         {r}
                                     </button>
@@ -296,8 +395,9 @@ export default function PerformanceTab() {
                                 {['FP32', 'FP16', 'INT8'].map(p => (
                                     <button
                                         key={p}
-                                        onClick={() => setPrecision(p.toLowerCase())}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${precision === p.toLowerCase() ? 'bg-white dark:bg-dark-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-dark-400 hover:text-dark-500'}`}
+                                        onClick={() => handlePrecisionChange(p.toLowerCase())}
+                                        disabled={benchmarkActive}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${precision === p.toLowerCase() ? 'bg-white dark:bg-dark-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-dark-400 hover:text-dark-500'} ${benchmarkActive ? 'cursor-not-allowed opacity-50' : ''}`}
                                     >
                                         {p}
                                     </button>
@@ -318,31 +418,6 @@ export default function PerformanceTab() {
                                     <ComparisonCard type="cloud" latency="840.0 ms" network="REQUIRED" privacy="EXTERNAL" energy="HIGH" />
                                     <ComparisonCard type="cpu" latency="42.0 ms" network="NONE" privacy="LOCAL" energy="MEDIUM" />
                                     <ComparisonCard type="onnx" latency="2.4 ms" network="NONE (AIR-GAPPED)" privacy="ULTRA-LOCAL" energy="ULTRA-LOW" isRecommended />
-                                </div>
-                            </div>
-
-                            {/* ── 6. Privacy Assurance ─────────────────────────── */}
-                            <div className="bg-white dark:bg-dark-900 border border-dark-200/80 dark:border-dark-800/80 rounded-2xl p-8 flex items-center justify-between">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                                        <CheckCircle2 size={18} />
-                                        <h3 className="text-sm font-black uppercase tracking-[0.1em]">Privacy Assurance</h3>
-                                    </div>
-                                    <p className="max-w-md text-xs font-medium text-dark-500 dark:text-dark-400">Your embeddings are generated locally. No vector data or text content ever leaves your system, ensuring complete data sovereignty.</p>
-                                </div>
-                                <div className="flex gap-6">
-                                    {[
-                                        { label: 'End-To-End Local', icon: <Shield size={16} /> },
-                                        { label: 'No External APIs', icon: <AlertCircle size={16} /> },
-                                        { label: 'Offline Runtime', icon: <Droplets size={16} /> }
-                                    ].map((f, i) => (
-                                        <div key={i} className="flex flex-col items-center gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-dark-50 dark:bg-dark-800 flex items-center justify-center text-emerald-500 border border-dark-100 dark:border-dark-700">
-                                                {f.icon}
-                                            </div>
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-dark-500 text-center">{f.label}</span>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -435,31 +510,6 @@ export default function PerformanceTab() {
                             </div>
                         </div>
                     )}
-                </div>
-
-                {/* ── 8. Engine Lifecycle Timeline ───────────────────────── */}
-                <div className="pt-10 border-t border-dark-100 dark:border-dark-800">
-                    <h3 className="text-[10px] font-black text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-8 text-center">Engine Lifecycle Milestones</h3>
-                    <div className="max-w-4xl mx-auto flex items-center justify-between relative px-10">
-                        <div className="absolute top-4 left-20 right-20 h-px bg-dark-100 dark:bg-dark-800 z-0" />
-                        {[
-                            { label: 'Model Loaded', time: '0.0s', active: true },
-                            { label: 'Inference Ready', time: '0.3s', active: true },
-                            { label: 'Opt Applied', time: '0.8s', active: true },
-                            { label: 'Local Sharding', time: '1.2s', active: true },
-                            { label: 'Benchmark Done', time: '1.5s', active: benchmarkActive }
-                        ].map((step, i) => (
-                            <div key={i} className="relative z-10 flex flex-col items-center gap-3">
-                                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${step.active ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-dark-900 border-dark-200 dark:border-dark-800'}`}>
-                                    {step.active ? <CheckCircle2 size={16} className="text-white" /> : <div className="w-1.5 h-1.5 rounded-full bg-dark-200 dark:bg-dark-700" />}
-                                </div>
-                                <div className="text-center">
-                                    <p className={`text-[9px] font-black uppercase tracking-widest ${step.active ? 'text-dark-800 dark:text-dark-50' : 'text-dark-400'}`}>{step.label}</p>
-                                    <p className="text-[9px] font-bold text-dark-400 opacity-60 mt-1">{step.time}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
         </div>

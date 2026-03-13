@@ -30,6 +30,15 @@ class InternetStatusRequest(BaseModel):
     online: bool
 
 
+class PrivacyModeRequest(BaseModel):
+    """Toggle privacy mode (cloud APIs disabled)."""
+    enabled: bool
+
+
+# Runtime state: tracks whether internet is online (updated by Electron IPC)
+_internet_online: bool = False
+
+
 class RuntimeConfig(BaseModel):
     """Runtime and precision preference from the frontend."""
     runtime: str   # "standard" | "onnx"
@@ -202,9 +211,19 @@ async def update_internet_status(body: InternetStatusRequest) -> dict:
     When online=False → switch to local inference (Ollama / ONNX) so the app
                         keeps working fully offline.
     """
+    global _internet_online
+    _internet_online = body.online
+
+    from app.services.hybrid_router import get_privacy_mode
     from app.ai_models.model_manager import model_manager
 
     results: dict = {"online": body.online, "llm_mode": None, "embeddings_mode": None}
+
+    # Only switch modes if privacy mode is not active
+    if get_privacy_mode():
+        results["llm_mode"] = "local (privacy)"
+        results["embeddings_mode"] = "local (privacy)"
+        return results
 
     # Switch LLM mode
     try:
@@ -291,3 +310,44 @@ async def set_runtime(body: RuntimeConfig) -> dict:
             pass
 
     return {"runtime": body.runtime, "precision": body.precision, "applied": True}
+
+
+@router.get("/mode")
+async def get_current_mode() -> dict:
+    """Return the current LLM mode, privacy state, and internet connectivity."""
+    from app.ai_models.model_manager import model_manager
+    from app.services.hybrid_router import get_privacy_mode
+
+    try:
+        llm_mode = model_manager.llm._mode
+    except Exception:
+        llm_mode = "unknown"
+
+    return {
+        "llm_mode": llm_mode,
+        "privacy_mode": get_privacy_mode(),
+        "internet_online": _internet_online,
+    }
+
+
+@router.post("/privacy")
+async def set_privacy(body: PrivacyModeRequest) -> dict:
+    """Enable or disable Privacy Mode (cloud APIs disabled, local inference only)."""
+    from app.ai_models.model_manager import model_manager
+    from app.services.hybrid_router import set_privacy_mode, get_privacy_mode
+
+    set_privacy_mode(body.enabled)
+
+    if body.enabled:
+        try:
+            model_manager.llm.switch_to_local()
+            model_manager.embeddings.switch_to_local()
+        except Exception:
+            pass
+
+    try:
+        llm_mode = model_manager.llm._mode
+    except Exception:
+        llm_mode = "unknown"
+
+    return {"privacy_mode": get_privacy_mode(), "llm_mode": llm_mode}

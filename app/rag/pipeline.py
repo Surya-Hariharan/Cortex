@@ -14,6 +14,7 @@ from app.models.domain.chat import Chat, Message
 from app.models.schemas.chat import RAGQueryRequest, RAGQueryResponse, MessageRead
 from app.rag.retriever import semantic_search
 from app.rag.context_builder import build_context
+from app.services.hybrid_router import hybrid_generate
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -76,13 +77,13 @@ async def run_rag_pipeline(
         max_tokens=settings.RAG_MAX_CONTEXT_TOKENS - 512,  # reserve 512 for answer
     )
 
-    # 4. Generate LLM response (async, offloaded to thread pool)
+    # 4. Generate LLM response via hybrid router (picks local vs cloud intelligently)
     gen_start = datetime.utcnow()
-    answer = await model_manager.llm.agenerate(
+    answer, model_used = await hybrid_generate(
         query=request.query,
         context=context_text or None,
         history=history,
-        max_new_tokens=512,
+        llm=model_manager.llm,
     )
     latency_ms = int((datetime.utcnow() - gen_start).total_seconds() * 1000)
 
@@ -124,4 +125,5 @@ async def run_rag_pipeline(
         message=MessageRead.model_validate(assistant_msg),
         citations=citations,
         context_tokens=context_tokens,
+        model_used=model_used,
     )

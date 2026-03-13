@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { backendStatus } from '../../services/api.js';
+import { backendStatus, system as systemApi } from '../../services/api.js';
 
 const CoreContext = createContext();
 
@@ -34,6 +34,9 @@ export const CoreProvider = ({ children }) => {
     // Real internet check: pings external endpoint every 10s from Electron main process.
     // Unlike navigator.onLine, this actually confirms outbound internet access.
     const [isInternetOnline, setIsInternetOnline] = useState(true);
+
+    // ── Privacy Mode ──────────────────────────────────────────────────────────
+    const [privacyMode, setPrivacyModeState] = useState(false);
 
     // ── UI States ─────────────────────────────────────────────────────────────
     const [toast, setToast] = useState(null);
@@ -126,6 +129,11 @@ export const CoreProvider = ({ children }) => {
         return () => unsubInternet?.();
     }, []);
 
+    // Auto-switch backend mode when real internet connectivity changes
+    useEffect(() => {
+        systemApi.setInternetStatus(isInternetOnline).catch(() => { });
+    }, [isInternetOnline]);
+
     // Theme injection
     useEffect(() => {
         const root = window.document.documentElement;
@@ -161,6 +169,15 @@ export const CoreProvider = ({ children }) => {
         window.electronAPI?.logout?.();
     };
 
+    const togglePrivacyMode = async () => {
+        try {
+            const res = await systemApi.setPrivacy(!privacyMode);
+            setPrivacyModeState(res.privacy_mode ?? !privacyMode);
+        } catch {
+            setPrivacyModeState(prev => !prev);
+        }
+    };
+
     const value = {
         isAuthenticated,
         username, setUsername,
@@ -168,6 +185,7 @@ export const CoreProvider = ({ children }) => {
         isOnline,
         isNetworkOnline,
         isInternetOnline,
+        privacyMode, togglePrivacyMode,
         toast, setToast, showToast,
         userStream, setUserStream,
         login, logout

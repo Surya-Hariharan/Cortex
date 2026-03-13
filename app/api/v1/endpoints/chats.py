@@ -68,6 +68,7 @@ async def streaming_chat(
                 "chat_id": result.chat_id,
                 "citations": result.citations,
                 "tokens_used": result.context_tokens,
+                "model_used": result.model_used,
             })
             yield f"data: {done_payload}\n\n"
         except Exception as exc:

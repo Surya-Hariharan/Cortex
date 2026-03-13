@@ -92,6 +92,9 @@ export const system = {
     pauseScheduler: () => req('/system/scheduler/pause', { method: 'POST' }),
     resumeScheduler: () => req('/system/scheduler/resume', { method: 'POST' }),
     setRuntime: (runtime, precision) => req('/system/runtime', { method: 'POST', body: JSON.stringify({ runtime, precision }) }),
+    setInternetStatus: (online) => req('/system/internet-status', { method: 'POST', body: JSON.stringify({ online }) }),
+    getMode: () => req('/system/mode'),
+    setPrivacy: (enabled) => req('/system/privacy', { method: 'POST', body: JSON.stringify({ enabled }) }),
 };
 
 // ── Documents ─────────────────────────────────────────────────────────────────

@@ -108,7 +108,7 @@ function ComparisonCard({ type, latency, network, privacy, energy, isRecommended
 }
 
 export default function PerformanceTab() {
-    const { showToast } = useCore();
+    const { showToast, privacyMode, togglePrivacyMode } = useCore();
     const [viewMode, setViewMode] = useState('overview'); // overview | monitor
     const [benchmarkActive, setBenchmarkActive] = useState(false);
     const [benchmarkResult, setBenchmarkResult] = useState(null);
@@ -117,6 +117,7 @@ export default function PerformanceTab() {
     const [runtime, setRuntime] = useState('onnx'); // standard | onnx
     const [precision, setPrecision] = useState('fp16'); // fp32 | fp16 | int8
     const [hardware, setHardware] = useState({ cpu: true, gpu: true, npu: true });
+    const [currentMode, setCurrentMode] = useState({ llm_mode: 'local', privacy_mode: false, internet_online: false });
     const [liveData, setLiveData] = useState({
         latency: [],
         cpu: [],
@@ -143,6 +144,16 @@ export default function PerformanceTab() {
         };
         fetchPerf();
         const interval = setInterval(fetchPerf, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Poll current AI mode (cloud vs local) for live badge
+    useEffect(() => {
+        const fetchMode = () => {
+            systemApi.getMode().then(setCurrentMode).catch(() => {});
+        };
+        fetchMode();
+        const interval = setInterval(fetchMode, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -257,7 +268,15 @@ export default function PerformanceTab() {
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <h1 className="text-xl font-black text-dark-800 dark:text-dark-50 tracking-tighter">On-Device AI Engine</h1>
-                                    <div className="performance-chip border-synapse-500/20 bg-synapse-500/5 text-synapse-600 dark:text-synapse-400">Local Only</div>
+                                    {currentMode.llm_mode && ['gemini', 'groq'].includes(currentMode.llm_mode) ? (
+                                        <div className="performance-chip border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                            <Globe size={10} /> Cloud Active
+                                        </div>
+                                    ) : (
+                                        <div className="performance-chip border-synapse-500/20 bg-synapse-500/5 text-synapse-600 dark:text-synapse-400 flex items-center gap-1">
+                                            <Shield size={10} /> Local Only
+                                        </div>
+                                    )}
                                 </div>
                                 <p className="text-xs font-bold text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">
                                     Model: BGE-small-v1.5 <span className="opacity-30">•</span> Runtime: ONNX Optimized <span className="opacity-30">•</span> Precision: FP16
@@ -370,6 +389,28 @@ export default function PerformanceTab() {
                         icon={<Droplets size={16} />}
                         accentColor="amber"
                     />
+                </div>
+
+                {/* ── Privacy Mode Toggle ────────────────────────────────── */}
+                <div className="bg-white dark:bg-dark-900 border border-dark-200/80 dark:border-dark-800/80 rounded-2xl p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg transition-colors ${privacyMode ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-dark-100 dark:bg-dark-800 text-dark-400'}`}>
+                            <Shield size={18} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black text-dark-800 dark:text-dark-50 tracking-tight">Private Thinking Mode</p>
+                            <p className="text-[10px] font-bold text-dark-400 dark:text-dark-500 uppercase tracking-widest mt-0.5">
+                                {privacyMode ? 'Cloud APIs disabled — local inference only' : 'Hybrid routing active — cloud enrichment enabled'}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={togglePrivacyMode}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${privacyMode ? 'bg-violet-600' : 'bg-dark-200 dark:bg-dark-700'}`}
+                        title={privacyMode ? 'Disable Privacy Mode' : 'Enable Privacy Mode'}
+                    >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${privacyMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
                 </div>
 
                 {/* ── 4. Tabs & Mode Switching ──────────────────────────── */}

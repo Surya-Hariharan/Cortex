@@ -274,10 +274,14 @@ app = FastAPI(
 )
 
 # ── Middleware ────────────────────────────────────────────────────────────────
+# Electron renderer runs from file:// — it sends no Origin (or Origin: null).
+# Using allow_credentials=True with allow_origins=["*"] is a CORS-spec violation
+# that Chromium rejects. Since this app uses localStorage (not cookies) for auth,
+# credentials=False is correct and allows wildcard origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

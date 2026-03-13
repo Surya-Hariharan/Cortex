@@ -100,13 +100,26 @@ export const system = {
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 export const documents = {
-    upload(file, userId, projectId = null) {
+    async upload(file, userId, projectId = null) {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('user_id', userId);
         if (projectId) fd.append('project_id', projectId);
-        return fetch(`${BASE}/documents/upload`, { method: 'POST', body: fd })
-            .then(r => r.json());
+        let res;
+        try {
+            res = await fetch(`${BASE}/documents/upload`, {
+                method: 'POST',
+                body: fd,
+                signal: AbortSignal.timeout(120000), // 2 min for large files
+            });
+        } catch (err) {
+            backendStatus._set(false);
+            throw new Error('Backend is offline. Please start the server and try again.');
+        }
+        backendStatus._set(true);
+        const data = await res.json().catch(() => ({ detail: res.statusText }));
+        if (!res.ok) throw new Error(data.detail || `Upload failed (HTTP ${res.status})`);
+        return data;
     },
 
     list(userId, { projectId, status, limit = 50, offset = 0 } = {}) {

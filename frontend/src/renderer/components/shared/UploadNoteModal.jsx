@@ -87,6 +87,8 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
             setOcrProgress(100);
             setIsProcessing(false);
             onUploadSuccess?.();
+            // Auto-advance to success screen
+            setTimeout(() => setStep(5), 600);
         } catch (err) {
             clearInterval(progressInterval);
             setOcrProgress(0);

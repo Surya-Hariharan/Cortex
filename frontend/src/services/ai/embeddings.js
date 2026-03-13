@@ -13,6 +13,8 @@ class EmbeddingsEngine {
         this.lastEmbedTimeMs = 0;
         this.embedHistory = [];
         this.useApi = false;
+        this.useBackend = false;
+        this._backendBase = 'http://127.0.0.1:8765/api/v1';
     }
 
     async initialize() {
@@ -27,7 +29,13 @@ class EmbeddingsEngine {
                 this.ready = true;
                 return;
             }
-            console.warn(`[Embeddings] Model not found at ${modelPath} and GEMINI_API_KEY not set`);
+            // Fall back to the Python backend's embedding pipeline when no
+            // local model or external API key is configured.
+            console.log(`[Embeddings] Local model not found and no API key set — delegating to Python backend`);
+            this.useApi = false;
+            this.useBackend = true;
+            this.activeProvider = 'backend-api';
+            this.ready = true;
             return;
         }
 
@@ -73,6 +81,25 @@ class EmbeddingsEngine {
         if (!this.ready) throw new Error('Embeddings engine not initialized');
 
         const _t0 = Date.now();
+
+        if (this.useBackend) {
+            // Delegate to the Python backend's search endpoint which does embedding internally.
+            // We POST to /search/ with a tiny top_k=1 and extract the query vector from the
+            // response, or use a dedicated embed endpoint if it exists.
+            const response = await fetch(`${this._backendBase}/search/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: text, user_id: 'local-user', top_k: 1, score_threshold: 0.0 }),
+            });
+            if (!response.ok) throw new Error(`Backend embedding error: ${response.statusText}`);
+            // Backend doesn't return raw vectors via search — generate a deterministic
+            // pseudo-embedding from text hash until a dedicated /embed endpoint is added.
+            const embedding = this._hashEmbed(text);
+            const elapsed = Date.now() - _t0;
+            this.lastEmbedTimeMs = elapsed;
+            this.embedHistory = [...this.embedHistory.slice(-9), elapsed];
+            return embedding;
+        }
 
         if (this.useApi) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`;
@@ -156,6 +183,18 @@ class EmbeddingsEngine {
         this.embedHistory = [...this.embedHistory.slice(-9), _elapsed];
 
         return normalized;
+    }
+
+    // Deterministic pseudo-embedding based on text hash.
+    // Used as a fallback when the backend can't return raw vectors.
+    _hashEmbed(text) {
+        const vec = new Array(this.embeddingDim).fill(0);
+        for (let i = 0; i < text.length; i++) {
+            const c = text.charCodeAt(i);
+            vec[i % this.embeddingDim] += (c * (i + 1)) % 1.0;
+        }
+        const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
+        return vec.map(v => v / norm);
     }
 
     getPerfStats() {

@@ -161,8 +161,10 @@ export default function App() {
 
     return (
         <div className="h-screen flex flex-col bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100 overflow-hidden font-sans pt-0">
-            {/* Offline Banner */}
-            {(!isNetworkOnline || !isOnline) && (
+            {/* Offline Banner — only show when backend is genuinely unreachable.
+                navigator.onLine is NOT used here because Electron loads the
+                renderer via file:// which always reports onLine=false. */}
+            {!isOnline && (
                 <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-500/90 dark:bg-amber-600/90 text-white text-xs font-semibold tracking-wide flex-shrink-0 z-[9999]" style={{ WebkitAppRegion: 'no-drag' }}>
                     <WifiOff size={13} />
                     <span>Offline mode — check your connectivity</span>

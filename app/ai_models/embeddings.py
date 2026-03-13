@@ -145,3 +145,21 @@ class EmbeddingModel:
             embeddings = embeddings / norms
 
         return embeddings.astype(np.float32)
+
+    def switch_to_cloud(self) -> None:
+        """Switch to Gemini API for embeddings (when internet is available)."""
+        if settings.GEMINI_API_KEY:
+            self._use_api = True
+            logger.info("Embeddings switched to cloud mode: gemini-api")
+        else:
+            logger.warning("switch_to_cloud() called but GEMINI_API_KEY is not set")
+
+    def switch_to_local(self) -> None:
+        """Switch to local ONNX model for embeddings (when offline)."""
+        self._use_api = False
+        if self._session is None:
+            try:
+                self._load()
+            except Exception as exc:
+                logger.warning("Could not load local embeddings model: %s", exc)
+        logger.info("Embeddings switched to local mode: onnx")

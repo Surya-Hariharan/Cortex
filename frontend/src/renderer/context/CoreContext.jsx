@@ -24,7 +24,16 @@ export const CoreProvider = ({ children }) => {
 
     // ── Connectivity State ───────────────────────────────────────────────────
     const [isOnline, setIsOnline] = useState(true);
-    const [isNetworkOnline, setIsNetworkOnline] = useState(window.navigator.onLine);
+    // navigator.onLine is unreliable in Electron (file:// renderer always returns false).
+    // We keep it only to detect genuine network-loss events via the online/offline DOM events.
+    const [isNetworkOnline, setIsNetworkOnline] = useState(
+        // If running in Electron (no real HTTP origin), assume network is fine by default;
+        // the online/offline events will correct this if it actually goes offline.
+        window.location.protocol === 'file:' ? true : window.navigator.onLine
+    );
+    // Real internet check: pings external endpoint every 10s from Electron main process.
+    // Unlike navigator.onLine, this actually confirms outbound internet access.
+    const [isInternetOnline, setIsInternetOnline] = useState(true);
 
     // ── UI States ─────────────────────────────────────────────────────────────
     const [toast, setToast] = useState(null);
@@ -51,20 +60,45 @@ export const CoreProvider = ({ children }) => {
     useEffect(() => {
         const unsub = backendStatus.subscribe(v => setIsOnline(v));
 
-        // Delay the very first check by 3 s so we don't flash "offline"
-        // before the Python backend has had time to bind its port.
-        const initialCheck = setTimeout(() => backendStatus.check().then(v => setIsOnline(v)), 3000);
-        const healthPoll = setInterval(() => backendStatus.check(), 30000);
+        // Do immediate check first, then set up delayed check as backup
+        const immediateCheck = () => {
+            backendStatus.check().then(v => {
+                setIsOnline(v);
+                if (v) {
+                    console.log('[Cortex] Backend connectivity established');
+                }
+            }).catch(() => {
+                setIsOnline(false);
+            });
+        };
+
+        // Check immediately on mount
+        immediateCheck();
+
+        // Backup delayed check (in case backend is still starting)
+        const initialCheck = setTimeout(immediateCheck, 2000);
+
+        // Regular health polling - more frequent to catch issues quickly
+        const healthPoll = setInterval(() => backendStatus.check(), 10000);
 
         // React immediately when Electron's main process confirms backend is up
         // (fires once after waitForBackend() resolves in main.js).
         const unsubElectron = window.electronAPI?.onBackendStatus?.(({ ready }) => {
+            console.log('[Cortex] Electron backend status:', ready);
             setIsOnline(ready);
             if (ready) backendStatus._set(true);
         });
 
-        const handleOnline = () => setIsNetworkOnline(true);
-        const handleOffline = () => setIsNetworkOnline(false);
+        const handleOnline = () => {
+            console.log('[Cortex] Network online');
+            setIsNetworkOnline(true);
+            // Recheck backend when network comes back online
+            setTimeout(immediateCheck, 500);
+        };
+        const handleOffline = () => {
+            console.log('[Cortex] Network offline');
+            setIsNetworkOnline(false);
+        };
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
@@ -76,6 +110,20 @@ export const CoreProvider = ({ children }) => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
+    }, []);
+
+    // Internet status from Electron main process (real connectivity check, updated every 10s)
+    useEffect(() => {
+        // Get initial status
+        window.electronAPI?.getInternetStatus?.().then(online => {
+            if (online !== undefined) setIsInternetOnline(online);
+        });
+        // Subscribe to live updates
+        const unsubInternet = window.electronAPI?.onInternetStatus?.(({ online }) => {
+            console.log('[Cortex] Internet status:', online ? 'online' : 'offline');
+            setIsInternetOnline(online);
+        });
+        return () => unsubInternet?.();
     }, []);
 
     // Theme injection
@@ -119,6 +167,7 @@ export const CoreProvider = ({ children }) => {
         theme, setTheme,
         isOnline,
         isNetworkOnline,
+        isInternetOnline,
         toast, setToast, showToast,
         userStream, setUserStream,
         login, logout

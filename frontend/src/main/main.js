@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
+const https = require('https');
 require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
 
 // ── Python Backend ────────────────────────────────────────────────────────────
@@ -91,6 +92,75 @@ function waitForBackend(timeout = 30000) {
         };
         tryPing();
     });
+}
+
+// ── Backend HTTP Utility ─────────────────────────────────────────────────────
+function postToBackend(apiPath, body) {
+    return new Promise((resolve, reject) => {
+        const payload = JSON.stringify(body);
+        const req = http.request({
+            hostname: '127.0.0.1',
+            port: BACKEND_PORT,
+            path: apiPath,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+            },
+        }, res => {
+            let data = '';
+            res.on('data', d => data += d);
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    resolve({ status: res.statusCode, data: parsed });
+                } catch {
+                    resolve({ status: res.statusCode, data: { detail: data } });
+                }
+            });
+        });
+        req.on('error', err => reject(err));
+        req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
+        req.write(payload);
+        req.end();
+    });
+}
+
+// ── Internet Connectivity Check ──────────────────────────────────────────────
+let isInternetOnline = false;
+let internetCheckInterval = null;
+
+// Pings a lightweight external endpoint (Google connectivity check).
+// Returns true if we get any HTTP response (even 204/301/etc).
+function checkInternetConnectivity() {
+    return new Promise(resolve => {
+        const req = http.get('http://connectivitycheck.gstatic.com/generate_204', res => {
+            res.resume();
+            resolve(true);
+        });
+        req.on('error', () => resolve(false));
+        req.setTimeout(4000, () => { req.destroy(); resolve(false); });
+    });
+}
+
+async function updateInternetStatus() {
+    const online = await checkInternetConnectivity();
+    if (online !== isInternetOnline) {
+        isInternetOnline = online;
+        console.log(`[Cortex] Internet status changed: ${online ? 'online' : 'offline'}`);
+        mainWindow?.webContents.send('internet-status', { online });
+
+        // Notify the Python backend so it can switch AI model modes
+        try {
+            await postToBackend('/api/v1/system/internet-status', { online });
+        } catch (_) { /* backend may not be up yet */ }
+    }
+}
+
+function startInternetChecks() {
+    // Run immediately, then every 10 seconds
+    updateInternetStatus();
+    internetCheckInterval = setInterval(updateInternetStatus, 10000);
 }
 
 // Session file stored in Electron's userData folder — survives app restarts
@@ -284,37 +354,6 @@ function registerIpcHandlers() {
     });
 
     // ── Auth API proxies ────────────────────────────────────────────────────
-    function postToBackend(apiPath, body) {
-        return new Promise((resolve, reject) => {
-            const payload = JSON.stringify(body);
-            const req = http.request({
-                hostname: '127.0.0.1',
-                port: BACKEND_PORT,
-                path: apiPath,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(payload),
-                },
-            }, res => {
-                let data = '';
-                res.on('data', d => data += d);
-                res.on('end', () => {
-                    try {
-                        const parsed = JSON.parse(data);
-                        resolve({ status: res.statusCode, data: parsed });
-                    } catch {
-                        resolve({ status: res.statusCode, data: { detail: data } });
-                    }
-                });
-            });
-            req.on('error', err => reject(err));
-            req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
-            req.write(payload);
-            req.end();
-        });
-    }
-
     ipcMain.handle('auth-register', async (_e, body) => {
         try {
             return await postToBackend('/api/v1/auth/register', body);
@@ -454,6 +493,9 @@ function registerIpcHandlers() {
         } catch { return false; }
     });
 
+    // ── Internet status ─────────────────────────────────────────────────────
+    ipcMain.handle('get-internet-status', () => isInternetOnline);
+
     // ── Performance ─────────────────────────────────────────────────────────
     ipcMain.handle('get-perf-stats', () => {
         if (!embeddingsEngine?.isReady()) return { provider: 'cpu', lastEmbedTimeMs: 0, avgEmbedTimeMs: 0, embedHistory: [], ready: false };
@@ -524,6 +566,9 @@ app.whenReady().then(async () => {
         mainWindow?.webContents.send('backend-status', { ready });
     });
 
+    // Start 10-second internet connectivity checks
+    startInternetChecks();
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -531,6 +576,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
     stopPythonBackend();
+    if (internetCheckInterval) clearInterval(internetCheckInterval);
     if (process.platform !== 'darwin') app.quit();
 });
 

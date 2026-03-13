@@ -6,6 +6,7 @@ GET /system/scheduler — AI task scheduler status
 POST /system/benchmark — run benchmark and preload models
 POST /system/models/{model_name}/load — load specific model
 POST /system/models/{model_name}/unload — unload specific model
+POST /system/internet-status — notify backend of internet connectivity change
 """
 from __future__ import annotations
 
@@ -22,6 +23,11 @@ class BenchmarkResult(BaseModel):
     loaded_models: dict[str, bool]
     execution_time_ms: float
     message: str
+
+
+class InternetStatusRequest(BaseModel):
+    """Internet connectivity status from the Electron main process."""
+    online: bool
 
 
 @router.get("/health")
@@ -179,3 +185,41 @@ async def unload_model(model_name: str) -> dict:
             return {"success": False, "message": f"{model_name} model was not loaded"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to unload {model_name}: {str(exc)}")
+
+
+@router.post("/internet-status")
+async def update_internet_status(body: InternetStatusRequest) -> dict:
+    """Receive internet connectivity status from the Electron main process.
+
+    When online=True  → switch LLM and embeddings to cloud APIs (Gemini/Groq)
+                        for higher quality responses.
+    When online=False → switch to local inference (Ollama / ONNX) so the app
+                        keeps working fully offline.
+    """
+    from app.ai_models.model_manager import model_manager
+
+    results: dict = {"online": body.online, "llm_mode": None, "embeddings_mode": None}
+
+    # Switch LLM mode
+    try:
+        llm = model_manager.llm  # trigger lazy load if needed
+        if body.online:
+            results["llm_mode"] = llm.switch_to_cloud()
+        else:
+            results["llm_mode"] = llm.switch_to_local()
+    except Exception as exc:
+        results["llm_error"] = str(exc)
+
+    # Switch embeddings mode
+    try:
+        emb = model_manager.embeddings
+        if body.online:
+            emb.switch_to_cloud()
+            results["embeddings_mode"] = "api"
+        else:
+            emb.switch_to_local()
+            results["embeddings_mode"] = "local"
+    except Exception as exc:
+        results["embeddings_error"] = str(exc)
+
+    return results

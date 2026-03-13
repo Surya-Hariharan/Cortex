@@ -292,3 +292,51 @@ class LLMModel:
         return await loop.run_in_executor(
             None, lambda: self.generate(query, context, history, max_new_tokens)
         )
+
+    def switch_to_cloud(self) -> str:
+        """Switch to the best available cloud API (Gemini > Groq).
+
+        Called when internet becomes available so we can use higher-quality
+        cloud models instead of local ONNX/Ollama.
+        Returns the new mode name.
+        """
+        if settings.GEMINI_API_KEY:
+            self._mode = "gemini"
+            logger.info("LLM switched to cloud mode: gemini")
+        elif settings.GROQ_API_KEY:
+            self._mode = "groq"
+            logger.info("LLM switched to cloud mode: groq")
+        else:
+            logger.warning("switch_to_cloud() called but no cloud API keys configured")
+        return self._mode
+
+    def switch_to_local(self) -> str:
+        """Switch to the best available local inference engine (Ollama > ONNX).
+
+        Called when internet goes offline so we fall back gracefully to
+        local models.  Returns the new mode name.
+        """
+        # Try Ollama first (fastest local option)
+        try:
+            with httpx.Client() as client:
+                resp = client.get(f"{settings.OLLAMA_ENDPOINT}/api/tags", timeout=2.0)
+                if resp.status_code == 200:
+                    models = [m["name"] for m in resp.json().get("models", [])]
+                    if any(m.startswith(settings.OLLAMA_MODEL) for m in models):
+                        self._mode = "ollama"
+                        logger.info("LLM switched to local mode: ollama")
+                        return self._mode
+        except Exception:
+            pass
+
+        # Fall back to ONNX if Ollama isn't available
+        onnx_candidates = ["model.onnx", "model_quantized.onnx", "decoder_model.onnx"]
+        for candidate in onnx_candidates:
+            if (self._model_dir / candidate).exists():
+                self._mode = "onnx"
+                self._session = None  # force reload on next generate()
+                logger.info("LLM switched to local mode: onnx")
+                return self._mode
+
+        logger.warning("switch_to_local() called but no local models found; keeping current mode: %s", self._mode)
+        return self._mode

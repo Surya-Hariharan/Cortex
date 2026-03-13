@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('backend-status', (_e, status) => cb(status));
         return () => ipcRenderer.removeAllListeners('backend-status');
     },
+    // ── Internet status ───────────────────────────────────────────────────────
+    getInternetStatus: () => ipcRenderer.invoke('get-internet-status'),
+    onInternetStatus: (cb) => {
+        ipcRenderer.on('internet-status', (_e, status) => cb(status));
+        return () => ipcRenderer.removeAllListeners('internet-status');
+    },
     updateTitleBarOverlay: (settings) => ipcRenderer.send('update-titlebar-overlay', settings),
     // Window controls
     windowMinimize: () => ipcRenderer.send('window-minimize'),

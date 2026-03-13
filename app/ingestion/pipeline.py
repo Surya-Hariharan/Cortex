@@ -62,11 +62,11 @@ async def ingest_document(document_id: str, db: AsyncSession) -> None:
         if not chunks:
             raise ValueError("No chunks produced — document may be empty or unreadable")
 
-        # 3. Embed (batch for efficiency)
+        # 4. Embed (batch for efficiency)
         texts = [c["text"] for c in chunks]
         embeddings = model_manager.embeddings.encode(texts)  # (N, 384)
 
-        # 4. Build DB rows & collect IDs
+        # 5. Build DB rows & collect IDs
         chunk_ids: list[str] = []
         db_chunks: list[DocumentChunk] = []
         for i, (chunk, _) in enumerate(zip(chunks, embeddings)):
@@ -83,19 +83,18 @@ async def ingest_document(document_id: str, db: AsyncSession) -> None:
                 )
             )
 
-        # 5. FAISS add
+        # 6. FAISS add
         row_ids = vector_store.add(embeddings, chunk_ids)
-        # Attach FAISS row IDs to chunks
         for db_chunk, row_id in zip(db_chunks, row_ids):
             db_chunk.faiss_id = row_id
 
-        # 6. Persist chunks
+        # 7. Persist chunks
         db.add_all(db_chunks)
 
-        # 7. Calculate word count
+        # 8. Calculate word count
         word_count = sum(len(c["text"].split()) for c in chunks)
 
-        # 8. Update document metadata
+        # 9. Update document metadata
         doc.status = "indexed"
         doc.page_count = page_count
         doc.word_count = word_count
@@ -109,9 +108,15 @@ async def ingest_document(document_id: str, db: AsyncSession) -> None:
         logger.info(
             "Document ingested",
             id=document_id,
+            stream=doc.stream or "unset",
+            subject=doc.subject or "unset",
             pages=page_count,
             chunks=len(chunks),
             words=word_count,
+            ocr=bool(ocr_applied),
+            has_formulas=verification.has_formulas,
+            has_tables=verification.has_tables,
+            quality_score=f"{verification.quality_score:.2f}",
         )
 
     except Exception as exc:

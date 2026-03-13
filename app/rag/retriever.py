@@ -22,10 +22,14 @@ async def semantic_search(
     score_threshold: float = 0.3,
     document_ids: Optional[List[str]] = None,
     project_id: Optional[str] = None,
+    stream: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> List[SearchResult]:
     """Embed query → FAISS search → enrich with DB metadata.
 
-    Filters by ``document_ids`` or ``project_id`` when provided.
+    Filters by ``document_ids``, ``project_id``, ``stream``, or ``user_id``
+    when provided.  Stream filtering scopes retrieval to documents that were
+    uploaded with a matching academic stream tag (e.g. "AI & ML").
     """
     # Embed query
     query_vec = model_manager.embeddings.encode([query])[0]
@@ -38,16 +42,21 @@ async def semantic_search(
     chunk_ids = [cid for cid, _ in candidates]
     score_map = {cid: score for cid, score in candidates}
 
-    # Fetch chunks from DB
+    # Fetch chunks from DB with stream/user filters applied at SQL level
     stmt = (
         select(DocumentChunk, Document)
         .join(Document, DocumentChunk.document_id == Document.id)
         .where(DocumentChunk.id.in_(chunk_ids))
+        .where(Document.deleted_at.is_(None))
     )
     if document_ids:
         stmt = stmt.where(Document.id.in_(document_ids))
     if project_id:
         stmt = stmt.where(Document.project_id == project_id)
+    if stream:
+        stmt = stmt.where(Document.stream == stream)
+    if user_id:
+        stmt = stmt.where(Document.user_id == user_id)
 
     rows = (await db.execute(stmt)).all()
 
@@ -63,10 +72,12 @@ async def semantic_search(
                 page_number=chunk.page_number,
                 content=chunk.content,
                 score=score_map.get(chunk.id, 0.0),
-                metadata={"subject": doc.subject or ""},
+                metadata={
+                    "subject": doc.subject or "",
+                    "stream": doc.stream or "",
+                },
             )
         )
 
-    # Sort by score descending and truncate to top_k
     results.sort(key=lambda r: r.score, reverse=True)
     return results[:top_k]

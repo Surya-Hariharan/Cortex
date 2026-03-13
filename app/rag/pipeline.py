@@ -52,13 +52,15 @@ async def run_rag_pipeline(
         await db.flush()   # get the id without fully committing yet
         chat_id = new_chat.id
 
-    # 1. Retrieve
+    # 1. Retrieve — scoped to user + stream when provided
     results = await semantic_search(
         query=request.query,
         db=db,
         top_k=request.top_k,
         document_ids=request.document_ids,
         project_id=request.project_id,
+        stream=request.stream,
+        user_id=request.user_id,
     )
 
     # 2. Build context
@@ -84,6 +86,7 @@ async def run_rag_pipeline(
         context=context_text or None,
         history=history,
         llm=model_manager.llm,
+        stream=request.stream,
     )
     latency_ms = int((datetime.utcnow() - gen_start).total_seconds() * 1000)
 

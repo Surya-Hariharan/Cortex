@@ -108,11 +108,13 @@ export const system = {
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 export const documents = {
-    async upload(file, userId, projectId = null) {
+    async upload(file, userId, projectId = null, { stream = null, subject = null } = {}) {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('user_id', userId);
         if (projectId) fd.append('project_id', projectId);
+        if (stream)    fd.append('stream', stream);
+        if (subject)   fd.append('subject', subject);
         let res;
         try {
             res = await fetch(`${BASE}/documents/upload`, {

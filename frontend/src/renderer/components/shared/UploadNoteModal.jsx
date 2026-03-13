@@ -88,7 +88,10 @@ export default function UploadNoteModal({ isOpen, onClose, onUploadSuccess }) {
 
         try {
             const userId = getUserId() || 'local-user';
-            await documentsApi.upload(uploadData.file, userId);
+            await documentsApi.upload(uploadData.file, userId, null, {
+                stream: uploadData.stream || null,
+                subject: uploadData.subject || null,
+            });
 
             // Build tags for the note so it appears correctly in Campus Hub filters
             const tags = [

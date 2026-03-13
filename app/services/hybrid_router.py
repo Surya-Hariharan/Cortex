@@ -68,13 +68,30 @@ async def hybrid_generate(
     context: str | None,
     history: list,
     llm,
+    stream: str | None = None,
 ) -> tuple[str, str]:
     """Generate an answer using the appropriate backend.
+
+    ``stream`` — academic stream (e.g. "AI & ML") used to tailor the
+    response format with subject-appropriate formula/table instructions.
 
     Returns
     -------
     (answer, model_label)  where model_label is a human-readable description.
     """
+    # Build academic formatting instructions based on stream
+    _ACADEMIC_INSTRUCT = (
+        "Format your response like an expert academic tutor:\n"
+        "- Use **bold** for key terms and concept names.\n"
+        "- Present any formula in clear mathematical notation "
+        "(e.g. F = ma, E = mc², ∫f(x)dx, σ = F/A).\n"
+        "- Show derivation steps as numbered lists when applicable.\n"
+        "- Use Markdown tables for comparisons, truth tables, or multicolumn data.\n"
+        "- Cite the source document title or page when the answer is drawn from context.\n"
+    )
+    if stream:
+        _ACADEMIC_INSTRUCT = f"[Academic stream: {stream}]\n" + _ACADEMIC_INSTRUCT
+
     # Privacy mode: always run locally regardless of internet / api keys
     if _privacy_mode:
         if llm._mode not in ("ollama", "onnx"):
@@ -84,7 +101,7 @@ async def hybrid_generate(
             except Exception as exc:
                 logger.warning("Privacy mode: could not switch to local", error=str(exc))
         answer = await llm.agenerate(
-            query=query, context=context or None, history=history, max_new_tokens=512
+            query=query, context=context or None, history=history, max_new_tokens=1024
         )
         return answer, f"local ({llm._mode}) · private"
 
@@ -92,25 +109,26 @@ async def hybrid_generate(
     route = classify_query(query)
 
     if route == "cloud" and llm._mode in ("gemini", "groq"):
-        # Hybrid merge: ground cloud answer in local RAG context
         if context and context.strip():
             grounded_query = (
-                f"Personal knowledge base context (from user's own notes and documents):\n"
+                f"{_ACADEMIC_INSTRUCT}\n"
+                f"Course material and notes (retrieved from user's knowledge base):\n"
                 f"{context}\n\n"
-                f"Using the above personal notes as grounding where relevant, "
-                f"answer this question comprehensively:\n{query}"
+                f"Using the above materials as the primary reference, answer the "
+                f"following question thoroughly. Include relevant formulas, derivations, "
+                f"or tables where they improve clarity:\n\n{query}"
             )
         else:
-            grounded_query = query
+            grounded_query = f"{_ACADEMIC_INSTRUCT}\n{query}"
 
         answer = await llm.agenerate(
-            query=grounded_query, context=None, history=history, max_new_tokens=512
+            query=grounded_query, context=None, history=history, max_new_tokens=1024
         )
         label = f"hybrid ({llm._mode} + local RAG)" if context else f"cloud ({llm._mode})"
         return answer, label
 
     # Local path (or cloud LLM not available)
     answer = await llm.agenerate(
-        query=query, context=context or None, history=history, max_new_tokens=512
+        query=query, context=context or None, history=history, max_new_tokens=1024
     )
     return answer, f"local ({llm._mode})"

@@ -16,6 +16,7 @@ from sqlalchemy import select
 from app.models.domain.document import Document, DocumentChunk
 from app.ingestion.pdf_extractor import extract_document
 from app.ingestion.chunker import chunk_pages
+from app.ingestion.verifier import verify_content
 from app.ai_models.model_manager import model_manager
 from app.rag.vector_store import vector_store
 from app.core.logging import get_logger
@@ -50,7 +51,13 @@ async def ingest_document(document_id: str, db: AsyncSession) -> None:
         pages, ocr_applied = extract_document(doc.file_path, doc.mime_type)
         page_count = len(pages)
 
-        # 2. Chunk
+        # 2. Verify content quality before embedding
+        full_text = "\n".join(p.get("text", "") for p in pages)
+        verification = verify_content(full_text, stream=doc.stream, filename=doc.filename)
+        if not verification.is_valid:
+            raise ValueError(f"Content verification failed: {verification.reason}")
+
+        # 3. Chunk
         chunks = chunk_pages(pages)
         if not chunks:
             raise ValueError("No chunks produced — document may be empty or unreadable")

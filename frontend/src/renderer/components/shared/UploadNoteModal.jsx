@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     X,
     Upload,
@@ -17,6 +17,7 @@ import {
     Tags as TagsIcon,
     AlertCircle
 } from 'lucide-react';
+import { documents as documentsApi, getUserId } from '../../../services/api.js';
 
 const STEPS = [
     { id: 1, label: 'Upload' },

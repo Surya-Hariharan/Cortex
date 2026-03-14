@@ -6,17 +6,29 @@ const CLOUD_API_MS = 847;
 const CPU_BASELINE_MS = 41;
 
 // Auto-scales data array to fill a viewBox (vw × vh) with padding.
+// yMin/yMax: when provided, use a fixed scale so small fluctuations look calm.
 // Produces valid SVG point strings with no % units.
-function sparkPoints(data, vw = 400, vh = 100, pad = 6) {
+function sparkPoints(data, vw = 400, vh = 100, yMin = null, yMax = null, pad = 6) {
     if (!data || data.length < 2) return '';
-    const lo = Math.min(...data);
-    const hi = Math.max(...data);
+    const lo = yMin !== null ? yMin : Math.min(...data);
+    const hi = yMax !== null ? yMax : Math.max(...data);
     const range = hi - lo || 1;
     return data.map((v, i) => {
         const x = (i / (data.length - 1)) * vw;
         const y = vh - pad - ((v - lo) / range) * (vh - pad * 2);
         return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
+}
+
+// Returns a "nice" rounded ceiling so graph Y scale looks clean.
+// e.g. max=8ms → 10, max=42% → 50, max=340MB → 400
+function niceMax(values) {
+    const max = Math.max(...(values && values.length ? values : [1]), 0.001);
+    const raw = max * 1.3;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const normed = raw / mag;
+    const step = [1, 1.5, 2, 3, 5, 7, 10, 15, 20].find(s => s >= normed) || 20;
+    return step * mag;
 }
 
 // --- Sub-components ---
@@ -116,6 +128,43 @@ function ComparisonCard({ type, latency, network, privacy, energy, isRecommended
                         </span>
                     </div>
                 ))}
+            </div>
+        </div>
+    );
+}
+
+// Reusable small chart with Y axis labels (top/mid/0) and X axis (−40s / now)
+function SmallChart({ data, color, yMin = 0, yMax, yFmt = v => Math.round(v), label, valueDisplay, labelClass = '' }) {
+    const hi = yMax !== undefined ? yMax : niceMax(data && data.length ? data : [1]);
+    const pts = sparkPoints(data, 400, 100, yMin, hi, 6);
+    const midVal = (yMin + hi) / 2;
+
+    return (
+        <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-5 monitor-grid h-48 flex flex-col">
+            <div className="flex justify-between items-center mb-3">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${labelClass || 'text-dark-400'}`}>{label}</span>
+                <span className="text-xs font-mono font-bold text-white">{valueDisplay}</span>
+            </div>
+            <div className="flex gap-2 flex-1 min-h-0">
+                {/* Y axis labels */}
+                <div className="flex flex-col justify-between text-right w-8 flex-shrink-0 py-0.5">
+                    <span className="text-[8px] font-mono text-dark-600 leading-none">{yFmt(hi)}</span>
+                    <span className="text-[8px] font-mono text-dark-600 leading-none">{yFmt(midVal)}</span>
+                    <span className="text-[8px] font-mono text-dark-600 leading-none">{yFmt(yMin)}</span>
+                </div>
+                {/* Chart + X axis */}
+                <div className="flex-1 flex flex-col min-w-0">
+                    <div className="flex-1 relative min-h-0">
+                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
+                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
+                            {pts && <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+                        </svg>
+                    </div>
+                    <div className="flex justify-between mt-1 flex-shrink-0">
+                        <span className="text-[8px] font-mono text-dark-600">−40s</span>
+                        <span className="text-[8px] font-mono text-dark-600">now</span>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -505,100 +554,110 @@ export default function PerformanceTab() {
                         /* ── 7. Technical Monitor ──────────────────────────── */
                         <div className="space-y-5 animate-fade-in">
                             {/* Main Latency Graph */}
-                            <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-8 overflow-hidden relative monitor-grid">
-                                <div className="flex justify-between items-center mb-8">
-                                    <div className="space-y-1">
-                                        <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Inference Latency Stream</h3>
-                                        <p className="text-[10px] text-dark-500 font-bold uppercase tracking-widest">Master Node: ONNX Optimized</p>
+                            {(() => {
+                                const latMax = niceMax(liveData.latency.length ? liveData.latency : [5]);
+                                const latTicks = [latMax, latMax * 0.75, latMax * 0.5, latMax * 0.25, 0];
+                                const fmtMs = v => v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v);
+                                return (
+                                    <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-8 overflow-hidden relative monitor-grid">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <div className="space-y-1">
+                                                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Inference Latency Stream</h3>
+                                                <p className="text-[10px] text-dark-500 font-bold uppercase tracking-widest">Master Node: ONNX Optimized</p>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-[10px] font-black text-emerald-500/80 tracking-widest bg-emerald-500/5 px-4 py-2 rounded-full border border-emerald-500/10">
+                                                <Activity size={12} /> REAL-TIME MONITORING ACTIVE
+                                            </div>
+                                        </div>
+                                        {/* Chart area with Y axis */}
+                                        <div className="flex gap-3">
+                                            {/* Y axis labels */}
+                                            <div className="flex flex-col justify-between text-right w-10 flex-shrink-0" style={{ height: '16rem' }}>
+                                                {latTicks.map((v, i) => (
+                                                    <span key={i} className="text-[9px] font-mono text-dark-500 leading-none">{fmtMs(v)} ms</span>
+                                                ))}
+                                            </div>
+                                            {/* Chart + X axis */}
+                                            <div className="flex-1 flex flex-col min-w-0">
+                                                <div className="h-64 w-full relative">
+                                                    <svg width="100%" height="100%" viewBox="0 0 400 256" preserveAspectRatio="none" className="overflow-visible">
+                                                        <defs>
+                                                            <linearGradient id="monitor-gradient-v2" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+                                                                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        {[64, 128, 192].map(y => (
+                                                            <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.04" strokeWidth="1" />
+                                                        ))}
+                                                        {liveData.latency.length >= 2 && (() => {
+                                                            const pts = sparkPoints(liveData.latency, 400, 256, 0, latMax, 16);
+                                                            return (
+                                                                <>
+                                                                    <polygon points={`0,256 ${pts} 400,256`} fill="url(#monitor-gradient-v2)" />
+                                                                    <polyline
+                                                                        points={pts}
+                                                                        fill="none"
+                                                                        stroke="#10b981"
+                                                                        strokeWidth="2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        style={{ transition: 'all 0.4s ease' }}
+                                                                    />
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </svg>
+                                                </div>
+                                                {/* X axis */}
+                                                <div className="flex justify-between mt-1.5">
+                                                    <span className="text-[9px] font-mono text-dark-600">−40s</span>
+                                                    <span className="text-[9px] font-mono text-dark-600 flex items-center gap-1"><Activity size={8} className="text-emerald-500" /> now</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-4 text-[10px] font-black text-emerald-500/80 tracking-widest bg-emerald-500/5 px-4 py-2 rounded-full border border-emerald-500/10">
-                                        <Activity size={12} /> REAL-TIME MONITORING ACTIVE
-                                    </div>
-                                </div>
-
-                                <div className="h-64 w-full relative">
-                                    <svg width="100%" height="100%" viewBox="0 0 400 256" preserveAspectRatio="none" className="overflow-visible">
-                                        <defs>
-                                            <linearGradient id="monitor-gradient-v2" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
-                                                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                                            </linearGradient>
-                                        </defs>
-                                        {/* Horizontal grid lines */}
-                                        {[64, 128, 192].map(y => (
-                                            <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.04" strokeWidth="1" />
-                                        ))}
-                                        {liveData.latency.length >= 2 && (() => {
-                                            const pts = sparkPoints(liveData.latency, 400, 256, 16);
-                                            return (
-                                                <>
-                                                    <polygon points={`0,256 ${pts} 400,256`} fill="url(#monitor-gradient-v2)" />
-                                                    <polyline
-                                                        points={pts}
-                                                        fill="none"
-                                                        stroke="#10b981"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        style={{ transition: 'all 0.4s ease' }}
-                                                    />
-                                                </>
-                                            );
-                                        })()}
-                                    </svg>
-                                </div>
-                            </div>
+                                );
+                            })()}
 
                             {/* Dual Small Graphs */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-6 monitor-grid h-48 flex flex-col">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest">CPU Usage</span>
-                                        <span className="text-xs font-mono font-bold text-white">{(liveData.cpu[liveData.cpu.length - 1] || 0).toFixed(1)}%</span>
-                                    </div>
-                                    <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
-                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
-                                            <polyline points={sparkPoints(liveData.cpu)} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-6 monitor-grid h-48 flex flex-col">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest">Memory</span>
-                                        <span className="text-xs font-mono font-bold text-white">{(liveData.mem[liveData.mem.length - 1] || 412).toFixed(0)} MB</span>
-                                    </div>
-                                    <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
-                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
-                                            <polyline points={sparkPoints(liveData.mem)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-6 monitor-grid h-48 flex flex-col">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest text-synapse-400">OCR Throughput</span>
-                                        <span className="text-xs font-mono font-bold text-white">{(liveData.ocr[liveData.ocr.length - 1] || 0).toFixed(1)} <span className="text-[10px] opacity-40">pg/s</span></span>
-                                    </div>
-                                    <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
-                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
-                                            <polyline points={sparkPoints(liveData.ocr)} fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-6 monitor-grid h-48 flex flex-col">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest text-emerald-400">Embedding Speed</span>
-                                        <span className="text-xs font-mono font-bold text-white">{(liveData.embed[liveData.embed.length - 1] || 0).toFixed(0)} <span className="text-[10px] opacity-40">ms/batch</span></span>
-                                    </div>
-                                    <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
-                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
-                                            <polyline points={sparkPoints(liveData.embed)} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <SmallChart
+                                    data={liveData.cpu}
+                                    color="#6366f1"
+                                    yMin={0}
+                                    yMax={100}
+                                    yFmt={v => `${Math.round(v)}%`}
+                                    label="CPU Usage"
+                                    valueDisplay={`${(liveData.cpu[liveData.cpu.length - 1] || 0).toFixed(1)}%`}
+                                />
+                                <SmallChart
+                                    data={liveData.mem}
+                                    color="#f59e0b"
+                                    yMin={0}
+                                    yMax={realResRef.current.mem_total_mb}
+                                    yFmt={v => v >= 1024 ? `${(v / 1024).toFixed(1)}G` : `${Math.round(v)}M`}
+                                    label="Memory"
+                                    valueDisplay={`${(liveData.mem[liveData.mem.length - 1] || 412).toFixed(0)} MB`}
+                                />
+                                <SmallChart
+                                    data={liveData.ocr}
+                                    color="#a78bfa"
+                                    yMin={0}
+                                    yFmt={v => v.toFixed(1)}
+                                    label="OCR Throughput"
+                                    labelClass="text-synapse-400"
+                                    valueDisplay={<>{(liveData.ocr[liveData.ocr.length - 1] || 0).toFixed(1)} <span className="text-[10px] opacity-40">pg/s</span></>}
+                                />
+                                <SmallChart
+                                    data={liveData.embed}
+                                    color="#10b981"
+                                    yMin={0}
+                                    yFmt={v => `${Math.round(v)}`}
+                                    label="Embedding Speed"
+                                    labelClass="text-emerald-400"
+                                    valueDisplay={<>{(liveData.embed[liveData.embed.length - 1] || 0).toFixed(0)} <span className="text-[10px] opacity-40">ms/batch</span></>}
+                                />
                             </div>
                         </div>
                     )}

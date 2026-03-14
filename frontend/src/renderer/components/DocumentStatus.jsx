@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { documents as docsApi, system as systemApi, getUserId } from '../../services/api.js';
+import { useCore } from '../context/CoreContext';
 import {
     Database,
     Zap,
@@ -50,6 +51,7 @@ function fmtDate(iso) {
 }
 
 export default function DocumentStatus() {
+    const { showToast } = useCore();
     const [isPaused, setIsPaused] = useState(false);
     const [indexedDocs, setIndexedDocs] = useState([]);
     const [queueDocs, setQueueDocs] = useState([]);
@@ -91,19 +93,28 @@ export default function DocumentStatus() {
         return () => clearInterval(t);
     }, []);
 
+    const handleRefresh = async () => {
+        await loadData({ withSpinner: true });
+        showToast('Pipeline data refreshed', 'success');
+    };
+
     const togglePause = async () => {
         if (isTogglingPause) return;
         setIsTogglingPause(true);
         try {
             if (isPaused) {
                 await systemApi.resumeScheduler();
+                await loadData({ withSpinner: true });
+                showToast('Pipeline resumed — processing is active', 'success');
             } else {
                 await systemApi.pauseScheduler();
+                await loadData({ withSpinner: true });
+                showToast('Pipeline paused — new tasks will queue up', 'info');
             }
-            await loadData({ withSpinner: true });
         } catch (err) {
             console.warn('Failed to toggle pipeline pause:', err);
             await loadData({ withSpinner: true });
+            showToast('Failed to update pipeline state. Is the backend running?', 'error');
         } finally {
             setIsTogglingPause(false);
         }
@@ -131,7 +142,7 @@ export default function DocumentStatus() {
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => loadData({ withSpinner: true })}
+                            onClick={handleRefresh}
                             disabled={isRefreshing || isTogglingPause}
                             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isRefreshing
                                 ? 'bg-synapse-50 text-synapse-700 border-synapse-200'

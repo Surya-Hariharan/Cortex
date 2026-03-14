@@ -69,6 +69,15 @@ class LLMModel:
 
         tokenizer_path = self._model_dir / "tokenizer.json"
         if not tokenizer_path.exists():
+            # Fall back to cloud APIs if local tokenizer is unavailable
+            if settings.GROQ_API_KEY:
+                logger.info("LLM tokenizer not found, falling back to Groq API.")
+                self._mode = "groq"
+                return
+            if settings.GEMINI_API_KEY:
+                logger.info("LLM tokenizer not found, falling back to Gemini API.")
+                self._mode = "gemini"
+                return
             raise FileNotFoundError(f"tokenizer.json not found in {self._model_dir}")
 
         self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
@@ -108,7 +117,11 @@ class LLMModel:
 
     def _ensure_loaded(self) -> None:
         if self._session is None and self._mode == "onnx":
-            self._load()
+            try:
+                self._load()
+            except Exception as exc:
+                logger.warning("LLM unavailable, falling back to stub mode", error=str(exc))
+                self._mode = "none"
 
     def _build_prompt(
         self,
@@ -142,7 +155,10 @@ class LLMModel:
         Model must support a simple seq2seq or autoregressive ONNX interface.
         """
         self._ensure_loaded()
-        
+
+        if self._mode == "none":
+            return "No AI model is currently configured. Please set up a local model or provide an API key."
+
         if self._mode == "ollama":
             url = f"{settings.OLLAMA_ENDPOINT}/api/chat"
             

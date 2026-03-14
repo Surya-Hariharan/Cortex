@@ -66,7 +66,7 @@ async def system_health() -> dict:
         from app.services.vector_store_health import get_health_status
         vs_status = get_health_status()
         report["subsystems"]["vector_store"] = vs_status
-        if vs_status.get("status") != "healthy":
+        if vs_status.get("status") in ("error", "down", "unhealthy"):
             report["status"] = "degraded"
     except Exception as exc:
         report["subsystems"]["vector_store"] = {"status": "unknown", "detail": str(exc)}

@@ -8,11 +8,9 @@ import {
     AlertCircle,
     Clock,
     FileText,
-    Search,
     Cpu,
     Activity,
     ChevronRight,
-    ArrowUpRight,
     Play,
     Pause
 } from 'lucide-react';
@@ -59,11 +57,13 @@ export default function DocumentStatus() {
     const [health, setHealth] = useState(null);
     const [resources, setResources] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isTogglingPause, setIsTogglingPause] = useState(false);
     const [showAllDocs, setShowAllDocs] = useState(false);
-    const [showHealthModal, setShowHealthModal] = useState(false);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async ({ withSpinner = false } = {}) => {
         const userId = getUserId();
+        if (withSpinner) setIsRefreshing(true);
         try {
             const [h, all, res] = await Promise.all([
                 systemApi.health(),
@@ -80,6 +80,7 @@ export default function DocumentStatus() {
             if (sched?.paused !== undefined) setIsPaused(sched.paused);
         } catch (_) {}
         setLoading(false);
+        setIsRefreshing(false);
     }, []);
 
     // Poll resources every 5 s for live hardware stats
@@ -91,16 +92,20 @@ export default function DocumentStatus() {
     }, []);
 
     const togglePause = async () => {
+        if (isTogglingPause) return;
+        setIsTogglingPause(true);
         try {
             if (isPaused) {
                 await systemApi.resumeScheduler();
             } else {
                 await systemApi.pauseScheduler();
             }
-            setIsPaused(p => !p);
+            await loadData({ withSpinner: true });
         } catch (err) {
             console.warn('Failed to toggle pipeline pause:', err);
-            setIsPaused(p => !p); // optimistic anyway
+            await loadData({ withSpinner: true });
+        } finally {
+            setIsTogglingPause(false);
         }
     };
 
@@ -125,18 +130,27 @@ export default function DocumentStatus() {
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={loadData} className="px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100">
-                            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <button
+                            onClick={() => loadData({ withSpinner: true })}
+                            disabled={isRefreshing || isTogglingPause}
+                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isRefreshing
+                                ? 'bg-synapse-50 text-synapse-700 border-synapse-200'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isRefreshing || isTogglingPause) ? 'cursor-not-allowed opacity-80' : ''}`}
+                        >
+                            <RefreshCcw size={16} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
+                            {isRefreshing ? 'Refreshing…' : 'Refresh'}
                         </button>
                         <button
                             onClick={togglePause}
-                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${isPaused
+                            disabled={isTogglingPause || isRefreshing}
+                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isPaused
                                 ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                                }`}
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isTogglingPause || isRefreshing) ? 'cursor-not-allowed opacity-80' : ''}`}
                         >
-                            {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                            {isPaused ? 'Resume Indexing' : 'Pause Pipeline'}
+                            {(isRefreshing || isTogglingPause)
+                                ? <RefreshCcw size={16} className="animate-spin" />
+                                : (isPaused ? <Play size={16} /> : <Pause size={16} />)}
+                            {isTogglingPause ? 'Updating…' : (isPaused ? 'Resume Indexing' : 'Pause Pipeline')}
                         </button>
                     </div>
                 </div>
@@ -332,12 +346,6 @@ export default function DocumentStatus() {
                                             </div>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={() => setShowHealthModal(true)}
-                                        className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
-                                    >
-                                        View System Logs <ArrowUpRight size={14} />
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -346,28 +354,6 @@ export default function DocumentStatus() {
                 </div>
             </div>
 
-            {/* System Health Modal */}
-            {showHealthModal && (
-                <div
-                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-                    onClick={() => setShowHealthModal(false)}
-                >
-                    <div
-                        className="bg-white dark:bg-dark-900 rounded-3xl w-full max-w-2xl max-h-[80vh] overflow-auto shadow-2xl border border-slate-200 dark:border-dark-800"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-dark-800">
-                            <h3 className="text-sm font-black text-slate-800 dark:text-dark-50 uppercase tracking-wider">System Health Report</h3>
-                            <button onClick={() => setShowHealthModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                                <Search size={18} className="rotate-45" />
-                            </button>
-                        </div>
-                        <pre className="text-[11px] font-mono text-slate-600 dark:text-dark-300 p-6 whitespace-pre-wrap overflow-auto leading-relaxed">
-                            {JSON.stringify({ health, resources }, null, 2)}
-                        </pre>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

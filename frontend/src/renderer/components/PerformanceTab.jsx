@@ -5,6 +5,20 @@ import { useCore } from '../context/CoreContext.jsx';
 const CLOUD_API_MS = 847;
 const CPU_BASELINE_MS = 41;
 
+// Auto-scales data array to fill a viewBox (vw × vh) with padding.
+// Produces valid SVG point strings with no % units.
+function sparkPoints(data, vw = 400, vh = 100, pad = 6) {
+    if (!data || data.length < 2) return '';
+    const lo = Math.min(...data);
+    const hi = Math.max(...data);
+    const range = hi - lo || 1;
+    return data.map((v, i) => {
+        const x = (i / (data.length - 1)) * vw;
+        const y = vh - pad - ((v - lo) / range) * (vh - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+}
+
 // --- Sub-components ---
 
 function MiniSparkline({ data, color = '#6366f1' }) {
@@ -503,26 +517,34 @@ export default function PerformanceTab() {
                                 </div>
 
                                 <div className="h-64 w-full relative">
-                                    <svg width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible">
-                                        <polyline
-                                            points={liveData.latency.map((v, i) => `${(i / 39) * 100}%,${256 - (v / 40) * 256}`).join(' ')}
-                                            fill="none"
-                                            stroke="#10b981"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            style={{ transition: 'all 0.5s ease' }}
-                                        />
-                                        <polygon
-                                            points={`0,256 ${liveData.latency.map((v, i) => `${(i / 39) * 100}%,${256 - (v / 40) * 256}`).join(' ')} 100%,256`}
-                                            fill="url(#monitor-gradient-v2)"
-                                        />
+                                    <svg width="100%" height="100%" viewBox="0 0 400 256" preserveAspectRatio="none" className="overflow-visible">
                                         <defs>
                                             <linearGradient id="monitor-gradient-v2" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.1" />
+                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
                                                 <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
                                             </linearGradient>
                                         </defs>
+                                        {/* Horizontal grid lines */}
+                                        {[64, 128, 192].map(y => (
+                                            <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.04" strokeWidth="1" />
+                                        ))}
+                                        {liveData.latency.length >= 2 && (() => {
+                                            const pts = sparkPoints(liveData.latency, 400, 256, 16);
+                                            return (
+                                                <>
+                                                    <polygon points={`0,256 ${pts} 400,256`} fill="url(#monitor-gradient-v2)" />
+                                                    <polyline
+                                                        points={pts}
+                                                        fill="none"
+                                                        stroke="#10b981"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        style={{ transition: 'all 0.4s ease' }}
+                                                    />
+                                                </>
+                                            );
+                                        })()}
                                     </svg>
                                 </div>
                             </div>
@@ -535,8 +557,9 @@ export default function PerformanceTab() {
                                         <span className="text-xs font-mono font-bold text-white">{(liveData.cpu[liveData.cpu.length - 1] || 0).toFixed(1)}%</span>
                                     </div>
                                     <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible opacity-60">
-                                            <polyline points={liveData.cpu.map((v, i) => `${(i / 39) * 100}%,${100 - v * 4}`).join(' ')} fill="none" stroke="#6366f1" strokeWidth="1.5" />
+                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
+                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
+                                            <polyline points={sparkPoints(liveData.cpu)} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </div>
                                 </div>
@@ -546,8 +569,9 @@ export default function PerformanceTab() {
                                         <span className="text-xs font-mono font-bold text-white">{(liveData.mem[liveData.mem.length - 1] || 412).toFixed(0)} MB</span>
                                     </div>
                                     <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible opacity-60">
-                                            <polyline points={liveData.mem.map((v, i) => `${(i / 39) * 100}%,${100 - (v - 400) / 4}`).join(' ')} fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
+                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
+                                            <polyline points={sparkPoints(liveData.mem)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </div>
                                 </div>
@@ -557,8 +581,9 @@ export default function PerformanceTab() {
                                         <span className="text-xs font-mono font-bold text-white">{(liveData.ocr[liveData.ocr.length - 1] || 0).toFixed(1)} <span className="text-[10px] opacity-40">pg/s</span></span>
                                     </div>
                                     <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible opacity-60">
-                                            <polyline points={liveData.ocr.map((v, i) => `${(i / 39) * 100}%,${100 - v * 5}`).join(' ')} fill="none" stroke="#a78bfa" strokeWidth="1.5" />
+                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
+                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
+                                            <polyline points={sparkPoints(liveData.ocr)} fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </div>
                                 </div>
@@ -568,8 +593,9 @@ export default function PerformanceTab() {
                                         <span className="text-xs font-mono font-bold text-white">{(liveData.embed[liveData.embed.length - 1] || 0).toFixed(0)} <span className="text-[10px] opacity-40">ms/batch</span></span>
                                     </div>
                                     <div className="flex-1 w-full relative">
-                                        <svg width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible opacity-60">
-                                            <polyline points={liveData.embed.map((v, i) => `${(i / 39) * 100}%,${100 - (v - 80) * 5}`).join(' ')} fill="none" stroke="#10b981" strokeWidth="1.5" />
+                                        <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
+                                            {[25, 50, 75].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />)}
+                                            <polyline points={sparkPoints(liveData.embed)} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </div>
                                 </div>

@@ -297,8 +297,8 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
             </div>
 
             {/* ── Input — pinned to bottom ──────────────────────────────────── */}
-            <div className="flex-shrink-0 px-6 pb-6 pt-3 bg-white dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800/60">
-                <div className="max-w-[860px] mx-auto space-y-2">
+            <div className="flex-shrink-0 px-6 pb-5 pt-3 bg-white dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800/60">
+                <div className="max-w-[760px] mx-auto space-y-2">
 
                     {/* Active model badge + attached file badge */}
                     {(selectedModel || attachedFile) && (
@@ -343,21 +343,21 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
 
                     {/* Input form */}
                     <form onSubmit={handleSearch} className="relative group">
-                        <div className={`bg-white dark:bg-dark-900 shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.28)] flex items-center gap-3 pl-2 pr-2 py-3 rounded-[28px] transition-all duration-300 border ${isSearching ? 'border-synapse-400 dark:border-synapse-500/50' : 'border-slate-200 dark:border-dark-800 group-hover:border-synapse-300 dark:group-hover:border-dark-700'}`}>
+                        <div className={`bg-white dark:bg-dark-900 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.24)] flex items-center gap-2.5 pl-2 pr-2 py-2 rounded-[24px] transition-all duration-300 border ${isSearching ? 'border-synapse-400 dark:border-synapse-500/50' : 'border-slate-200 dark:border-dark-800 group-hover:border-synapse-300 dark:group-hover:border-dark-700'}`}>
 
                             {/* Plus → upload + model dropdown */}
                             <div className="relative flex-shrink-0" ref={dropdownRef}>
                                 <button
                                     type="button"
                                     onClick={() => setShowModelDropdown(prev => !prev)}
-                                    className={`rounded-2xl w-12 h-12 flex items-center justify-center transition-colors ${showModelDropdown ? 'bg-synapse-100 dark:bg-synapse-900/30 text-synapse-600' : 'bg-slate-50 dark:bg-dark-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 hover:text-slate-600 dark:hover:text-dark-200'}`}
+                                    className={`rounded-xl w-10 h-10 flex items-center justify-center transition-colors ${showModelDropdown ? 'bg-synapse-100 dark:bg-synapse-900/30 text-synapse-600' : 'bg-slate-50 dark:bg-dark-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 hover:text-slate-600 dark:hover:text-dark-200'}`}
                                     title="Attach file or select model"
                                 >
-                                    <Plus size={22} />
+                                    <Plus size={18} />
                                 </button>
 
                                 {showModelDropdown && (
-                                    <div className="absolute bottom-[58px] left-0 z-50 w-60 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+                                    <div className="absolute bottom-[50px] left-0 z-50 w-60 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
 
                                         {/* ── Attach section ── */}
                                         <div className="px-4 py-2.5 border-b border-slate-100 dark:border-dark-800">
@@ -417,19 +417,19 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 placeholder="Ask anything about your study materials…"
-                                className="flex-1 bg-transparent text-slate-800 dark:text-dark-50 placeholder-slate-400 dark:placeholder-dark-500 text-[16px] font-semibold outline-none px-2"
+                                className="flex-1 bg-transparent text-slate-800 dark:text-dark-50 placeholder-slate-400 dark:placeholder-dark-500 text-[15px] font-semibold outline-none px-1.5"
                                 disabled={isSearching}
                             />
 
                             <button
                                 type="submit"
                                 disabled={!query.trim() || isSearching}
-                                className={`w-12 h-12 flex flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200 ${query.trim() && !isSearching ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-lg shadow-synapse-200/40' : 'bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-dark-600 cursor-not-allowed'}`}
+                                className={`w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${query.trim() && !isSearching ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-md shadow-synapse-200/40' : 'bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-dark-600 cursor-not-allowed'}`}
                             >
                                 {isSearching ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
-                                    <ArrowUpRight size={24} />
+                                    <ArrowUpRight size={20} />
                                 )}
                             </button>
                         </div>

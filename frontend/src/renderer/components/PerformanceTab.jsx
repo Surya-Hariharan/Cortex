@@ -266,10 +266,10 @@ export default function PerformanceTab() {
 
     return (
         <div className="h-full overflow-y-auto bg-white dark:bg-dark-950 scroll-smooth">
-            <div className="max-w-[1200px] mx-auto px-8 py-10 space-y-12 pb-20">
+            <div className="max-w-[1200px] mx-auto px-8 py-5 space-y-6 pb-10">
 
                 {/* ── 1. Powerful Hero Header ────────────────────────────── */}
-                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-6 group shadow-2xl shadow-dark-200/50 dark:shadow-dark-950">
+                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-5 group shadow-2xl shadow-dark-200/50 dark:shadow-dark-950">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-synapse-500/10 rounded-full blur-[120px] -mr-40 -mt-20 pointer-events-none" />
 
                     <div className="flex items-center justify-between relative z-10">
@@ -292,15 +292,15 @@ export default function PerformanceTab() {
                                     )}
                                 </div>
                                 <p className="text-xs font-bold text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">
-                                    Model: BGE-small-v1.5 <span className="opacity-30">•</span> Runtime: ONNX Optimized <span className="opacity-30">•</span> Precision: FP16
+                                    Model: BGE-small-v1.5
                                 </p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 shadow-sm">
-                                <div className={`w-2 h-2 rounded-full ${benchmarkActive ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
-                                <span className="text-[10px] font-black text-dark-700 dark:text-dark-100 uppercase tracking-[0.1em]">
+                            <div className="flex items-center justify-center gap-2 px-4 py-1.5 min-w-[160px] rounded-full bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 shadow-sm">
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${benchmarkActive ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
+                                <span className="text-[10px] font-black text-dark-700 dark:text-dark-100 uppercase tracking-[0.1em] whitespace-nowrap">
                                     {benchmarkActive ? 'Benchmarking...' : 'System Active'}
                                 </span>
                             </div>
@@ -325,16 +325,6 @@ export default function PerformanceTab() {
                                 <Terminal size={16} />
                             </button>
                         </div>
-                    </div>
-                </div>
-
-                {/* ── 2. Performance Summary Chips ───────────────────────── */}
-                <div className="flex items-center gap-4 px-1">
-                    <span className="text-[10px] font-black text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em]">Performance Snapshot</span>
-                    <div className="flex items-center gap-3">
-                        <div className="performance-chip"><Zap size={12} className="text-synapse-500" /> 21x faster than cloud</div>
-                        <div className="performance-chip"><Shield size={12} className="text-emerald-500" /> 100% local inference</div>
-                        <div className="performance-chip"><Droplets size={12} className="text-blue-500" /> Ultra-low energy usage</div>
                     </div>
                 </div>
 
@@ -368,7 +358,7 @@ export default function PerformanceTab() {
                 )}
 
                 {/* ── 4. Metric Tiles ────────────────────────────────────── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <PerformanceTile
                         label="Avg Latency"
                         value={avgMs}
@@ -438,7 +428,7 @@ export default function PerformanceTab() {
                 </div>
 
                 {/* ── 4. Tabs & Mode Switching ──────────────────────────── */}
-                <div className="space-y-8">
+                <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-dark-100 dark:border-dark-800">
                         <div className="flex gap-10">
                             {['overview', 'monitor'].map(mode => (
@@ -486,11 +476,11 @@ export default function PerformanceTab() {
                     </div>
 
                     {viewMode === 'overview' ? (
-                        <div className="space-y-12 animate-fade-in">
+                        <div className="space-y-6 animate-fade-in">
                             {/* ── 5. Comparison Cards ───────────────────────────── */}
-                            <div className="space-y-6">
+                            <div className="space-y-3">
                                 <h3 className="text-xs font-black text-dark-800 dark:text-dark-50 uppercase tracking-[0.2em] px-1">Architectural Benchmarks</h3>
-                                <div className="flex gap-6">
+                                <div className="flex gap-4">
                                     <ComparisonCard type="cloud" latency={`${CLOUD_API_MS.toFixed(1)} ms`} network="REQUIRED" privacy="EXTERNAL" energy="HIGH" />
                                     <ComparisonCard type="cpu" latency={`${CPU_BASELINE_MS.toFixed(1)} ms`} network="NONE" privacy="LOCAL" energy="MEDIUM" />
                                     <ComparisonCard type="onnx" latency={`${typeof avgMs === 'number' ? avgMs.toFixed(1) : avgMs} ms`} network="NONE (AIR-GAPPED)" privacy="ULTRA-LOCAL" energy="ULTRA-LOW" isRecommended />
@@ -499,7 +489,7 @@ export default function PerformanceTab() {
                         </div>
                     ) : (
                         /* ── 7. Technical Monitor ──────────────────────────── */
-                        <div className="space-y-8 animate-fade-in">
+                        <div className="space-y-5 animate-fade-in">
                             {/* Main Latency Graph */}
                             <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-8 overflow-hidden relative monitor-grid">
                                 <div className="flex justify-between items-center mb-8">
@@ -538,7 +528,7 @@ export default function PerformanceTab() {
                             </div>
 
                             {/* Dual Small Graphs */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-6 monitor-grid h-48 flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
                                         <span className="text-[10px] font-black text-dark-400 uppercase tracking-widest">CPU Usage</span>

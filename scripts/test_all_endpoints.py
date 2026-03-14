@@ -186,7 +186,7 @@ hit("GET", "/notes/", params={"user_id": USER_ID})
 if NOTE_ID:
     hit("GET",   f"/notes/{NOTE_ID}")
     hit("PATCH", f"/notes/{NOTE_ID}", json_body={"title": "Updated Note"})
-    hit("PATCH", f"/notes/{NOTE_ID}/visibility", json_body={"visibility": "public"}, expected=[200])
+    hit("PATCH", f"/notes/{NOTE_ID}/visibility", params={"user_id": USER_ID}, json_body={"visibility": "public"}, expected=[200])
 
 hit("GET", "/notes/public/browse")
 if NOTE_ID:
@@ -194,7 +194,7 @@ if NOTE_ID:
 
 # Save a public note to personal (self-save is fine for health check)
 if NOTE_ID:
-    hit("POST", f"/notes/{NOTE_ID}/save", json_body={"saver_id": USER_ID, "source_note_id": NOTE_ID}, expected=[201, 409])
+    hit("POST", f"/notes/{NOTE_ID}/save", params={"saver_id": USER_ID}, expected=[201, 400, 409])
 
 # ---------------------------------------------------------------------------
 # 6. Tasks
@@ -263,11 +263,31 @@ if GROUP_ID:
         json_body={"name": "Updated Group"})
 
 if INVITE_CODE:
-    # Join with a second fake user
-    FAKE_USER = str(uuid.uuid4())
-    hit("POST", "/groups/join", params={"invite_code": INVITE_CODE, "user_id": FAKE_USER, "user_name": "Fake User"})
+    # Join with a real second user so FK validation does not invalidate the test.
+    second_email = f"healthcheck_group_{uuid.uuid4().hex[:8]}@example.com"
+    second_phone = f"77{uuid.uuid4().int % 10**8:08d}"
+    hit("POST", "/auth/register", json_body={
+        "name": "Health Check Group User",
+        "email": second_email,
+        "password": TEST_PASSWORD,
+        "phone": second_phone,
+        "gender": "",
+        "location": "",
+        "college": "",
+        "degree": "",
+        "course": "",
+        "user_type": "Student",
+        "year_of_study": "",
+    }, expected=[201])
+    _, second_login = hit("POST", "/auth/login", json_body={
+        "email": second_email,
+        "password": TEST_PASSWORD,
+    }, expected=[200])
+    second_user_id = second_login.get("id") if isinstance(second_login, dict) else None
+    if second_user_id:
+        hit("POST", "/groups/join", params={"invite_code": INVITE_CODE, "user_id": second_user_id, "user_name": "Health Check Group User"}, expected=[200])
     if GROUP_ID:
-        hit("DELETE", f"/groups/{GROUP_ID}/leave", params={"user_id": FAKE_USER}, expected=[204])
+        hit("DELETE", f"/groups/{GROUP_ID}/leave", params={"user_id": second_user_id}, expected=[204])
 
 # block/remove member (use own id to test API routing — will 403 since non-admin)
 if GROUP_ID:

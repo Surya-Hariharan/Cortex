@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
-from app.models.domain.document import Document
+from app.models.domain.document import Document, DocumentChunk
 from app.models.domain.engagement import FileDownload, FileRating, FileView
 from app.models.domain.note import Note
 from app.models.domain.sync import SyncEvent
@@ -30,7 +30,9 @@ async def get_stats(user_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 
     chunk_sum = (
         await db.execute(
-            select(func.coalesce(func.sum(Document.chunk_count), 0)).where(
+            select(func.count(DocumentChunk.id))
+            .join(Document, DocumentChunk.document_id == Document.id)
+            .where(
                 Document.user_id == user_id,
                 Document.deleted_at.is_(None),
             )

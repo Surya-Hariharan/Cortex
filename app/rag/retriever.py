@@ -31,8 +31,12 @@ async def semantic_search(
     when provided.  Stream filtering scopes retrieval to documents that were
     uploaded with a matching academic stream tag (e.g. "AI & ML").
     """
-    # Embed query
-    query_vec = model_manager.embeddings.encode([query])[0]
+    # Embed query — return empty results if embeddings are unavailable
+    try:
+        query_vec = model_manager.embeddings.encode([query])[0]
+    except Exception as exc:
+        logger.warning("Embedding model unavailable, skipping retrieval", error=str(exc))
+        return []
 
     # Retrieve candidates from FAISS
     candidates = vector_store.search(query_vec, top_k=top_k * 3, score_threshold=score_threshold)

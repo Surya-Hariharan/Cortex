@@ -16,11 +16,14 @@ logger = get_logger(__name__)
 
 
 async def create_chat(data: ChatCreate, db: AsyncSession) -> Chat:
+    from sqlalchemy.orm import selectinload
     chat = Chat(id=str(uuid.uuid4()), **data.model_dump())
     db.add(chat)
     await db.commit()
-    await db.refresh(chat)
-    return chat
+    # Re-fetch with messages eagerly loaded to avoid MissingGreenlet on lazy access
+    return (await db.execute(
+        select(Chat).where(Chat.id == chat.id).options(selectinload(Chat.messages))
+    )).scalar_one()
 
 
 async def get_chat(chat_id: str, db: AsyncSession, include_messages: bool = False) -> Optional[Chat]:
@@ -39,10 +42,18 @@ async def list_chats(
     offset: int = 0,
 ) -> List[Chat]:
     from sqlalchemy import and_
+    from sqlalchemy.orm import selectinload
     filters = [Chat.user_id == user_id, Chat.deleted_at.is_(None)]
     if project_id:
         filters.append(Chat.project_id == project_id)
-    stmt = select(Chat).where(and_(*filters)).order_by(Chat.updated_at.desc()).limit(limit).offset(offset)
+    stmt = (
+        select(Chat)
+        .where(and_(*filters))
+        .options(selectinload(Chat.messages))
+        .order_by(Chat.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     return list((await db.execute(stmt)).scalars().all())
 
 

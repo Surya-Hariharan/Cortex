@@ -50,6 +50,10 @@ class EmbeddingModel:
             # Fall back to HuggingFace-style layout
             tokenizer_path = self._model_dir / "tokenizer.json"
         if not tokenizer_path.exists():
+            if settings.GEMINI_API_KEY:
+                logger.info("Tokenizer not found, falling back to Gemini API.")
+                self._use_api = True
+                return
             raise FileNotFoundError(f"Tokenizer not found in {self._model_dir}")
 
         self._tokenizer = Tokenizer.from_file(str(tokenizer_path))

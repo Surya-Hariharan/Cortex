@@ -82,6 +82,7 @@
 
 body {
   overflow: hidden;
+  -webkit-user-select: none;
   user-select: none;
   -webkit-app-region: no-drag;
 }

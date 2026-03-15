@@ -127,17 +127,17 @@ export default function DocumentStatus() {
             {/* Header */}
             <header className="flex-shrink-0 px-8 py-6 mb-2">
                 <div className="max-w-[1240px] mx-auto flex justify-between items-end">
-                    <div>
+                    <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1">
-                            <div className="w-10 h-10 rounded-xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-200 dark:shadow-none">
+                            <div className="w-10 h-10 rounded-xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-200 dark:shadow-none flex-shrink-0">
                                 <Database size={24} />
                             </div>
-                            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50">
+                            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50 truncate">
                                 AI <span className="text-synapse-600 dark:text-synapse-500">Processing</span>
                             </h1>
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-dark-400 font-medium">
-                            OCR, embedding generation, indexing, and inference pipeline.
+                        <p className="text-sm text-slate-500 dark:text-dark-400 font-medium truncate">
+                            OCR, embedding generation, and indexing.
                         </p>
                     </div>
                     <div className="flex gap-3">
@@ -171,10 +171,10 @@ export default function DocumentStatus() {
                 <div className="max-w-[1240px] mx-auto space-y-8">
 
                     {/* Performance Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard label="Total Indexed" value={loading ? '…' : indexedDocs.length.toLocaleString()} subtext={`${(health?.subsystems?.vector_store?.db_chunks ?? 0).toLocaleString()} chunks in vector store`} icon={Database} color="bg-synapse-500" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <StatCard label="Total Indexed" value={loading ? '…' : indexedDocs.length.toLocaleString()} subtext={`${(health?.subsystems?.vector_store?.db_chunks ?? 0).toLocaleString()} chunks`} icon={Database} color="bg-synapse-500" />
                         <StatCard label="AI Models" value={loading ? '…' : (health?.subsystems?.models?.status === 'ok' ? 'Online' : health?.subsystems?.models?.status ?? 'Unknown')} subtext="Embedding engine status" icon={Zap} color="bg-amber-500" />
-                        <StatCard label="Processing Queue" value={loading ? '…' : queueDocs.length} subtext={`${failedDocs.length} failed document${failedDocs.length !== 1 ? 's' : ''}`} icon={Clock} color="bg-emerald-500" />
+                        <StatCard label="Processing Queue" value={loading ? '…' : queueDocs.length} subtext={`${failedDocs.length} failed jobs`} icon={Clock} color="bg-emerald-500" />
                         <StatCard label="Vector Store" value={loading ? '…' : (health?.subsystems?.vector_store?.status === 'healthy' ? 'Ready' : health?.subsystems?.vector_store?.status ?? 'Init')} subtext={`FAISS: ${(health?.subsystems?.vector_store?.faiss_vectors ?? 0).toLocaleString()} vectors`} icon={Cpu} color="bg-blue-500" />
                     </div>
 

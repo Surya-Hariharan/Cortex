@@ -47,5 +47,5 @@ websockets>=12.0
 structlog>=24.1.0
 
 # ── Cloud / Docker (optional) ────────────────────────────────────────────────
-# asyncpg>=0.29.0             # PostgreSQL async driver
+asyncpg>=0.29.0             # PostgreSQL async driver
 # pgvector>=0.2.5             # pgvector Python client

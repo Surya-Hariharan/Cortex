@@ -126,52 +126,52 @@ export default function DocumentStatus() {
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in pr-2 overflow-y-auto scrollbar-thin">
             {/* Header */}
             <header className="flex-shrink-0 px-8 py-6 mb-2">
-                <div className="max-w-[1240px] mx-auto flex justify-between items-end">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                            <div className="w-10 h-10 rounded-xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-200 dark:shadow-none flex-shrink-0">
-                                <Database size={24} />
+                    <div className="max-w-[1240px] mx-auto flex justify-between items-center">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-4 mb-1">
+                                <div className="w-11 h-11 rounded-2xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-500/20 flex-shrink-0 transition-transform hover:scale-105">
+                                    <Database size={24} />
+                                </div>
+                                <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50 truncate flex items-baseline gap-2">
+                                    AI <span className="text-synapse-600 dark:text-synapse-500">Processing</span>
+                                </h1>
                             </div>
-                            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50 truncate">
-                                AI <span className="text-synapse-600 dark:text-synapse-500">Processing</span>
-                            </h1>
+                            <p className="text-sm text-slate-500 dark:text-dark-400 font-medium truncate ml-14">
+                                OCR, embedding generation, and indexing.
+                            </p>
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-dark-400 font-medium truncate">
-                            OCR, embedding generation, and indexing.
-                        </p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing || isTogglingPause}
+                                className={`h-11 px-6 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isRefreshing
+                                    ? 'bg-synapse-50 text-synapse-700 border-synapse-200'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isRefreshing || isTogglingPause) ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                                <RefreshCcw size={16} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
+                                {isRefreshing ? 'Refreshing…' : 'Refresh'}
+                            </button>
+                            <button
+                                onClick={togglePause}
+                                disabled={isTogglingPause || isRefreshing}
+                                className={`h-11 px-6 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isPaused
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-sm'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isTogglingPause || isRefreshing) ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                                {(isRefreshing || isTogglingPause)
+                                    ? <RefreshCcw size={16} className="animate-spin" />
+                                    : (isPaused ? <Play size={16} /> : <Pause size={16} />)}
+                                {isTogglingPause ? 'Updating…' : (isPaused ? 'Resume Indexing' : 'Pause Pipeline')}
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={handleRefresh}
-                            disabled={isRefreshing || isTogglingPause}
-                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isRefreshing
-                                ? 'bg-synapse-50 text-synapse-700 border-synapse-200'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isRefreshing || isTogglingPause) ? 'cursor-not-allowed opacity-80' : ''}`}
-                        >
-                            <RefreshCcw size={16} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
-                            {isRefreshing ? 'Refreshing…' : 'Refresh'}
-                        </button>
-                        <button
-                            onClick={togglePause}
-                            disabled={isTogglingPause || isRefreshing}
-                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isPaused
-                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isTogglingPause || isRefreshing) ? 'cursor-not-allowed opacity-80' : ''}`}
-                        >
-                            {(isRefreshing || isTogglingPause)
-                                ? <RefreshCcw size={16} className="animate-spin" />
-                                : (isPaused ? <Play size={16} /> : <Pause size={16} />)}
-                            {isTogglingPause ? 'Updating…' : (isPaused ? 'Resume Indexing' : 'Pause Pipeline')}
-                        </button>
-                    </div>
-                </div>
             </header>
 
             <div className="flex-1 px-8 pb-12">
                 <div className="max-w-[1240px] mx-auto space-y-8">
 
                     {/* Performance Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <StatCard label="Total Indexed" value={loading ? '…' : indexedDocs.length.toLocaleString()} subtext={`${(health?.subsystems?.vector_store?.db_chunks ?? 0).toLocaleString()} chunks`} icon={Database} color="bg-synapse-500" />
                         <StatCard label="AI Models" value={loading ? '…' : (health?.subsystems?.models?.status === 'ok' ? 'Online' : health?.subsystems?.models?.status ?? 'Unknown')} subtext="Embedding engine status" icon={Zap} color="bg-amber-500" />
                         <StatCard label="Processing Queue" value={loading ? '…' : queueDocs.length} subtext={`${failedDocs.length} failed jobs`} icon={Clock} color="bg-emerald-500" />
@@ -182,7 +182,7 @@ export default function DocumentStatus() {
 
                         {/* Left: Active Queue */}
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden shadow-sm">
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl overflow-hidden shadow-sm shadow-slate-200/50 dark:shadow-none">
                                 <div className="px-6 py-5 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Activity size={16} className="text-synapse-500" />
@@ -221,7 +221,7 @@ export default function DocumentStatus() {
                             </div>
 
                             {/* Recent Indexed Documents */}
-                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden shadow-sm">
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl overflow-hidden shadow-sm shadow-slate-200/50 dark:shadow-none">
                                 <div className="px-6 py-5 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
                                     <h3 className="text-xs font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Recently Indexed</h3>
                                     <button
@@ -275,7 +275,7 @@ export default function DocumentStatus() {
                         {/* Right: Errors & Hardware */}
                         <div className="space-y-6">
                             {/* Error Section */}
-                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl p-6 shadow-sm border-l-4 border-l-red-500">
+                            <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-6 shadow-sm border-l-4 border-l-red-500 shadow-slate-200/50 dark:shadow-none">
                                 <div className="flex items-center gap-2 mb-6">
                                     <AlertCircle size={18} className="text-red-500" />
                                     <h3 className="text-sm font-black uppercase text-slate-800 dark:text-dark-50 tracking-wider">Processing Errors</h3>
@@ -301,7 +301,7 @@ export default function DocumentStatus() {
                             </div>
 
                             {/* Resource Usage — real data from systemApi.resources() */}
-                            <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative group">
+                            <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative group shadow-sm shadow-synapse-900/10 active:scale-[0.99] transition-transform">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-synapse-500/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-3 mb-6">

@@ -767,7 +767,7 @@ export default function Settings({
             onClick={onClose}
         >
             <div
-                className="bg-white dark:bg-dark-900 rounded-2xl w-full max-w-4xl h-[700px] shadow-2xl overflow-hidden border border-slate-200/60 dark:border-dark-700/60 flex animate-scale-in relative"
+                className="bg-white dark:bg-dark-900 rounded-2xl w-full max-w-[906px] h-[710px] shadow-2xl overflow-hidden border border-slate-200/60 dark:border-dark-700/60 flex animate-scale-in relative"
                 onClick={e => e.stopPropagation()}
             >
                 {/* ── Left nav ── */}

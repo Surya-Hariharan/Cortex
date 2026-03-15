@@ -50,6 +50,17 @@ POSTGRES_BOOTSTRAP_SQL: list[str] = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    # ── Idempotent column migrations for PostgreSQL ─────────────────────────
+    """
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'notes' AND column_name = 'visibility'
+        ) THEN
+            ALTER TABLE notes ADD COLUMN visibility VARCHAR DEFAULT 'private';
+        END IF;
+    END $$
+    """,
     # Core app indexes.
     "CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_projects_user_deleted ON projects(user_id, deleted_at)",

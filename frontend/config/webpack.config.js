@@ -60,5 +60,8 @@ module.exports = {
       filename: 'styles.css',
     }),
   ],
+  performance: {
+    hints: false,
+  },
   devtool: isProd ? false : 'source-map',
 };

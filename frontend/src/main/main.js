@@ -46,7 +46,7 @@ async function startPythonBackend() {
     });
 
     if (isRunning) {
-        console.log(`[Cortex] Backend already running on port ${BACKEND_PORT}, skipping spawn.`);
+        console.log(`[Cortex] Using already running backend on port ${BACKEND_PORT}.`);
         return;
     }
 

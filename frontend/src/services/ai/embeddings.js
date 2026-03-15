@@ -23,7 +23,7 @@ class EmbeddingsEngine {
 
         if (!fs.existsSync(modelPath)) {
             if (process.env.GEMINI_API_KEY) {
-                console.log(`[Embeddings] Local model not found. Using Gemini API fallback`);
+                console.info(`[Embeddings] Local ONNX model not found — using Gemini API as primary embedding provider.`);
                 this.useApi = true;
                 this.activeProvider = 'gemini-api';
                 this.ready = true;

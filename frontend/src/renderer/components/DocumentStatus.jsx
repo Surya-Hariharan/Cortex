@@ -171,7 +171,7 @@ export default function DocumentStatus() {
                 <div className="max-w-[1240px] mx-auto space-y-8">
 
                     {/* Performance Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <StatCard label="Total Indexed" value={loading ? '…' : indexedDocs.length.toLocaleString()} subtext={`${(health?.subsystems?.vector_store?.db_chunks ?? 0).toLocaleString()} chunks`} icon={Database} color="bg-synapse-500" />
                         <StatCard label="AI Models" value={loading ? '…' : (health?.subsystems?.models?.status === 'ok' ? 'Online' : health?.subsystems?.models?.status ?? 'Unknown')} subtext="Embedding engine status" icon={Zap} color="bg-amber-500" />
                         <StatCard label="Processing Queue" value={loading ? '…' : queueDocs.length} subtext={`${failedDocs.length} failed jobs`} icon={Clock} color="bg-emerald-500" />

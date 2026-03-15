@@ -362,7 +362,6 @@ export default function PerformanceTab() {
                             </div>
                         </div>
                         </div>
-                    </div>
                 </div>
 
                 {/* ── 3. Benchmark Results Display ──────────────────────── */}

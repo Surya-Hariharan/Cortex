@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Users, Globe } from 'lucide-react';
 import StudyGroups from '../StudyGroups';
 import NetworkTab from '../NetworkTab';
+import MyContributions from '../MyContributions';
 
 const SUB_TABS = [
     { id: 'study-groups', label: 'Study Groups', icon: <Users size={16} /> },
     { id: 'nearby-mesh', label: 'Nearby Mesh', icon: <Globe size={16} /> },
+    { id: 'contributions', label: 'My Contributions', icon: <Users size={16} /> }, // Reusing Users icon or similar
 ];
 
 export default function Campus({ onToast }) {
@@ -37,6 +39,7 @@ export default function Campus({ onToast }) {
             <div className="flex-1 overflow-hidden">
                 {activeTab === 'study-groups' && <StudyGroups onToast={onToast} />}
                 {activeTab === 'nearby-mesh' && <NetworkTab />}
+                {activeTab === 'contributions' && <MyContributions />}
             </div>
         </div>
     );

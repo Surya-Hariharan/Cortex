@@ -17,12 +17,10 @@ import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, Panel
 import { useCore } from './context/CoreContext';
 
 const TABS = [
-    { id: 'knowledge', label: 'Home', icon: <Home size={16} /> },
-    { id: 'home', label: 'Knowledge', icon: <BookOpen size={16} /> },
+    { id: 'knowledge', label: 'Search', icon: <Search size={16} /> },
+    { id: 'home', label: 'Dashboard', icon: <Home size={16} /> },
     { id: 'workspace', label: 'Workspace', icon: <FileText size={16} /> },
-    { id: 'campus', label: 'Campus', icon: <Users size={16} /> },
-    { id: 'activity', label: 'Activity', icon: <ActivityIcon size={16} /> },
-    { id: 'ai-engine', label: 'AI Engine', icon: <Cpu size={16} /> },
+    { id: 'campus', label: 'Community', icon: <Users size={16} /> },
 ];
 
 const MemoHomePage = React.memo(HomePage);

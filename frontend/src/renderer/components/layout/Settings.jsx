@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     Settings as SettingsIcon, Bell, Palette, Database, ShieldCheck, User,
     LogOut, X, ChevronRight, ChevronDown, Check, Sun, Moon, Monitor as MonitorIcon,
-    Cpu, Download, Trash2, Archive, Shield, Eye, EyeOff, AlertTriangle, Pencil
+    Cpu, Download, Trash2, Archive, Shield, Eye, EyeOff, AlertTriangle, Pencil,
+    Activity, Zap
 } from 'lucide-react';
+import DocumentStatus from '../DocumentStatus';
+import PerformanceTab from '../PerformanceTab';
 
 /* ─────────────────────────────────────────────────────────────
    Reusable primitives
@@ -698,6 +701,33 @@ function AccountPanel({ username, setUsername, userStream, onToast, onClose, onL
     );
 }
 
+function SystemPanel() {
+    const [subTab, setSubTab] = useState('pipeline'); // pipeline | performance
+
+    return (
+        <div className="h-full flex flex-col">
+            <div className="px-7 py-4 border-b border-slate-100 dark:border-dark-800 flex items-center gap-6 overflow-x-auto flex-shrink-0">
+                <button
+                    onClick={() => setSubTab('pipeline')}
+                    className={`text-xs font-black uppercase tracking-widest pb-1 transition-all whitespace-nowrap ${subTab === 'pipeline' ? 'text-synapse-600 border-b-2 border-synapse-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    Pipeline
+                </button>
+                <button
+                    onClick={() => setSubTab('performance')}
+                    className={`text-xs font-black uppercase tracking-widest pb-1 transition-all whitespace-nowrap ${subTab === 'performance' ? 'text-synapse-600 border-b-2 border-synapse-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    Performance
+                </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+                {subTab === 'pipeline' && <DocumentStatus />}
+                {subTab === 'performance' && <PerformanceTab />}
+            </div>
+        </div>
+    );
+}
+
 /* ─────────────────────────────────────────────────────────────
    Main Settings Modal
 ───────────────────────────────────────────────────────────── */
@@ -706,6 +736,7 @@ const NAV_ITEMS = [
     { id: 'general', label: 'General', Icon: SettingsIcon },
     { id: 'notifications', label: 'Notifications', Icon: Bell },
     { id: 'personalization', label: 'Personalization', Icon: Palette },
+    { id: 'system', label: 'System', Icon: Cpu },
     { id: 'data-controls', label: 'Data controls', Icon: Database },
     { id: 'security', label: 'Security', Icon: ShieldCheck },
     { id: 'account', label: 'Account', Icon: User },
@@ -783,6 +814,7 @@ export default function Settings({
                     {tab === 'general' && <GeneralPanel theme={theme} setTheme={setTheme} perfProvider={perfProvider} setPerfProvider={setPerfProvider} onToast={onToast} />}
                     {tab === 'notifications' && <NotificationsPanel />}
                     {tab === 'personalization' && <PersonalizationPanel username={username} setUsername={setUsername} userStream={userStream} onOpenStreamSelector={handleOpenStreamSelector} onToast={onToast} />}
+                    {tab === 'system' && <SystemPanel />}
                     {tab === 'data-controls' && <DataControlsPanel onToast={onToast} />}
                     {tab === 'security' && <SecurityPanel onToast={onToast} onLogout={onLogout} />}
                     {tab === 'account' && <AccountPanel username={username} setUsername={setUsername} userStream={userStream} onToast={onToast} onClose={onClose} onLogout={onLogout} />}

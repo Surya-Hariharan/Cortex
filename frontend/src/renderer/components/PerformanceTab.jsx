@@ -49,26 +49,26 @@ function MiniSparkline({ data, color = '#6366f1' }) {
 function PerformanceTile({ label, value, unit, trend, trendDir, sub, history, icon, accentColor }) {
     const isUp = trendDir === 'up';
     return (
-        <div className="group relative bg-white dark:bg-dark-900 border border-dark-200/80 dark:border-dark-800/80 rounded-2xl p-5 transition-all duration-300 hover:shadow-xl hover:shadow-dark-200/10 dark:hover:shadow-dark-950/40 hover:-translate-y-1">
-            <div className="flex justify-between items-start mb-4">
+        <div className="group relative bg-white dark:bg-dark-900 border border-dark-200/80 dark:border-dark-800/80 rounded-xl p-4 transition-all duration-300 hover:shadow-md">
+            <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-lg bg-${accentColor}-500/10 text-${accentColor}-500`}>
+                    <div className={`p-1.5 rounded-lg bg-${accentColor}-500/10 text-${accentColor}-500`}>
                         {icon}
                     </div>
-                    <span className="text-[10px] font-black text-dark-400 dark:text-dark-500 uppercase tracking-widest">{label}</span>
+                    <span className="text-xs font-semibold text-dark-500 dark:text-dark-400 uppercase tracking-wide">{label}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    {isUp ? <ArrowUpRight size={14} className="text-emerald-500" /> : <ArrowDownRight size={14} className="text-blue-500" />}
-                    <span className={`text-[10px] font-black ${isUp ? 'text-emerald-500' : 'text-blue-500'}`}>{trend}</span>
+                    {isUp ? <ArrowUpRight size={12} className="text-emerald-500" /> : <ArrowDownRight size={12} className="text-blue-500" />}
+                    <span className={`text-[10px] font-semibold ${isUp ? 'text-emerald-500' : 'text-blue-500'}`}>{trend}</span>
                 </div>
             </div>
             <div className="flex items-end justify-between">
                 <div>
                     <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black tracking-tighter text-dark-800 dark:text-dark-50">{value}</span>
-                        <span className="text-xs font-bold text-dark-400">{unit}</span>
+                        <span className="text-xl font-bold tracking-tight text-dark-800 dark:text-dark-50">{value}</span>
+                        <span className="text-xs font-medium text-dark-400">{unit}</span>
                     </div>
-                    <p className="text-[10px] font-bold text-dark-500 mt-1 uppercase tracking-tighter opacity-70">{sub}</p>
+                    <p className="text-[10px] font-medium text-dark-500 mt-0.5 uppercase tracking-tight opacity-70">{sub}</p>
                 </div>
                 <div className="opacity-40 group-hover:opacity-100 transition-opacity">
                     <MiniSparkline data={history} color={isUp ? '#10b981' : '#3b82f6'} />
@@ -83,7 +83,7 @@ function SmallChart({ data, color, yMin = 0, yMax, yFmt = v => Math.round(v), la
     const pts = sparkPoints(data, 400, 100, yMin, hi, 6);
     const midVal = (yMin + hi) / 2;
     return (
-        <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-5 monitor-grid h-48 flex flex-col">
+        <div className="bg-dark-950 border border-dark-800/80 rounded-2xl p-4 monitor-grid h-36 flex flex-col">
             <div className="flex justify-between items-center mb-3">
                 <span className={`text-[10px] font-black uppercase tracking-widest ${labelClass || 'text-dark-400'}`}>{label}</span>
                 <span className="text-xs font-mono font-bold text-white">{valueDisplay}</span>
@@ -221,94 +221,82 @@ export default function PerformanceTab() {
 
     return (
         <div className="h-full overflow-y-auto bg-white dark:bg-dark-950 scroll-smooth">
-            <div className="max-w-[1240px] mx-auto px-8 py-5 space-y-6 pb-12">
-                
-                {/* 1. Compact Hero */}
-                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-5 group">
-                    <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-xl bg-synapse-600 flex items-center justify-center text-white shadow-lg">
-                                <Zap size={24} fill="currentColor" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-black text-dark-800 dark:text-dark-50 tracking-tight">AI Engine</h2>
-                                <p className="text-[10px] font-bold text-dark-400 uppercase tracking-widest">BGE-small-v1.5</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={runBenchmark} disabled={benchmarkActive} className="px-4 py-1.5 rounded-lg bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 text-[10px] font-black uppercase">
-                                {benchmarkActive ? 'Benchmarking...' : 'Run Benchmark'}
-                            </button>
-                            <div className="flex gap-1">
-                                {hardware.gpu && <div className="p-1.5 rounded-lg bg-synapse-500/10 text-synapse-500 shadow-sm"><Activity size={12} /></div>}
-                                {hardware.npu && <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 shadow-sm"><Zap size={12} /></div>}
-                            </div>
-                        </div>
+            <div className="px-7 py-5 space-y-4 pb-8">
+
+                {/* Settings-style section header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-sm font-semibold text-slate-800 dark:text-dark-50">AI Engine Performance</h3>
+                        <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">BGE-small-v1.5 · {runtime.toUpperCase()} · {precision.toUpperCase()}</p>
                     </div>
+                    <button onClick={runBenchmark} disabled={benchmarkActive} className="h-7 px-3 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-dark-200 text-xs font-semibold border border-slate-200 dark:border-dark-700 hover:bg-slate-200 dark:hover:bg-dark-700 transition-colors disabled:opacity-60">
+                        {benchmarkActive ? 'Benchmarking…' : 'Run Benchmark'}
+                    </button>
                 </div>
+                <div className="h-px bg-slate-100 dark:bg-dark-800" />
 
                 {/* 2. Benchmark Results */}
                 {benchmarkResult && (
-                    <div className={`p-4 rounded-2xl border ${benchmarkResult.success ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-500/20' : 'bg-red-50/50 dark:bg-red-900/10 border-red-500/20'}`}>
+                    <div className={`p-3 rounded-xl border ${benchmarkResult.success ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-500/20' : 'bg-red-50/50 dark:bg-red-900/10 border-red-500/20'}`}>
                         <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <CheckCircle2 size={16} className={benchmarkResult.success ? 'text-emerald-500' : 'text-red-500'} />
-                                <span className="text-sm font-bold">{benchmarkResult.success ? 'Success' : 'Failed'}</span>
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 size={14} className={benchmarkResult.success ? 'text-emerald-500' : 'text-red-500'} />
+                                <span className="text-sm font-semibold">{benchmarkResult.success ? 'Benchmark passed' : 'Benchmark failed'}</span>
                             </div>
-                            <span className="text-sm font-black">{benchmarkResult.execution_time_ms.toFixed(1)}ms</span>
+                            <span className="text-sm font-bold">{benchmarkResult.execution_time_ms.toFixed(1)}ms</span>
                         </div>
                     </div>
                 )}
 
                 {/* 3. Metric Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <PerformanceTile label="Latency" value={avgMs} unit="ms" sub="Inference speed" trend="LIVE" icon={<Clock size={16} />} accentColor="blue" />
-                    <PerformanceTile label="Runtime" value={runtime.toUpperCase()} unit={precision.toUpperCase()} sub="Active engine" trend="SYNC" icon={<Cpu size={16} />} accentColor="purple" />
-                    <PerformanceTile label="Memory" value={(realResRef.current.mem / 1024).toFixed(1)} unit="GB" sub={`${(realResRef.current.mem / realResRef.current.mem_total_mb * 100).toFixed(0)}% used`} trend="LIVE" icon={<Droplets size={16} />} accentColor="amber" />
-                    <PerformanceTile label="Models" value={modelsLoaded} unit="/ 3" sub="Loaded in memory" trend="OK" icon={<Activity size={16} />} accentColor="emerald" />
+                <div className="grid grid-cols-2 gap-3">
+                    <PerformanceTile label="Latency" value={avgMs} unit="ms" sub="Inference speed" trend="LIVE" icon={<Clock size={14} />} accentColor="blue" />
+                    <PerformanceTile label="Runtime" value={runtime.toUpperCase()} unit={precision.toUpperCase()} sub="Active engine" trend="SYNC" icon={<Cpu size={14} />} accentColor="purple" />
+                    <PerformanceTile label="Memory" value={(realResRef.current.mem / 1024).toFixed(1)} unit="GB" sub={`${(realResRef.current.mem / realResRef.current.mem_total_mb * 100).toFixed(0)}% used`} trend="LIVE" icon={<Droplets size={14} />} accentColor="amber" />
+                    <PerformanceTile label="Models" value={modelsLoaded} unit="/ 3" sub="Loaded in memory" trend="OK" icon={<Activity size={14} />} accentColor="emerald" />
                 </div>
 
                 {/* 4. Privacy Toggle */}
-                <div className="bg-white dark:bg-dark-900 border border-dark-200 rounded-2xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Shield size={18} className="text-violet-500" />
+                <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <Shield size={15} className="text-violet-500" />
                         <div>
-                            <p className="text-sm font-bold tracking-tight">Private Thinking Mode</p>
-                            <p className="text-[10px] text-dark-400 uppercase tracking-widest">{privacyMode ? 'Cloud Disabled' : 'Hybrid Active'}</p>
+                            <p className="text-sm font-medium text-slate-800 dark:text-dark-100">Private Thinking Mode</p>
+                            <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">{privacyMode ? 'Cloud disabled — local only' : 'Hybrid mode active'}</p>
                         </div>
                     </div>
-                    <button onClick={togglePrivacyMode} className={`w-10 h-5 rounded-full relative transition-colors ${privacyMode ? 'bg-violet-600' : 'bg-dark-200'}`}>
+                    <button onClick={togglePrivacyMode} className={`w-10 h-5 rounded-full relative transition-colors ${privacyMode ? 'bg-violet-600' : 'bg-slate-200 dark:bg-dark-700'}`}>
                         <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${privacyMode ? 'translate-x-5' : ''}`} />
                     </button>
                 </div>
 
                 {/* 5. Tabs & Charts */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-dark-100 dark:border-dark-800">
-                        <div className="flex gap-6">
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-dark-800">
+                        <div className="flex gap-5">
                             {['overview', 'monitor'].map(m => (
-                                <button key={m} onClick={() => setViewMode(m)} className={`pb-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === m ? 'text-dark-800 dark:text-dark-50 border-b-2 border-synapse-600' : 'text-dark-400'}`}>
+                                <button key={m} onClick={() => setViewMode(m)} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition-all ${viewMode === m ? 'text-slate-800 dark:text-dark-50 border-b-2 border-synapse-600' : 'text-slate-400 hover:text-slate-600'}`}>
                                     {m}
                                 </button>
                             ))}
                         </div>
-                        <div className="hidden md:flex items-center gap-3 pb-2">
-                             <div className="flex bg-dark-50 dark:bg-dark-900 p-0.5 rounded-lg border">
+                        <div className="flex items-center gap-2 pb-2">
+                            <div className="flex bg-slate-50 dark:bg-dark-900 p-0.5 rounded-lg border border-slate-200 dark:border-dark-700">
                                 {['standard', 'onnx'].map(r => (
-                                    <button key={r} onClick={() => handleRuntimeChange(r)} className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${runtime === r ? 'bg-white shadow-sm text-synapse-600' : 'text-dark-400'}`}>{r}</button>
+                                    <button key={r} onClick={() => handleRuntimeChange(r)} className={`px-2 py-1 rounded-md text-[10px] font-semibold uppercase ${runtime === r ? 'bg-white shadow-sm text-synapse-600 dark:bg-dark-800' : 'text-slate-400'}`}>{r}</button>
                                 ))}
-                             </div>
+                            </div>
                         </div>
                     </div>
 
                     {viewMode === 'overview' ? (
-                        <div className="py-12 text-center text-[10px] font-bold text-dark-400 uppercase tracking-widest">
-                            Select Monitor for real-time throughput metrics
+                        <div className="py-8 text-center text-xs font-medium text-slate-400">
+                            Switch to Monitor for real-time throughput charts
                         </div>
                     ) : (
-                        <div className="space-y-4 animate-fade-in">
+                        <div className="space-y-3 animate-fade-in">
                             <SmallChart data={liveData.latency} color="#10b981" yMin={0} yFmt={v => `${v.toFixed(1)}ms`} label="Avg Latency" valueDisplay={`${avgMs.toFixed(1)} ms`} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <SmallChart data={liveData.cpu} color="#6366f1" yMax={100} yFmt={v => `${v}%`} label="CPU" valueDisplay={`${(liveData.cpu[liveData.cpu.length -1] || 0).toFixed(1)}%`} />
                                 <SmallChart data={liveData.mem} color="#f59e0b" yMax={realResRef.current.mem_total_mb} yFmt={v => `${Math.round(v/1024)}G`} label="Memory" valueDisplay={`${(liveData.mem[liveData.mem.length -1] || 0).toFixed(0)}M`} />
                             </div>

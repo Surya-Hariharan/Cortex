@@ -6,8 +6,6 @@ const CLOUD_API_MS = 847;
 const CPU_BASELINE_MS = 41;
 
 // Auto-scales data array to fill a viewBox (vw × vh) with padding.
-// yMin/yMax: when provided, use a fixed scale so small fluctuations look calm.
-// Produces valid SVG point strings with no % units.
 function sparkPoints(data, vw = 400, vh = 100, yMin = null, yMax = null, pad = 6) {
     if (!data || data.length < 2) return '';
     const lo = yMin !== null ? yMin : Math.min(...data);
@@ -20,8 +18,6 @@ function sparkPoints(data, vw = 400, vh = 100, yMin = null, yMax = null, pad = 6
     }).join(' ');
 }
 
-// Returns a "nice" rounded ceiling so graph Y scale looks clean.
-// e.g. max=8ms → 10, max=42% → 50, max=340MB → 400
 function niceMax(values) {
     const max = Math.max(...(values && values.length ? values : [1]), 0.001);
     const raw = max * 1.3;
@@ -31,23 +27,18 @@ function niceMax(values) {
     return step * mag;
 }
 
-// --- Sub-components ---
-
 function MiniSparkline({ data, color = '#6366f1' }) {
     if (!data || data.length < 2) return <div className="h-5 w-16 bg-dark-50 dark:bg-dark-800/50 rounded animate-pulse" />;
-
     const max = Math.max(...data, 1);
     const min = Math.min(...data);
     const range = max - min || 1;
     const width = 64;
     const height = 24;
-
     const points = data.map((v, i) => {
         const x = (i / (data.length - 1)) * width;
         const y = height - ((v - min) / range) * (height - 4) - 2;
         return `${x},${y}`;
     }).join(' ');
-
     return (
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="overflow-visible">
             <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -71,7 +62,6 @@ function PerformanceTile({ label, value, unit, trend, trendDir, sub, history, ic
                     <span className={`text-[10px] font-black ${isUp ? 'text-emerald-500' : 'text-blue-500'}`}>{trend}</span>
                 </div>
             </div>
-
             <div className="flex items-end justify-between">
                 <div>
                     <div className="flex items-baseline gap-1">
@@ -84,61 +74,14 @@ function PerformanceTile({ label, value, unit, trend, trendDir, sub, history, ic
                     <MiniSparkline data={history} color={isUp ? '#10b981' : '#3b82f6'} />
                 </div>
             </div>
-            <div className={`absolute bottom-0 left-6 right-6 h-0.5 bg-${accentColor}-500/20 rounded-t-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center`} />
         </div>
     );
 }
 
-function ComparisonCard({ type, latency, network, privacy, energy, isRecommended }) {
-    const config = {
-        cloud: { title: 'Cloud API', icon: <Globe size={20} />, color: 'slate' },
-        cpu: { title: 'CPU Standard', icon: <Cpu size={20} />, color: 'slate' },
-        onnx: { title: 'ONNX Optimized', icon: <Zap size={20} />, color: 'synapse' }
-    }[type];
-
-    return (
-        <div className={`flex-1 p-6 rounded-2xl border transition-all duration-300 relative ${isRecommended ? 'bg-synapse-50/30 dark:bg-synapse-900/10 border-synapse-400/40 shadow-lg shadow-synapse-500/5' : 'bg-white dark:bg-dark-900 border-dark-200/80 dark:border-dark-800/80'}`}>
-            {isRecommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-synapse-600 text-white text-[9px] font-black px-3 py-1 rounded-full tracking-[0.2em] shadow-lg shadow-synapse-500/20 uppercase z-10">
-                    Recommended
-                </div>
-            )}
-
-            <div className="flex items-center gap-3 mb-6">
-                <div className={`p-2.5 rounded-xl bg-${config.color}-100 dark:bg-${config.color}-900/40 text-${config.color}-600 dark:text-${config.color}-400`}>
-                    {config.icon}
-                </div>
-                <h4 className="text-sm font-black text-dark-800 dark:text-dark-50">{config.title}</h4>
-            </div>
-
-            <div className="space-y-4">
-                {[
-                    { label: 'Latency', value: latency, sub: 'Lower is better' },
-                    { label: 'Network', value: network, sub: 'Connectivity' },
-                    { label: 'Privacy', value: privacy, sub: 'Data safety' },
-                    { label: 'Energy', value: energy, sub: 'Efficiency' },
-                ].map((item, i) => (
-                    <div key={i} className="flex justify-between items-start pt-4 first:pt-0 border-t border-dark-100 dark:border-dark-800 first:border-0">
-                        <div>
-                            <p className="text-[10px] font-black text-dark-400 dark:text-dark-500 uppercase tracking-widest leading-none">{item.label}</p>
-                            <p className="text-[9px] font-bold text-dark-400 opacity-60 mt-1">{item.sub}</p>
-                        </div>
-                        <span className={`text-xs font-extrabold ${item.value.includes('ONNX') || item.value.includes('LOCAL') || item.value.includes('ULTRA') ? 'text-synapse-600 dark:text-synapse-400' : 'text-dark-700 dark:text-dark-200'}`}>
-                            {item.value}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-// Reusable small chart with Y axis labels (top/mid/0) and X axis (−40s / now)
 function SmallChart({ data, color, yMin = 0, yMax, yFmt = v => Math.round(v), label, valueDisplay, labelClass = '' }) {
     const hi = yMax !== undefined ? yMax : niceMax(data && data.length ? data : [1]);
     const pts = sparkPoints(data, 400, 100, yMin, hi, 6);
     const midVal = (yMin + hi) / 2;
-
     return (
         <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-5 monitor-grid h-48 flex flex-col">
             <div className="flex justify-between items-center mb-3">
@@ -146,13 +89,11 @@ function SmallChart({ data, color, yMin = 0, yMax, yFmt = v => Math.round(v), la
                 <span className="text-xs font-mono font-bold text-white">{valueDisplay}</span>
             </div>
             <div className="flex gap-2 flex-1 min-h-0">
-                {/* Y axis labels */}
                 <div className="flex flex-col justify-between text-right w-8 flex-shrink-0 py-0.5">
                     <span className="text-[8px] font-mono text-dark-600 leading-none">{yFmt(hi)}</span>
                     <span className="text-[8px] font-mono text-dark-600 leading-none">{yFmt(midVal)}</span>
                     <span className="text-[8px] font-mono text-dark-600 leading-none">{yFmt(yMin)}</span>
                 </div>
-                {/* Chart + X axis */}
                 <div className="flex-1 flex flex-col min-w-0">
                     <div className="flex-1 relative min-h-0">
                         <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="overflow-visible opacity-80">
@@ -172,112 +113,71 @@ function SmallChart({ data, color, yMin = 0, yMax, yFmt = v => Math.round(v), la
 
 export default function PerformanceTab() {
     const { showToast, privacyMode, togglePrivacyMode } = useCore();
-    const [viewMode, setViewMode] = useState('overview'); // overview | monitor
+    const [viewMode, setViewMode] = useState('overview');
     const [benchmarkActive, setBenchmarkActive] = useState(false);
     const [benchmarkResult, setBenchmarkResult] = useState(null);
     const [perf, setPerf] = useState(null);
     const [modelStatus, setModelStatus] = useState(null);
-    const [runtime, setRuntime] = useState('onnx'); // standard | onnx
-    const [precision, setPrecision] = useState('fp16'); // fp32 | fp16 | int8
+    const [runtime, setRuntime] = useState('onnx');
+    const [precision, setPrecision] = useState('fp16');
     const [hardware, setHardware] = useState({ cpu: true, gpu: false, npu: false });
-    const [currentMode, setCurrentMode] = useState({ llm_mode: 'local', privacy_mode: false, internet_online: false });
-    const [liveData, setLiveData] = useState({
-        latency: [],
-        cpu: [],
-        mem: [],
-        ocr: [],
-        embed: [],
-        disk: [],
-    });
-    // Holds latest real resource values from backend (updated every 2s)
+    const [currentMode, setCurrentMode] = useState({ llm_mode: 'local' });
+    const [liveData, setLiveData] = useState({ latency: [], cpu: [], mem: [], ocr: [], embed: [], disk: [] });
     const realResRef = useRef({ cpu: 7, mem: 450, disk_percent: 0, disk_used_gb: 0, disk_total_gb: 0, mem_total_mb: 8192 });
 
-    // Poll system health for live perf stats
     useEffect(() => {
         const fetchPerf = async () => {
             try {
-                const [healthData, modelData] = await Promise.all([
-                    systemApi.health(),
-                    systemApi.models()
-                ]);
-                if (healthData) setPerf(healthData);
-                if (modelData) setModelStatus(modelData);
-            } catch (err) {
-                console.warn('Failed to fetch performance data:', err);
-            }
+                const [h, m] = await Promise.all([systemApi.health(), systemApi.models()]);
+                if (h) setPerf(h);
+                if (m) setModelStatus(m);
+            } catch (_) {}
         };
         fetchPerf();
         const interval = setInterval(fetchPerf, 5000);
         return () => clearInterval(interval);
     }, []);
 
-    // Poll current AI mode (cloud vs local) for live badge
     useEffect(() => {
-        const fetchMode = () => {
-            systemApi.getMode().then(setCurrentMode).catch(() => {});
-        };
+        const fetchMode = () => { systemApi.getMode().then(setCurrentMode).catch(() => {}); };
         fetchMode();
         const interval = setInterval(fetchMode, 5000);
         return () => clearInterval(interval);
     }, []);
 
-    // Handle benchmark execution
     const runBenchmark = async () => {
         setBenchmarkActive(true);
         setBenchmarkResult(null);
-
         try {
             showToast('Starting AI model benchmark...', 'info');
             const result = await systemApi.benchmark();
-
             setBenchmarkResult(result);
-
             if (result.success) {
                 showToast(`Benchmark completed in ${result.execution_time_ms.toFixed(1)}ms`, 'success');
-
-                // Refresh model status after benchmark
-                const modelData = await systemApi.models();
-                setModelStatus(modelData);
+                const m = await systemApi.models();
+                setModelStatus(m);
             } else {
                 showToast(`Benchmark failed: ${result.message}`, 'error');
             }
-        } catch (err) {
-            console.error('Benchmark failed:', err);
+        } catch (_) {
             showToast('Benchmark failed to execute', 'error');
         } finally {
             setBenchmarkActive(false);
         }
     };
 
-    // Handle runtime changes
-    const handleRuntimeChange = async (newRuntime) => {
-        setRuntime(newRuntime);
-        showToast(`Runtime changed to ${newRuntime.toUpperCase()}`, 'info');
-        try {
-            await systemApi.setRuntime(newRuntime, precision);
-        } catch (err) {
-            console.warn('Failed to apply runtime change:', err);
-        }
+    const handleRuntimeChange = async (r) => {
+        setRuntime(r);
+        showToast(`Runtime changed to ${r.toUpperCase()}`, 'info');
+        try { await systemApi.setRuntime(r, precision); } catch (_) {}
     };
 
-    // Handle precision changes
-    const handlePrecisionChange = async (newPrecision) => {
-        setPrecision(newPrecision);
-        showToast(`Precision changed to ${newPrecision.toUpperCase()}`, 'info');
-        try {
-            await systemApi.setRuntime(runtime, newPrecision);
-        } catch (err) {
-            console.warn('Failed to apply precision change:', err);
-        }
+    const handlePrecisionChange = async (p) => {
+        setPrecision(p);
+        showToast(`Precision changed to ${p.toUpperCase()}`, 'info');
+        try { await systemApi.setRuntime(runtime, p); } catch (_) {}
     };
 
-    // Handle terminal button click
-    const openTerminal = () => {
-        showToast('Terminal functionality coming soon...', 'info');
-        // Future: Could open a model console or system logs
-    };
-
-    // Poll real system resources every 2s for live monitor graphs
     useEffect(() => {
         const fetchResources = async () => {
             try {
@@ -291,11 +191,7 @@ export default function PerformanceTab() {
                     mem_total_mb: data.memory?.total_mb ?? 8192,
                 };
                 if (data.hardware) {
-                    setHardware({
-                        cpu: true,
-                        gpu: data.hardware.directml || data.hardware.cuda,
-                        npu: data.hardware.npu,
-                    });
+                    setHardware({ cpu: true, gpu: data.hardware.directml || data.hardware.cuda, npu: data.hardware.npu });
                 }
             } catch (_) {}
         };
@@ -304,7 +200,6 @@ export default function PerformanceTab() {
         return () => clearInterval(t);
     }, []);
 
-    // Live monitor — real CPU/memory base + tiny jitter for smooth animation
     useEffect(() => {
         const t = setInterval(() => {
             const { cpu, mem, disk_percent } = realResRef.current;
@@ -320,308 +215,102 @@ export default function PerformanceTab() {
         return () => clearInterval(t);
     }, [precision]);
 
-    // Extract real performance data from backend
     const avgMs = perf?.subsystems?.models?.embeddings?.latency || 2.4;
     const history = perf?.embedHistory || [2.5, 2.3, 2.7, 2.4, 2.2, 2.4, 2.3, 2.5, 2.4];
-    const totalOps = perf?.subsystems?.vector_store?.db_chunks || perf?.embedHistory?.length || 142;
-    const systemRAM = modelStatus?.system_free_ram_mb || 0;
     const modelsLoaded = modelStatus ? Object.values(modelStatus.models).filter(m => m.loaded).length : 0;
 
     return (
         <div className="h-full overflow-y-auto bg-white dark:bg-dark-950 scroll-smooth">
-            <div className="max-w-[1200px] mx-auto px-8 py-5 space-y-6 pb-10">
-
-                {/* ── 1. Powerful Hero Header ────────────────────────────── */}
-                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-5 group shadow-2xl shadow-dark-200/50 dark:shadow-dark-950">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-synapse-500/10 rounded-full blur-[120px] -mr-40 -mt-20 pointer-events-none" />
-
+            <div className="max-w-[1240px] mx-auto px-8 py-5 space-y-6 pb-12">
+                
+                {/* 1. Compact Hero */}
+                <div className="relative overflow-hidden hero-gradient-animate border border-dark-200/80 dark:border-dark-800/80 rounded-3xl p-5 group">
                     <div className="flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-5">
-                            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br from-synapse-500 to-synapse-600 flex items-center justify-center shadow-2xl shadow-synapse-500/30 border border-white/20 relative ${benchmarkActive ? 'animate-pulse scale-105' : ''} transition-all duration-700`}>
-                                <div className="absolute inset-0 rounded-2xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <Zap size={28} className="text-white relative z-10" fill="white" />
+                            <div className="w-12 h-12 rounded-xl bg-synapse-600 flex items-center justify-center text-white shadow-lg">
+                                <Zap size={24} fill="currentColor" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] opacity-80 truncate">
-                                    Model: BGE-small-v1.5
-                                </p>
+                                <h2 className="text-lg font-black text-dark-800 dark:text-dark-50 tracking-tight">AI Engine</h2>
+                                <p className="text-[10px] font-bold text-dark-400 uppercase tracking-widest">BGE-small-v1.5</p>
                             </div>
                         </div>
-
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={runBenchmark}
-                                disabled={benchmarkActive}
-                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] ${benchmarkActive ? 'bg-amber-500 text-white' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-sm hover:-translate-y-0.5'}`}
-                            >
-                                {benchmarkActive ? 'Running...' : 'Bench'}
+                            <button onClick={runBenchmark} disabled={benchmarkActive} className="px-4 py-1.5 rounded-lg bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 text-[10px] font-black uppercase">
+                                {benchmarkActive ? 'Benchmarking...' : 'Run Benchmark'}
                             </button>
-                            <div className="flex gap-1 flex-shrink-0">
-                                {hardware.gpu && <div className="p-1.5 rounded-lg bg-synapse-500/10 text-synapse-500 border border-synapse-500/20" title="GPU Detected"><Activity size={12} /></div>}
-                                {hardware.npu && <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" title="NPU Ready"><Zap size={12} /></div>}
+                            <div className="flex gap-1">
+                                {hardware.gpu && <div className="p-1.5 rounded-lg bg-synapse-500/10 text-synapse-500 shadow-sm"><Activity size={12} /></div>}
+                                {hardware.npu && <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 shadow-sm"><Zap size={12} /></div>}
                             </div>
                         </div>
-                        </div>
+                    </div>
                 </div>
 
-                {/* ── 3. Benchmark Results Display ──────────────────────── */}
+                {/* 2. Benchmark Results */}
                 {benchmarkResult && (
-                    <div className={`rounded-2xl p-6 border transition-all duration-500 ${benchmarkResult.success ? 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-400/40' : 'bg-red-50/30 dark:bg-red-900/10 border-red-400/40'}`}>
-                        <div className="flex items-center justify-between">
+                    <div className={`p-4 rounded-2xl border ${benchmarkResult.success ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-500/20' : 'bg-red-50/50 dark:bg-red-900/10 border-red-500/20'}`}>
+                        <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-xl ${benchmarkResult.success ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                                    {benchmarkResult.success ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-dark-800 dark:text-dark-50">
-                                        {benchmarkResult.success ? 'Benchmark Completed' : 'Benchmark Failed'}
-                                    </h3>
-                                    <p className="text-xs text-dark-500 dark:text-dark-400 mt-1">
-                                        {benchmarkResult.message}
-                                    </p>
-                                </div>
+                                <CheckCircle2 size={16} className={benchmarkResult.success ? 'text-emerald-500' : 'text-red-500'} />
+                                <span className="text-sm font-bold">{benchmarkResult.success ? 'Success' : 'Failed'}</span>
                             </div>
-                            <div className="text-right">
-                                <div className="text-lg font-black text-dark-800 dark:text-dark-50">
-                                    {benchmarkResult.execution_time_ms.toFixed(1)}ms
-                                </div>
-                                <div className="text-xs text-dark-500 dark:text-dark-400">
-                                    {Object.values(benchmarkResult.loaded_models || {}).filter(Boolean).length} models loaded
-                                </div>
-                            </div>
+                            <span className="text-sm font-black">{benchmarkResult.execution_time_ms.toFixed(1)}ms</span>
                         </div>
                     </div>
                 )}
 
-                {/* ── 4. Metric Tiles ────────────────────────────────────── */}
-                <div className="grid grid-cols-2 gap-4">
-                    <PerformanceTile
-                        label="Avg Latency"
-                        value={avgMs}
-                        unit="ms"
-                        sub="Inference speed"
-                        trend="LIVE"
-                        trendDir="down"
-                        history={history}
-                        icon={<Clock size={16} />}
-                        accentColor="blue"
-                    />
-                    <PerformanceTile
-                        label="Models Active"
-                        value={modelsLoaded}
-                        unit="/ 3"
-                        sub="Loaded in memory"
-                        trend={`↑ ${modelsLoaded}`}
-                        trendDir="up"
-                        history={[0, 1, 2, 3, 3, 3]}
-                        icon={<Activity size={16} />}
-                        accentColor="purple"
-                    />
-                    <PerformanceTile
-                        label="System RAM"
-                        value={(realResRef.current.mem / 1024).toFixed(1)}
-                        unit={`/ ${(realResRef.current.mem_total_mb / 1024).toFixed(0)} GB`}
-                        sub={`${(realResRef.current.mem_total_mb > 0 ? (realResRef.current.mem / realResRef.current.mem_total_mb * 100).toFixed(0) : 0)}% used`}
-                        trend="LIVE"
-                        trendDir="down"
-                        history={liveData.mem.map(v => v / 1024)}
-                        icon={<Droplets size={16} />}
-                        accentColor="amber"
-                    />
-                    <PerformanceTile
-                        label="Disk Usage"
-                        value={realResRef.current.disk_used_gb}
-                        unit={`/ ${realResRef.current.disk_total_gb} GB`}
-                        sub={`${realResRef.current.disk_percent ?? 0}% used`}
-                        trend="LIVE"
-                        trendDir="down"
-                        history={liveData.disk}
-                        icon={<BarChart3 size={16} />}
-                        accentColor="indigo"
-                    />
+                {/* 3. Metric Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <PerformanceTile label="Latency" value={avgMs} unit="ms" sub="Inference speed" trend="LIVE" icon={<Clock size={16} />} accentColor="blue" />
+                    <PerformanceTile label="Runtime" value={runtime.toUpperCase()} unit={precision.toUpperCase()} sub="Active engine" trend="SYNC" icon={<Cpu size={16} />} accentColor="purple" />
+                    <PerformanceTile label="Memory" value={(realResRef.current.mem / 1024).toFixed(1)} unit="GB" sub={`${(realResRef.current.mem / realResRef.current.mem_total_mb * 100).toFixed(0)}% used`} trend="LIVE" icon={<Droplets size={16} />} accentColor="amber" />
+                    <PerformanceTile label="Models" value={modelsLoaded} unit="/ 3" sub="Loaded in memory" trend="OK" icon={<Activity size={16} />} accentColor="emerald" />
                 </div>
 
-                {/* ── Privacy Mode Toggle ────────────────────────────────── */}
-                <div className="bg-white dark:bg-dark-900 border border-dark-200/80 dark:border-dark-800/80 rounded-2xl p-5 flex items-center justify-between">
+                {/* 4. Privacy Toggle */}
+                <div className="bg-white dark:bg-dark-900 border border-dark-200 rounded-2xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg transition-colors ${privacyMode ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-dark-100 dark:bg-dark-800 text-dark-400'}`}>
-                            <Shield size={18} />
-                        </div>
+                        <Shield size={18} className="text-violet-500" />
                         <div>
-                            <p className="text-sm font-black text-dark-800 dark:text-dark-50 tracking-tight">Private Thinking Mode</p>
-                            <p className="text-[10px] font-bold text-dark-400 dark:text-dark-500 uppercase tracking-widest mt-0.5">
-                                {privacyMode ? 'Cloud APIs disabled — local inference only' : 'Hybrid routing active — cloud enrichment enabled'}
-                            </p>
+                            <p className="text-sm font-bold tracking-tight">Private Thinking Mode</p>
+                            <p className="text-[10px] text-dark-400 uppercase tracking-widest">{privacyMode ? 'Cloud Disabled' : 'Hybrid Active'}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={togglePrivacyMode}
-                        className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${privacyMode ? 'bg-violet-600' : 'bg-dark-200 dark:bg-dark-700'}`}
-                        title={privacyMode ? 'Disable Privacy Mode' : 'Enable Privacy Mode'}
-                    >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${privacyMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                    <button onClick={togglePrivacyMode} className={`w-10 h-5 rounded-full relative transition-colors ${privacyMode ? 'bg-violet-600' : 'bg-dark-200'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${privacyMode ? 'translate-x-5' : ''}`} />
                     </button>
                 </div>
 
-                {/* ── 4. Tabs & Mode Switching ──────────────────────────── */}
+                {/* 5. Tabs & Charts */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-dark-100 dark:border-dark-800">
-                        <div className="flex gap-8">
-                            {['overview', 'monitor'].map(mode => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setViewMode(mode)}
-                                    className={`relative text-[10px] font-black uppercase tracking-[0.2em] pb-3 transition-all ${viewMode === mode ? 'text-dark-800 dark:text-dark-50 border-b-2 border-synapse-600' : 'text-dark-400 hover:text-dark-600'}`}
-                                >
-                                    {mode}
+                        <div className="flex gap-6">
+                            {['overview', 'monitor'].map(m => (
+                                <button key={m} onClick={() => setViewMode(m)} className={`pb-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === m ? 'text-dark-800 dark:text-dark-50 border-b-2 border-synapse-600' : 'text-dark-400'}`}>
+                                    {m}
                                 </button>
                             ))}
                         </div>
-                        <div className="hidden md:flex items-center gap-4 pb-3">
-                            {/* Runtime Selector */}
-                            <div className="flex items-center bg-dark-50 dark:bg-dark-900 p-1 rounded-xl border border-dark-100 dark:border-dark-800">
+                        <div className="hidden md:flex items-center gap-3 pb-2">
+                             <div className="flex bg-dark-50 dark:bg-dark-900 p-0.5 rounded-lg border">
                                 {['standard', 'onnx'].map(r => (
-                                    <button
-                                        key={r}
-                                        onClick={() => handleRuntimeChange(r)}
-                                        disabled={benchmarkActive}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${runtime === r ? 'bg-white dark:bg-dark-800 text-synapse-600 dark:text-synapse-400 shadow-sm' : 'text-dark-400 hover:text-dark-500'} ${benchmarkActive ? 'cursor-not-allowed opacity-50' : ''}`}
-                                    >
-                                        {r}
-                                    </button>
+                                    <button key={r} onClick={() => handleRuntimeChange(r)} className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${runtime === r ? 'bg-white shadow-sm text-synapse-600' : 'text-dark-400'}`}>{r}</button>
                                 ))}
-                            </div>
-                            {/* Precision Selector */}
-                            <div className="flex items-center bg-dark-50 dark:bg-dark-900 p-1 rounded-xl border border-dark-100 dark:border-dark-800">
-                                {['FP32', 'FP16', 'INT8'].map(p => (
-                                    <button
-                                        key={p}
-                                        onClick={() => handlePrecisionChange(p.toLowerCase())}
-                                        disabled={benchmarkActive}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${precision === p.toLowerCase() ? 'bg-white dark:bg-dark-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-dark-400 hover:text-dark-500'} ${benchmarkActive ? 'cursor-not-allowed opacity-50' : ''}`}
-                                    >
-                                        {p}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="text-[10px] font-bold text-dark-400 dark:text-dark-500 uppercase tracking-widest flex items-center gap-2">
-                                <Activity size={12} className="animate-pulse" /> Live engine metrics
-                            </div>
+                             </div>
                         </div>
                     </div>
 
                     {viewMode === 'overview' ? (
-                        <div className="space-y-6 animate-fade-in py-4 text-center">
-                            <p className="text-[10px] font-bold text-dark-400 uppercase tracking-[0.2em]">Select Monitor for technical stream</p>
+                        <div className="py-12 text-center text-[10px] font-bold text-dark-400 uppercase tracking-widest">
+                            Select Monitor for real-time throughput metrics
                         </div>
                     ) : (
-                        /* ── 7. Technical Monitor ──────────────────────────── */
-                        <div className="space-y-5 animate-fade-in">
-                            {/* Main Latency Graph */}
-                            {(() => {
-                                const latMax = niceMax(liveData.latency.length ? liveData.latency : [5]);
-                                const latTicks = [latMax, latMax * 0.75, latMax * 0.5, latMax * 0.25, 0];
-                                const fmtMs = v => v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v);
-                                return (
-                                    <div className="bg-dark-950 border border-dark-800/80 rounded-3xl p-8 overflow-hidden relative monitor-grid">
-                                        <div className="flex justify-between items-center mb-6">
-                                            <div className="space-y-1">
-                                                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Inference Latency Stream</h3>
-                                                <p className="text-[10px] text-dark-500 font-bold uppercase tracking-widest">Master Node: ONNX Optimized</p>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-[10px] font-black text-emerald-500/80 tracking-widest bg-emerald-500/5 px-4 py-2 rounded-full border border-emerald-500/10">
-                                                <Activity size={12} /> REAL-TIME MONITORING ACTIVE
-                                            </div>
-                                        </div>
-                                        {/* Chart area with Y axis */}
-                                        <div className="flex gap-3">
-                                            {/* Y axis labels */}
-                                            <div className="flex flex-col justify-between text-right w-10 flex-shrink-0" style={{ height: '16rem' }}>
-                                                {latTicks.map((v, i) => (
-                                                    <span key={i} className="text-[9px] font-mono text-dark-500 leading-none">{fmtMs(v)} ms</span>
-                                                ))}
-                                            </div>
-                                            {/* Chart + X axis */}
-                                            <div className="flex-1 flex flex-col min-w-0">
-                                                <div className="h-64 w-full relative">
-                                                    <svg width="100%" height="100%" viewBox="0 0 400 256" preserveAspectRatio="none" className="overflow-visible">
-                                                        <defs>
-                                                            <linearGradient id="monitor-gradient-v2" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
-                                                                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        {[64, 128, 192].map(y => (
-                                                            <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#ffffff" strokeOpacity="0.04" strokeWidth="1" />
-                                                        ))}
-                                                        {liveData.latency.length >= 2 && (() => {
-                                                            const pts = sparkPoints(liveData.latency, 400, 256, 0, latMax, 16);
-                                                            return (
-                                                                <>
-                                                                    <polygon points={`0,256 ${pts} 400,256`} fill="url(#monitor-gradient-v2)" />
-                                                                    <polyline
-                                                                        points={pts}
-                                                                        fill="none"
-                                                                        stroke="#10b981"
-                                                                        strokeWidth="2"
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        style={{ transition: 'all 0.4s ease' }}
-                                                                    />
-                                                                </>
-                                                            );
-                                                        })()}
-                                                    </svg>
-                                                </div>
-                                                {/* X axis */}
-                                                <div className="flex justify-between mt-1.5">
-                                                    <span className="text-[9px] font-mono text-dark-600">−40s</span>
-                                                    <span className="text-[9px] font-mono text-dark-600 flex items-center gap-1"><Activity size={8} className="text-emerald-500" /> now</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            {/* Dual Small Graphs */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <SmallChart
-                                    data={liveData.cpu}
-                                    color="#6366f1"
-                                    yMin={0}
-                                    yMax={100}
-                                    yFmt={v => `${Math.round(v)}%`}
-                                    label="CPU Usage"
-                                    valueDisplay={`${(liveData.cpu[liveData.cpu.length - 1] || 0).toFixed(1)}%`}
-                                />
-                                <SmallChart
-                                    data={liveData.mem}
-                                    color="#f59e0b"
-                                    yMin={0}
-                                    yMax={realResRef.current.mem_total_mb}
-                                    yFmt={v => v >= 1024 ? `${(v / 1024).toFixed(1)}G` : `${Math.round(v)}M`}
-                                    label="Memory"
-                                    valueDisplay={`${(liveData.mem[liveData.mem.length - 1] || 412).toFixed(0)} MB`}
-                                />
-                                <SmallChart
-                                    data={liveData.ocr}
-                                    color="#a78bfa"
-                                    yMin={0}
-                                    yFmt={v => v.toFixed(1)}
-                                    label="OCR Throughput"
-                                    labelClass="text-synapse-400"
-                                    valueDisplay={<>{(liveData.ocr[liveData.ocr.length - 1] || 0).toFixed(1)} <span className="text-[10px] opacity-40">pg/s</span></>}
-                                />
-                                <SmallChart
-                                    data={liveData.embed}
-                                    color="#10b981"
-                                    yMin={0}
-                                    yFmt={v => `${Math.round(v)}`}
-                                    label="Embedding Speed"
-                                    labelClass="text-emerald-400"
-                                    valueDisplay={<>{(liveData.embed[liveData.embed.length - 1] || 0).toFixed(0)} <span className="text-[10px] opacity-40">ms/batch</span></>}
-                                />
+                        <div className="space-y-4 animate-fade-in">
+                            <SmallChart data={liveData.latency} color="#10b981" yMin={0} yFmt={v => `${v.toFixed(1)}ms`} label="Avg Latency" valueDisplay={`${avgMs.toFixed(1)} ms`} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <SmallChart data={liveData.cpu} color="#6366f1" yMax={100} yFmt={v => `${v}%`} label="CPU" valueDisplay={`${(liveData.cpu[liveData.cpu.length -1] || 0).toFixed(1)}%`} />
+                                <SmallChart data={liveData.mem} color="#f59e0b" yMax={realResRef.current.mem_total_mb} yFmt={v => `${Math.round(v/1024)}G`} label="Memory" valueDisplay={`${(liveData.mem[liveData.mem.length -1] || 0).toFixed(0)}M`} />
                             </div>
                         </div>
                     )}

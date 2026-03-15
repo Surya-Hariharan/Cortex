@@ -19,18 +19,18 @@ import {
 
 
 const StatCard = ({ label, value, subtext, icon: Icon, color }) => (
-    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 group">
-        <div className="flex justify-between items-start mb-4">
-            <div className={`p-2.5 rounded-xl ${color} bg-opacity-10 text-opacity-90`}>
-                <Icon size={20} className={color.replace('bg-', 'text-')} />
+    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-2xl p-4 hover:shadow-lg transition-all duration-300 group">
+        <div className="flex justify-between items-start mb-3">
+            <div className={`p-2 rounded-xl ${color} bg-opacity-10 text-opacity-90`}>
+                <Icon size={18} className={color.replace('bg-', 'text-')} />
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                 Real-time <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
         </div>
-        <h3 className="text-2xl font-black text-slate-800 dark:text-dark-50 mb-1">{value}</h3>
-        <p className="text-[11px] font-bold text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-[10px] text-slate-400 dark:text-dark-600 font-medium">{subtext}</p>
+        <h3 className="text-xl font-black text-slate-800 dark:text-dark-50 mb-0.5">{value}</h3>
+        <p className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-0.5">{label}</p>
+        <p className="text-[9px] text-slate-400 dark:text-dark-600 font-medium">{subtext}</p>
     </div>
 );
 
@@ -129,14 +129,14 @@ export default function DocumentStatus() {
                     <div className="max-w-[1240px] mx-auto flex justify-between items-center">
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-4 mb-1">
-                                <div className="w-11 h-11 rounded-2xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-500/20 flex-shrink-0 transition-transform hover:scale-105">
-                                    <Database size={24} />
+                                <div className="w-10 h-10 rounded-2xl bg-synapse-600 flex items-center justify-center text-white shadow-lg shadow-synapse-500/20 flex-shrink-0 transition-transform hover:scale-105">
+                                    <Database size={20} />
                                 </div>
-                                <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-dark-50 truncate flex items-baseline gap-2">
+                                <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-dark-50 truncate flex items-baseline gap-2">
                                     AI <span className="text-synapse-600 dark:text-synapse-500">Processing</span>
                                 </h1>
                             </div>
-                            <p className="text-sm text-slate-500 dark:text-dark-400 font-medium truncate ml-14">
+                            <p className="text-xs text-slate-500 dark:text-dark-400 font-medium truncate ml-14">
                                 OCR, embedding generation, and indexing.
                             </p>
                         </div>
@@ -144,24 +144,24 @@ export default function DocumentStatus() {
                             <button
                                 onClick={handleRefresh}
                                 disabled={isRefreshing || isTogglingPause}
-                                className={`h-11 px-6 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isRefreshing
+                                className={`h-10 px-5 rounded-2xl text-xs font-bold transition-all active:scale-95 flex items-center gap-2 border ${isRefreshing
                                     ? 'bg-synapse-50 text-synapse-700 border-synapse-200'
                                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isRefreshing || isTogglingPause) ? 'cursor-not-allowed opacity-80' : ''}`}
                             >
-                                <RefreshCcw size={16} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
+                                <RefreshCcw size={14} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
                                 {isRefreshing ? 'Refreshing…' : 'Refresh'}
                             </button>
                             <button
                                 onClick={togglePause}
                                 disabled={isTogglingPause || isRefreshing}
-                                className={`h-11 px-6 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 border ${isPaused
+                                className={`h-10 px-5 rounded-2xl text-xs font-bold transition-all active:scale-95 flex items-center gap-2 border ${isPaused
                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-sm'
                                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'} ${(isTogglingPause || isRefreshing) ? 'cursor-not-allowed opacity-80' : ''}`}
                             >
                                 {(isRefreshing || isTogglingPause)
-                                    ? <RefreshCcw size={16} className="animate-spin" />
-                                    : (isPaused ? <Play size={16} /> : <Pause size={16} />)}
-                                {isTogglingPause ? 'Updating…' : (isPaused ? 'Resume Indexing' : 'Pause Pipeline')}
+                                    ? <RefreshCcw size={14} className="animate-spin" />
+                                    : (isPaused ? <Play size={14} /> : <Pause size={14} />)}
+                                {isTogglingPause ? 'Updating…' : (isPaused ? 'Resume' : 'Pause')}
                             </button>
                         </div>
                     </div>
@@ -196,18 +196,18 @@ export default function DocumentStatus() {
                                         <div key={doc.id} className="p-6 hover:bg-slate-50/50 transition-colors">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-400">
-                                                        <FileText size={20} />
+                                                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-400">
+                                                        <FileText size={18} />
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-sm font-bold text-slate-800 dark:text-dark-100">{doc.title || doc.filename}</h4>
-                                                        <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-synapse-500 animate-pulse" />
+                                                        <h4 className="text-xs font-bold text-slate-800 dark:text-dark-100">{doc.title || doc.filename}</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5">
+                                                            <span className="w-1 h-1 rounded-full bg-synapse-500 animate-pulse" />
                                                             {doc.status} • {fmtDate(doc.created_at)}
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="text-xs font-black text-synapse-600 dark:text-synapse-400">{doc.status === 'processing' ? '50%' : '0%'}</span>
+                                                <span className="text-[10px] font-black text-synapse-600 dark:text-synapse-400">{doc.status === 'processing' ? '50%' : '0%'}</span>
                                             </div>
                                             <ProgressBar progress={doc.status === 'processing' ? 50 : 10} />
                                         </div>
@@ -243,21 +243,21 @@ export default function DocumentStatus() {
                                         <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
                                             {(showAllDocs ? indexedDocs : indexedDocs.slice(0, 5)).map(doc => (
                                                 <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
-                                                    <td className="px-6 py-4">
+                                                    <td className="px-6 py-3">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-dark-800 flex items-center justify-center text-slate-400">
-                                                                <FileText size={16} />
+                                                            <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-dark-800 flex items-center justify-center text-slate-400">
+                                                                <FileText size={14} />
                                                             </div>
-                                                            <span className="text-sm font-bold text-slate-700 dark:text-dark-200">{doc.title || doc.filename}</span>
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-dark-200">{doc.title || doc.filename}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                            <CheckCircle2 size={12} /> Indexed
+                                                    <td className="px-6 py-3">
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                            <CheckCircle2 size={10} /> Indexed
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <span className="text-xs font-medium text-slate-400">{fmtDate(doc.created_at)}</span>
+                                                    <td className="px-6 py-3 text-right">
+                                                        <span className="text-[10px] font-medium text-slate-400">{fmtDate(doc.created_at)}</span>
                                                     </td>
                                                 </tr>
                                             ))}

@@ -13,7 +13,7 @@ import StreamSelectorModal from './components/layout/StreamSelectorModal';
 import CreateProjectModal from './components/layout/CreateProjectModal';
 import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
-import { backendStatus } from '../services/api.js';
+import { backendStatus, projects as projectsApi, getUserId } from '../services/api.js';
 import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
@@ -53,9 +53,7 @@ export default function App() {
     const [activeChatId, setActiveChatId] = useState('c1');
     const [activeProjectId, setActiveProjectId] = useState(null);
     const [showCreateProject, setShowCreateProject] = useState(false);
-    const [projects, setProjects] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('cortex-projects') || '[]'); } catch { return []; }
-    });
+    const [projects, setProjects] = useState([]);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null, title: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
@@ -74,22 +72,47 @@ export default function App() {
         localStorage.setItem('cortex-chat-sessions', JSON.stringify(chatSessions.slice(0, 50)));
     }, [chatSessions]);
 
-    // Persist projects
+    // Load projects from backend on auth
     useEffect(() => {
-        localStorage.setItem('cortex-projects', JSON.stringify(projects));
-    }, [projects]);
+        if (!isAuthenticated) return;
+        const userId = getUserId() || 'local-user';
+        projectsApi.list(userId).then(data => {
+            if (Array.isArray(data)) setProjects(data);
+        }).catch(() => {});
+    }, [isAuthenticated]);
 
-    const handleCreateProject = (name) => {
-        const newProject = {
-            id: `p-${Date.now()}`,
-            title: name,
-            chats: [],
-            sources: [],
-            createdAt: Date.now(),
-        };
-        setProjects(prev => [newProject, ...prev]);
-        setActiveProjectId(newProject.id);
-        setActiveTab('project');
+    const handleCreateProject = async (name) => {
+        const userId = getUserId() || 'local-user';
+        try {
+            const project = await projectsApi.create({ user_id: userId, title: name });
+            setProjects(prev => [project, ...prev]);
+            setActiveProjectId(project.id);
+            setActiveTab('project');
+        } catch {
+            const fallback = { id: `p-${Date.now()}`, title: name, chats: [], sources: [], created_at: new Date().toISOString() };
+            setProjects(prev => [fallback, ...prev]);
+            setActiveProjectId(fallback.id);
+            setActiveTab('project');
+        }
+    };
+
+    const handleRenameProject = async (id, newTitle) => {
+        setProjects(prev => prev.map(p => p.id === id ? { ...p, title: newTitle } : p));
+        try {
+            await projectsApi.update(id, { title: newTitle });
+        } catch {
+            // UI already updated optimistically
+        }
+    };
+
+    const handleDeleteProject = async (id) => {
+        setProjects(prev => prev.filter(p => p.id !== id));
+        setActiveTab('home');
+        try {
+            await projectsApi.delete(id);
+        } catch {
+            // Already removed from UI
+        }
     };
 
     // ── Zoom bar ─────────────────────────────────────────────────────────────
@@ -528,10 +551,8 @@ export default function App() {
                                     onNewChat={(projectId, text) => {
                                         showToast(`New chat started in ${proj.title}`, 'success');
                                     }}
-                                    onDeleteProject={(id) => {
-                                        setProjects(prev => prev.filter(p => p.id !== id));
-                                        setActiveTab('home');
-                                    }}
+                                    onRenameProject={handleRenameProject}
+                                    onDeleteProject={handleDeleteProject}
                                 />
                             ) : null;
                         })()}

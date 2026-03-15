@@ -22,7 +22,7 @@ function projectColor(title = '') {
     return PROJECT_COLORS[idx];
 }
 
-export default function ProjectView({ project, onNewChat, onToast, onDeleteProject }) {
+export default function ProjectView({ project, onNewChat, onToast, onDeleteProject, onRenameProject }) {
     const [activeTab,   setActiveTab]   = useState('chats');
     const [sortBy,      setSortBy]      = useState('Newest');
     const [typeFilter,  setTypeFilter]  = useState('All');
@@ -93,7 +93,11 @@ export default function ProjectView({ project, onNewChat, onToast, onDeleteProje
                                     value={renameVal}
                                     onChange={e => setRenameVal(e.target.value)}
                                     onKeyDown={e => {
-                                        if (e.key === 'Enter') { project.title = renameVal; setIsRenaming(false); onToast?.('Project renamed', 'success'); }
+                                        if (e.key === 'Enter') {
+                                            onRenameProject?.(project.id, renameVal);
+                                            setIsRenaming(false);
+                                            onToast?.('Project renamed', 'success');
+                                        }
                                         if (e.key === 'Escape') { setRenameVal(project.title); setIsRenaming(false); }
                                     }}
                                     onBlur={() => setIsRenaming(false)}

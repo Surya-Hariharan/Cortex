@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Search,
     Filter,
@@ -157,10 +157,18 @@ export default function AcademicHub({ userStream }) {
     });
     const [activeYear, setActiveYear] = useState('All');
     const [activeType, setActiveType] = useState('All');
-    const [sortBy, setSortBy] = useState('Recent');
+    const [sortBy, setSortBy] = useState('Most Recent');
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const sortRef = useRef(null);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [publicNotes, setPublicNotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const handleOutside = (e) => { if (sortRef.current && !sortRef.current.contains(e.target)) setIsSortOpen(false); };
+        document.addEventListener('mousedown', handleOutside);
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, []);
 
     useEffect(() => {
         setIsLoading(true);
@@ -249,18 +257,31 @@ export default function AcademicHub({ userStream }) {
                                 className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-dark-900/50 border border-transparent focus:border-synapse-500/50 focus:bg-white dark:focus:bg-dark-900 rounded-xl text-sm transition-all outline-none text-slate-800 dark:text-dark-100"
                             />
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-dark-900/50 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-dark-800 transition-all cursor-pointer">
-                            <span className="text-xs font-bold text-slate-500 dark:text-dark-400">Sort:</span>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="bg-transparent text-xs font-bold text-slate-800 dark:text-dark-200 outline-none cursor-pointer"
+                        <div ref={sortRef} className="relative">
+                            <button
+                                onClick={() => setIsSortOpen(v => !v)}
+                                className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-dark-900/50 border border-transparent hover:border-slate-200 dark:hover:border-dark-700 rounded-xl transition-all"
                             >
-                                <option>Most Recent</option>
-                                <option>Most Downloaded</option>
-                                <option>Highest Rated</option>
-                                <option>Recommended for You</option>
-                            </select>
+                                <span className="text-xs font-bold text-slate-400 dark:text-dark-500">Sort:</span>
+                                <span className="text-xs font-bold text-slate-800 dark:text-dark-100">{sortBy}</span>
+                                <ChevronDown size={12} className={`text-slate-400 dark:text-dark-500 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isSortOpen && (
+                                <div className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl shadow-xl overflow-hidden min-w-[180px]">
+                                    {['Most Recent', 'Most Downloaded', 'Highest Rated', 'Recommended for You'].map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => { setSortBy(opt); setIsSortOpen(false); }}
+                                            className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors ${sortBy === opt
+                                                ? 'text-synapse-600 dark:text-synapse-400 bg-synapse-50 dark:bg-synapse-900/20'
+                                                : 'text-slate-700 dark:text-dark-200 hover:bg-slate-50 dark:hover:bg-dark-800'
+                                            }`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

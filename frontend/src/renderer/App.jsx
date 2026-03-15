@@ -10,10 +10,11 @@ import AuthPortal from './components/pages/AuthPortal';
 import Settings from './components/layout/Settings';
 import CommandPalette from './components/layout/CommandPalette';
 import StreamSelectorModal from './components/layout/StreamSelectorModal';
+import CreateProjectModal from './components/layout/CreateProjectModal';
 import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus } from '../services/api.js';
-import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
 const TABS = [
@@ -30,8 +31,6 @@ const MemoCampus = React.memo(Campus);
 const MemoActivity = React.memo(Activity);
 const MemoAIEngine = React.memo(AIEngine);
 
-const MOCK_PROJECTS = [];
-
 export default function App() {
     const {
         isAuthenticated, username, setUsername, theme, setTheme,
@@ -42,7 +41,6 @@ export default function App() {
     const [activeTab, setActiveTab] = useState('knowledge');
     const [stats, setStats] = useState({ documents: 0, embeddings: 0, subjects: [] });
     const [perfProvider, setPerfProvider] = useState('cpu');
-    const [wsExpanded, setWsExpanded] = useState({ w1: true, w2: true });
 
     // 'checking' | 'online' | 'offline'
     const [connStatus, setConnStatus] = useState('checking');
@@ -54,6 +52,10 @@ export default function App() {
     const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [activeChatId, setActiveChatId] = useState('c1');
     const [activeProjectId, setActiveProjectId] = useState(null);
+    const [showCreateProject, setShowCreateProject] = useState(false);
+    const [projects, setProjects] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('cortex-projects') || '[]'); } catch { return []; }
+    });
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetId: null, type: null, title: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
@@ -71,6 +73,24 @@ export default function App() {
     useEffect(() => {
         localStorage.setItem('cortex-chat-sessions', JSON.stringify(chatSessions.slice(0, 50)));
     }, [chatSessions]);
+
+    // Persist projects
+    useEffect(() => {
+        localStorage.setItem('cortex-projects', JSON.stringify(projects));
+    }, [projects]);
+
+    const handleCreateProject = (name) => {
+        const newProject = {
+            id: `p-${Date.now()}`,
+            title: name,
+            chats: [],
+            sources: [],
+            createdAt: Date.now(),
+        };
+        setProjects(prev => [newProject, ...prev]);
+        setActiveProjectId(newProject.id);
+        setActiveTab('project');
+    };
 
     // ── Zoom bar ─────────────────────────────────────────────────────────────
     const [zoom, setZoom] = useState(100);
@@ -329,92 +349,81 @@ export default function App() {
                         {/* Projects Section */}
                         <div>
                             {!isSidebarCollapsed && (
-                                <div className="sidebar-header group">
-                                    <span>Workspaces</span>
-                                    <Plus size={14} className="opacity-0 group-hover:opacity-100 cursor-pointer hover:text-synapse-500 transition-all" />
+                                <div className="sidebar-header">
+                                    <span>Projects</span>
                                 </div>
                             )}
+
                             {isSidebarCollapsed ? (
-                                <div className="flex flex-col gap-1 items-center mt-2 border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
-                                    {MOCK_PROJECTS.map((ws) => (
-                                        <div key={ws.id} className="w-8 h-8 rounded border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 shadow-sm flex items-center justify-center text-[10px] uppercase font-bold text-slate-500 dark:text-dark-400 hover:text-synapse-600 dark:hover:text-synapse-400 hover:border-synapse-200 dark:hover:border-synapse-500 cursor-pointer transition-colors" title={ws.title}>
-                                            {ws.title.substring(0, 2)}
-                                        </div>
+                                /* Collapsed: icon-only stack */
+                                <div className="flex flex-col gap-1 items-center mt-2 border-b border-dark-100/50 dark:border-dark-800/50 pb-3">
+                                    <button
+                                        onClick={() => setShowCreateProject(true)}
+                                        title="New project"
+                                        className="w-8 h-8 rounded-lg border border-dashed border-slate-300 dark:border-dark-600 flex items-center justify-center text-slate-400 dark:text-dark-500 hover:border-synapse-400 hover:text-synapse-500 transition-colors"
+                                    >
+                                        <FolderPlus size={14} />
+                                    </button>
+                                    {projects.map(p => (
+                                        <button
+                                            key={p.id}
+                                            title={p.title}
+                                            onClick={() => { setActiveProjectId(p.id); setActiveTab('project'); }}
+                                            className={`w-8 h-8 rounded-lg border flex items-center justify-center text-[10px] uppercase font-bold transition-colors ${
+                                                activeTab === 'project' && activeProjectId === p.id
+                                                    ? 'border-synapse-300 dark:border-synapse-700 bg-synapse-50 dark:bg-synapse-900/20 text-synapse-600 dark:text-synapse-400'
+                                                    : 'border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 text-slate-500 dark:text-dark-400 hover:text-synapse-600 hover:border-synapse-200'
+                                            }`}
+                                        >
+                                            {p.title.substring(0, 2)}
+                                        </button>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="border-b border-dark-100/50 dark:border-dark-800/50 pb-4">
-                                    {MOCK_PROJECTS.map(ws => {
-                                        const isExpanded = wsExpanded[ws.id];
-                                        return (
-                                            <div key={ws.id}>
-                                                <button
-                                                    onClick={() => { setActiveProjectId(ws.id); setActiveTab('project'); setWsExpanded(prev => ({ ...prev, [ws.id]: true })); }}
-                                                    onContextMenu={(e) => {
-                                                        e.preventDefault();
-                                                        setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
-                                                    }}
-                                                    className="sidebar-nav-item text-slate-600 dark:text-dark-400 group"
-                                                >
-                                                    <div className="sidebar-accent-container">
-                                                        <ChevronRight size={14} className={`sidebar-chevron ${wsExpanded[ws.id] ? 'sidebar-chevron-expanded' : ''}`} />
-                                                    </div>
-                                                    <div className="sidebar-icon-container">
-                                                        {wsExpanded[ws.id] ? <FolderOpen size={18} className="text-synapse-500" /> : <Folder size={18} className="text-slate-400 dark:text-dark-500" />}
-                                                    </div>
-                                                    <span className={`sidebar-label font-bold transition-colors uppercase text-[11px] tracking-wide ${activeTab === 'project' && activeProjectId === ws.id
-                                                        ? 'text-synapse-600 dark:text-synapse-400'
-                                                        : 'text-slate-500 dark:text-dark-400 group-hover:text-slate-800 dark:group-hover:text-dark-100'
-                                                        }`}>
-                                                        {ws.title}
-                                                    </span>
-                                                    <div
-                                                        className="sidebar-menu-trigger"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: ws.id, type: 'project', title: ws.title });
-                                                        }}
-                                                    >
-                                                        <MoreHorizontal size={14} />
-                                                    </div>
-                                                </button>
+                                <div className="border-b border-dark-100/50 dark:border-dark-800/50 pb-3">
 
-                                                {wsExpanded[ws.id] && (
-                                                    <div className="relative">
-                                                        {ws.chats.map((chat) => {
-                                                            const isActive = activeTab === 'search' && activeChatId === chat.id;
-                                                            return (
-                                                                <button
-                                                                    key={chat.id}
-                                                                    onClick={() => { setActiveTab('search'); setActiveChatId(chat.id); }}
-                                                                    onContextMenu={(e) => {
-                                                                        e.preventDefault();
-                                                                        setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
-                                                                    }}
-                                                                    className={`sidebar-nav-item sidebar-child-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'}`}
-                                                                >
-                                                                    <div className="sidebar-accent-container">
-                                                                        <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-                                                                    </div>
-                                                                    <div className="sidebar-icon-container">
-                                                                        <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-synapse-500' : 'bg-slate-400 dark:bg-dark-600'}`} />
-                                                                    </div>
-                                                                    <span className="sidebar-label">{chat.title}</span>
-                                                                    <div
-                                                                        className="sidebar-menu-trigger"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: chat.id, type: 'chat', title: chat.title });
-                                                                        }}
-                                                                    >
-                                                                        <MoreHorizontal size={14} />
-                                                                    </div>
-                                                                </button>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
+                                    {/* "New project" row — always first */}
+                                    <button
+                                        onClick={() => setShowCreateProject(true)}
+                                        className="sidebar-nav-item text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-100"
+                                    >
+                                        <div className="sidebar-accent-container" />
+                                        <div className="sidebar-icon-container">
+                                            <FolderPlus size={15} className="text-slate-400 dark:text-dark-500" />
+                                        </div>
+                                        <span className="sidebar-label text-slate-500 dark:text-dark-400">New project</span>
+                                    </button>
+
+                                    {/* Project items */}
+                                    {projects.map(p => {
+                                        const isActive = activeTab === 'project' && activeProjectId === p.id;
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => { setActiveProjectId(p.id); setActiveTab('project'); }}
+                                                onContextMenu={(e) => {
+                                                    e.preventDefault();
+                                                    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: p.id, type: 'project', title: p.title });
+                                                }}
+                                                className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} group`}
+                                            >
+                                                <div className="sidebar-accent-container">
+                                                    <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                                </div>
+                                                <div className="sidebar-icon-container">
+                                                    <Folder size={15} className={isActive ? 'text-synapse-500' : 'text-slate-400 dark:text-dark-500'} />
+                                                </div>
+                                                <span className="sidebar-label">{p.title}</span>
+                                                <div
+                                                    className="sidebar-menu-trigger opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: p.id, type: 'project', title: p.title });
+                                                    }}
+                                                >
+                                                    <MoreHorizontal size={14} />
+                                                </div>
+                                            </button>
                                         );
                                     })}
                                 </div>
@@ -511,13 +520,17 @@ export default function App() {
                         {activeTab === 'activity' && <MemoActivity />}
                         {activeTab === 'ai-engine' && <MemoAIEngine />}
                         {activeTab === 'project' && (() => {
-                            const proj = MOCK_PROJECTS.find(p => p.id === activeProjectId);
+                            const proj = projects.find(p => p.id === activeProjectId);
                             return proj ? (
                                 <ProjectView
                                     project={proj}
                                     onToast={showToast}
                                     onNewChat={(projectId, text) => {
                                         showToast(`New chat started in ${proj.title}`, 'success');
+                                    }}
+                                    onDeleteProject={(id) => {
+                                        setProjects(prev => prev.filter(p => p.id !== id));
+                                        setActiveTab('home');
                                     }}
                                 />
                             ) : null;
@@ -708,6 +721,14 @@ export default function App() {
                     onUploadPdf={uploadPdf}
                     onToast={showToast}
                 />
+
+                {/* Create Project Modal */}
+                {showCreateProject && (
+                    <CreateProjectModal
+                        onClose={() => setShowCreateProject(false)}
+                        onCreate={handleCreateProject}
+                    />
+                )}
             </div>
         </div>
     );

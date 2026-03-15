@@ -361,7 +361,7 @@ export default function PerformanceTab() {
                                 {hardware.npu && <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" title="NPU Ready"><Zap size={12} /></div>}
                             </div>
                         </div>
-                    </div>
+                        </div>
                     </div>
                 </div>
 

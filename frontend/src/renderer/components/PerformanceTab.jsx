@@ -342,52 +342,26 @@ export default function PerformanceTab() {
                                 <Zap size={28} className="text-white relative z-10" fill="white" />
                             </div>
                             <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h1 className="text-xl font-black text-dark-800 dark:text-dark-50 tracking-tighter">On-Device AI Engine</h1>
-                                    {currentMode.llm_mode && ['gemini', 'groq'].includes(currentMode.llm_mode) ? (
-                                        <div className="performance-chip border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                            <Globe size={10} /> Cloud Active
-                                        </div>
-                                    ) : (
-                                        <div className="performance-chip border-synapse-500/20 bg-synapse-500/5 text-synapse-600 dark:text-synapse-400 flex items-center gap-1">
-                                            <Shield size={10} /> Local Only
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="text-xs font-bold text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">
+                                <p className="text-xs font-bold text-dark-400 dark:text-dark-500 uppercase tracking-[0.2em] opacity-80 truncate">
                                     Model: BGE-small-v1.5
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center gap-2 px-4 py-1.5 min-w-[160px] rounded-full bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 shadow-sm">
-                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${benchmarkActive ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
-                                <span className="text-[10px] font-black text-dark-700 dark:text-dark-100 uppercase tracking-[0.1em] whitespace-nowrap">
-                                    {benchmarkActive ? 'Benchmarking...' : 'System Active'}
-                                </span>
-                            </div>
+                        <div className="flex items-center gap-2">
                             <button
                                 onClick={runBenchmark}
                                 disabled={benchmarkActive}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-xl ${benchmarkActive ? 'bg-amber-500 text-white shadow-amber-500/20 cursor-not-allowed' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-dark-500/20 dark:shadow-dark-950/50 hover:-translate-y-1'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] ${benchmarkActive ? 'bg-amber-500 text-white' : 'bg-dark-900 dark:bg-dark-100 text-white dark:text-dark-900 shadow-sm hover:-translate-y-0.5'}`}
                             >
-                                {benchmarkActive ? 'Running...' : 'Run Benchmark'}
+                                {benchmarkActive ? 'Running...' : 'Bench'}
                             </button>
-                            <div className="h-10 w-px bg-dark-100 dark:bg-dark-800 mx-1" />
-                            <div className="flex gap-1.5">
-                                {hardware.cpu && <div className="p-2 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-500 border border-slate-200 dark:border-dark-700" title="CPU Active"><Cpu size={14} /></div>}
-                                {hardware.gpu && <div className="p-2 rounded-xl bg-synapse-500/10 text-synapse-500 border border-synapse-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]" title="GPU (DirectML) Detected"><Activity size={14} /></div>}
-                                {hardware.npu && <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]" title="NPU Accelerator Ready"><Zap size={14} /></div>}
+                            <div className="flex gap-1 flex-shrink-0">
+                                {hardware.gpu && <div className="p-1.5 rounded-lg bg-synapse-500/10 text-synapse-500 border border-synapse-500/20" title="GPU Detected"><Activity size={12} /></div>}
+                                {hardware.npu && <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" title="NPU Ready"><Zap size={12} /></div>}
                             </div>
-                            <button
-                                onClick={openTerminal}
-                                className="p-2 rounded-xl border border-dark-200 dark:border-dark-800 bg-white dark:bg-dark-900 text-dark-400 hover:text-dark-800 dark:hover:text-dark-100 transition-colors shadow-sm hover:-translate-y-1"
-                                title="Open System Console"
-                            >
-                                <Terminal size={16} />
-                            </button>
                         </div>
+                    </div>
                     </div>
                 </div>
 
@@ -421,13 +395,13 @@ export default function PerformanceTab() {
                 )}
 
                 {/* ── 4. Metric Tiles ────────────────────────────────────── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <PerformanceTile
                         label="Avg Latency"
                         value={avgMs}
                         unit="ms"
                         sub="Inference speed"
-                        trend="↓ 12%"
+                        trend="LIVE"
                         trendDir="down"
                         history={history}
                         icon={<Clock size={16} />}
@@ -493,19 +467,18 @@ export default function PerformanceTab() {
                 {/* ── 4. Tabs & Mode Switching ──────────────────────────── */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-dark-100 dark:border-dark-800">
-                        <div className="flex gap-10">
+                        <div className="flex gap-8">
                             {['overview', 'monitor'].map(mode => (
                                 <button
                                     key={mode}
                                     onClick={() => setViewMode(mode)}
-                                    className={`relative text-xs font-black uppercase tracking-[0.2em] pb-4 transition-all ${viewMode === mode ? 'text-dark-800 dark:text-dark-50' : 'text-dark-400 hover:text-dark-600 dark:hover:text-dark-300'}`}
+                                    className={`relative text-[10px] font-black uppercase tracking-[0.2em] pb-3 transition-all ${viewMode === mode ? 'text-dark-800 dark:text-dark-50 border-b-2 border-synapse-600' : 'text-dark-400 hover:text-dark-600'}`}
                                 >
                                     {mode}
-                                    {viewMode === mode && <div className="tab-underline" />}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex items-center gap-8 pb-4">
+                        <div className="hidden md:flex items-center gap-4 pb-3">
                             {/* Runtime Selector */}
                             <div className="flex items-center bg-dark-50 dark:bg-dark-900 p-1 rounded-xl border border-dark-100 dark:border-dark-800">
                                 {['standard', 'onnx'].map(r => (
@@ -539,16 +512,8 @@ export default function PerformanceTab() {
                     </div>
 
                     {viewMode === 'overview' ? (
-                        <div className="space-y-6 animate-fade-in">
-                            {/* ── 5. Comparison Cards ───────────────────────────── */}
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-black text-dark-800 dark:text-dark-50 uppercase tracking-[0.2em] px-1">Architectural Benchmarks</h3>
-                                <div className="flex gap-4">
-                                    <ComparisonCard type="cloud" latency={`${CLOUD_API_MS.toFixed(1)} ms`} network="REQUIRED" privacy="EXTERNAL" energy="HIGH" />
-                                    <ComparisonCard type="cpu" latency={`${CPU_BASELINE_MS.toFixed(1)} ms`} network="NONE" privacy="LOCAL" energy="MEDIUM" />
-                                    <ComparisonCard type="onnx" latency={`${typeof avgMs === 'number' ? avgMs.toFixed(1) : avgMs} ms`} network="NONE (AIR-GAPPED)" privacy="ULTRA-LOCAL" energy="ULTRA-LOW" isRecommended />
-                                </div>
-                            </div>
+                        <div className="space-y-6 animate-fade-in py-4 text-center">
+                            <p className="text-[10px] font-bold text-dark-400 uppercase tracking-[0.2em]">Select Monitor for technical stream</p>
                         </div>
                     ) : (
                         /* ── 7. Technical Monitor ──────────────────────────── */

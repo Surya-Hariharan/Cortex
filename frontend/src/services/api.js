@@ -1,9 +1,82 @@
 /**
- * Cortex API shim (backend connectivity disabled).
+ * Cortex API client.
  *
- * This module preserves the renderer import contract while returning safe,
- * offline-friendly defaults during backend/database redesign.
+ * Provides a real backend API connection for auth/reference flows while
+ * preserving fallback stubs for domains that are still offline-first.
  */
+
+const DEFAULT_BACKEND_URL = 'http://localhost:8080';
+
+function resolveBaseUrl() {
+    try {
+        const stored = window?.localStorage?.getItem('cortex-backend-base-url');
+        if (stored) return stored.replace(/\/+$/, '');
+    } catch {
+        // Ignore localStorage access errors in constrained contexts.
+    }
+
+    const envUrl = typeof process !== 'undefined' ? process?.env?.CORTEX_BACKEND_URL : null;
+    if (envUrl) return String(envUrl).replace(/\/+$/, '');
+    return DEFAULT_BACKEND_URL;
+}
+
+function createApiError(message, extras = {}) {
+    const error = new Error(message);
+    Object.assign(error, extras);
+    return error;
+}
+
+async function parseResponseBody(response) {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        return response.json();
+    }
+    const text = await response.text();
+    return text ? { detail: text } : {};
+}
+
+export const apiClient = {
+    baseURL: resolveBaseUrl(),
+    async request(path, { method = 'GET', headers = {}, body, signal } = {}) {
+        const url = `${this.baseURL}${path.startsWith('/') ? path : `/${path}`}`;
+        const finalHeaders = { ...headers };
+
+        let finalBody = body;
+        if (body != null && typeof body === 'object' && !(body instanceof FormData)) {
+            finalBody = JSON.stringify(body);
+            if (!finalHeaders['Content-Type']) {
+                finalHeaders['Content-Type'] = 'application/json';
+            }
+        }
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: finalHeaders,
+                body: finalBody,
+                signal,
+            });
+
+            const data = await parseResponseBody(response);
+
+            if (!response.ok) {
+                throw createApiError(data?.error || data?.detail || `Request failed with status ${response.status}`, {
+                    status: response.status,
+                    data,
+                    networkError: false,
+                });
+            }
+
+            return data;
+        } catch (error) {
+            if (error?.networkError === false) throw error;
+            throw createApiError('Network request failed', {
+                cause: error,
+                networkError: true,
+            });
+        }
+    },
+};
 
 function disabled(message = 'Backend API is disabled during redesign.') {
     return Promise.resolve({ disabled: true, detail: message });
@@ -33,13 +106,19 @@ export const backendStatus = {
         return () => this._listeners.delete(fn);
     },
     async check() {
-        this._set(false);
-        return false;
+        try {
+            await apiClient.request('/health');
+            this._set(true);
+            return true;
+        } catch {
+            this._set(false);
+            return false;
+        }
     },
 };
 
 export const system = {
-    health: () => Promise.resolve({ status: 'ok', mode: 'redesign_baseline', services: {} }),
+    health: () => apiClient.request('/health'),
     models: () => disabled(),
     scheduler: () => disabled(),
     resources: () => disabled(),
@@ -52,6 +131,33 @@ export const system = {
     setInternetStatus: () => disabled(),
     getMode: () => Promise.resolve({ mode: 'redesign_baseline' }),
     setPrivacy: () => disabled(),
+};
+
+export const auth = {
+    signup: (payload) => apiClient.request('/auth/signup', { method: 'POST', body: payload }),
+    login: (payload) => apiClient.request('/auth/login', { method: 'POST', body: payload }),
+    refresh: (refreshToken) => apiClient.request('/auth/refresh', { method: 'POST', body: { refreshToken } }),
+    logout: (accessToken, refreshToken) =>
+        apiClient.request('/auth/logout', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: { refreshToken },
+        }),
+};
+
+export const reference = {
+    districts: () => apiClient.request('/reference/districts'),
+    colleges: (districtId) =>
+        apiClient.request(
+            districtId ? `/reference/colleges?districtId=${encodeURIComponent(String(districtId))}` : '/reference/colleges'
+        ),
+    degrees: () => apiClient.request('/reference/degrees'),
+    courses: (degreeId) =>
+        apiClient.request(
+            degreeId ? `/reference/courses?degreeId=${encodeURIComponent(String(degreeId))}` : '/reference/courses'
+        ),
 };
 
 export const documents = {
@@ -120,8 +226,7 @@ export const transcription = {
 };
 
 export async function isBackendReady() {
-    backendStatus._set(false);
-    return false;
+    return backendStatus.check();
 }
 
 export const groups = {

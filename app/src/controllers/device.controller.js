@@ -1,4 +1,4 @@
-const { registerOrUpdateDevice } = require('../services/deviceService');
+const { registerOrUpdateDevice } = require('../services/device.service');
 
 async function registerDevice(req, res) {
   try {

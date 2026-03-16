@@ -1,4 +1,4 @@
-const referenceService = require('../services/referenceService');
+const referenceService = require('../services/reference.service');
 
 async function getDistricts(req, res) {
   const data = await referenceService.getDistricts();

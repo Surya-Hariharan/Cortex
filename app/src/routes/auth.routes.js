@@ -1,11 +1,11 @@
 const express = require('express');
-const authController = require('../controllers/authController');
-const { authJwt } = require('../middleware/authJwt');
-const { authRateLimiter } = require('../middleware/rateLimiters');
-const { requestSchemaValidator } = require('../validators/requestSchemaValidator');
-const { enumValidator } = require('../validators/enumValidator');
-const { academicIntegrityValidator } = require('../validators/academicIntegrityValidator');
-const { asyncHandler } = require('../utils/asyncHandler');
+const authController = require('../controllers/auth.controller');
+const { authJwt } = require('../middleware/auth-jwt.middleware');
+const { authRateLimiter } = require('../middleware/rate-limiter.middleware');
+const { requestSchemaValidator } = require('../validators/request-schema.validator');
+const { enumValidator } = require('../validators/enum.validator');
+const { academicIntegrityValidator } = require('../validators/academic-integrity.validator');
+const { asyncHandler } = require('../utils/async-handler.util');
 
 const router = express.Router();
 

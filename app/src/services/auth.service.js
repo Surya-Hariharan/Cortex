@@ -1,8 +1,8 @@
 const bcrypt = require('bcrypt');
 const { pool } = require('../../../supabase/db/pool');
-const { registerOrUpdateDevice } = require('./deviceService');
-const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/tokens');
-const { randomToken, sha256 } = require('../utils/crypto');
+const { registerOrUpdateDevice } = require('./device.service');
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/tokens.util');
+const { randomToken, sha256 } = require('../utils/crypto.util');
 
 function normalizeSignupPayload(input) {
   return {

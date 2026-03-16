@@ -1,10 +1,10 @@
 const express = require('express');
 const helmet = require('helmet');
 
-const authRoutes = require('./routes/authRoutes');
-const referenceRoutes = require('./routes/referenceRoutes');
-const deviceRoutes = require('./routes/deviceRoutes');
-const { errorHandler } = require('./middleware/errorHandler');
+const authRoutes = require('./routes/auth.routes');
+const referenceRoutes = require('./routes/reference.routes');
+const deviceRoutes = require('./routes/device.routes');
+const { errorHandler } = require('./middleware/error-handler.middleware');
 
 const app = express();
 

@@ -1,8 +1,8 @@
 const express = require('express');
-const deviceController = require('../controllers/deviceController');
-const { authJwt } = require('../middleware/authJwt');
-const { requestSchemaValidator } = require('../validators/requestSchemaValidator');
-const { asyncHandler } = require('../utils/asyncHandler');
+const deviceController = require('../controllers/device.controller');
+const { authJwt } = require('../middleware/auth-jwt.middleware');
+const { requestSchemaValidator } = require('../validators/request-schema.validator');
+const { asyncHandler } = require('../utils/async-handler.util');
 
 const router = express.Router();
 

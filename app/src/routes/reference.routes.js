@@ -1,6 +1,6 @@
 const express = require('express');
-const referenceController = require('../controllers/referenceController');
-const { asyncHandler } = require('../utils/asyncHandler');
+const referenceController = require('../controllers/reference.controller');
+const { asyncHandler } = require('../utils/async-handler.util');
 
 const router = express.Router();
 

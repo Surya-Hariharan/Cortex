@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import DocumentStatus from '../DocumentStatus';
 import PerformanceTab from '../PerformanceTab';
+import { getMeshConsent, setMeshConsent } from '../../../offline/offlineIdentity.js';
 
 /* ─────────────────────────────────────────────────────────────
    Reusable primitives
@@ -349,8 +350,14 @@ function PersonalizationPanel({ username, setUsername, userStream, onOpenStreamS
 function DataControlsPanel({ onToast }) {
     const [improveModel, setImproveModel] = useState(true);
     const [chat2Improve, setChat2Improve] = useState(false);
+    const [meshEnabled, setMeshEnabled] = useState(() => getMeshConsent());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
+    const handleMeshToggle = (val) => {
+        setMeshEnabled(val);
+        setMeshConsent(val);
+    };
 
     const handleExport = () => {
         const data = { exportedAt: new Date().toISOString(), version: '1.0', note: 'Cortex data export' };
@@ -400,6 +407,13 @@ function DataControlsPanel({ onToast }) {
                     desc="Allow anonymised chat transcripts to be reviewed for model quality"
                 >
                     <Toggle value={chat2Improve} onChange={setChat2Improve} />
+                </Row>
+
+                <Row
+                    label="Campus mesh network"
+                    desc="Enable campus knowledge sharing with nearby Cortex peers"
+                >
+                    <Toggle value={meshEnabled} onChange={handleMeshToggle} />
                 </Row>
 
                 <Row label="Shared links" desc="View and revoke any shared links you've created">

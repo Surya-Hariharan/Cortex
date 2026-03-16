@@ -119,18 +119,28 @@ function stopPythonBackend() {
 // Ping the backend until it answers (max 30s)
 function waitForBackend(timeout = 60000) {
     return new Promise(resolve => {
+        let settled = false;
+        const finalize = (value) => {
+            if (settled) return;
+            settled = true;
+            resolve(value);
+        };
         const start = Date.now();
         const tryPing = () => {
             const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
                 res.resume();
-                if (res.statusCode) { resolve(true); return; }
+                if (res.statusCode) { finalize(true); return; }
                 retry();
             });
             req.on('error', retry);
             req.setTimeout(1000, () => { req.destroy(); retry(); });
         };
-        const retry = () => {
-            if (Date.now() - start > timeout) { resolve(false); return; }
+        const retry = async () => {
+            if (Date.now() - start > timeout) {
+                const portOpen = await isPortOpen(BACKEND_PORT);
+                finalize(portOpen);
+                return;
+            }
             setTimeout(tryPing, 500);
         };
         tryPing();

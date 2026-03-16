@@ -56,6 +56,14 @@ export const CoreProvider = ({ children }) => {
     }, [meshEnabled]);
 
     useEffect(() => {
+        const onConsentUpdated = (event) => {
+            setMeshEnabledState(!!event.detail?.enabled);
+        };
+        window.addEventListener('mesh-consent-updated', onConsentUpdated);
+        return () => window.removeEventListener('mesh-consent-updated', onConsentUpdated);
+    }, []);
+
+    useEffect(() => {
         window.electronAPI?.getOfflineEngineStatus?.().then((ready) => {
             if (ready) {
                 setOfflineEngineReady(true);

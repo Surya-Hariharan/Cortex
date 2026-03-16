@@ -9,175 +9,9 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
-const http = require('http');
-const https = require('https');
-const net = require('net');
 require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
 
-// ── Python Backend ────────────────────────────────────────────────────────────
-let pythonProcess = null;
-const BACKEND_PORT = 8765;
-const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}/api/v1`;
-
-function findPython() {
-    // Prefer the project venv, then fall back to system python.
-    const root = path.join(__dirname, '../../../');
-    const candidates = [
-        path.join(root, '.venv', 'Scripts', 'python.exe'),  // Windows venv
-        path.join(root, '.venv', 'bin', 'python'),           // Unix venv
-        'python',
-        'python3',
-    ];
-    return candidates.find(p => {
-        try { return p.includes(path.sep) ? fs.existsSync(p) : true; }
-        catch { return false; }
-    }) || 'python';
-}
-
-function isBackendReachable(timeoutMs = 1000) {
-    return new Promise(resolve => {
-        const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
-            res.resume();
-            resolve(true);
-        });
-        req.on('error', () => resolve(false));
-        req.setTimeout(timeoutMs, () => { req.destroy(); resolve(false); });
-    });
-}
-
-function isPortOpen(port, host = '127.0.0.1', timeoutMs = 800) {
-    return new Promise(resolve => {
-        const socket = net.createConnection({ port, host });
-        let settled = false;
-        const done = (value) => {
-            if (settled) return;
-            settled = true;
-            socket.destroy();
-            resolve(value);
-        };
-        socket.on('connect', () => done(true));
-        socket.on('error', () => done(false));
-        socket.setTimeout(timeoutMs, () => done(false));
-    });
-}
-
-async function startPythonBackend() {
-    // Reachable backend already available: reuse it.
-    const isRunning = await isBackendReachable(1000);
-
-    if (isRunning) {
-        console.log(`[Cortex] Using already running backend on port ${BACKEND_PORT}.`);
-        return;
-    }
-
-    // If the port is occupied by a backend that is still booting, avoid
-    // launching another process that would fail with EADDRINUSE.
-    const portOpen = await isPortOpen(BACKEND_PORT);
-    if (portOpen) {
-        console.log(`[Cortex] Port ${BACKEND_PORT} is in use. Waiting for backend health...`);
-        const ready = await waitForBackend(45000);
-        if (ready) {
-            console.log(`[Cortex] Reused backend that was already starting on port ${BACKEND_PORT}.`);
-        } else {
-            console.error(`[Cortex] Port ${BACKEND_PORT} is occupied by another process that is not responding as Cortex backend.`);
-        }
-        return;
-    }
-
-    const root = path.join(__dirname, '../../../');
-    const py = findPython();
-    console.log('[Cortex] Starting Python backend with:', py);
-    pythonProcess = spawn(
-        py,
-        ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(BACKEND_PORT), '--log-level', 'warning'],
-        {
-            cwd: root,
-            stdio: 'pipe',
-            env: {
-                ...process.env,
-                PYTHONIOENCODING: 'utf-8',
-                PYTHONUTF8: '1',
-            },
-        }
-    );
-    pythonProcess.stdout.on('data', d => console.log('[Python]', d.toString('utf8').trim()));
-    pythonProcess.stderr.on('data', d => console.error('[Python]', d.toString('utf8').trim()));
-    pythonProcess.on('exit', code => {
-        console.log('[Cortex] Python backend exited with code', code);
-        pythonProcess = null;
-    });
-}
-
-function stopPythonBackend() {
-    if (pythonProcess) {
-        pythonProcess.kill();
-        pythonProcess = null;
-    }
-}
-
-// Ping the backend until it answers (max 30s)
-function waitForBackend(timeout = 60000) {
-    return new Promise(resolve => {
-        let settled = false;
-        const finalize = (value) => {
-            if (settled) return;
-            settled = true;
-            resolve(value);
-        };
-        const start = Date.now();
-        const tryPing = () => {
-            const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
-                res.resume();
-                if (res.statusCode) { finalize(true); return; }
-                retry();
-            });
-            req.on('error', retry);
-            req.setTimeout(1000, () => { req.destroy(); retry(); });
-        };
-        const retry = async () => {
-            if (Date.now() - start > timeout) {
-                const portOpen = await isPortOpen(BACKEND_PORT);
-                finalize(portOpen);
-                return;
-            }
-            setTimeout(tryPing, 500);
-        };
-        tryPing();
-    });
-}
-
-// ── Backend HTTP Utility ─────────────────────────────────────────────────────
-function postToBackend(apiPath, body) {
-    return new Promise((resolve, reject) => {
-        const payload = JSON.stringify(body);
-        const req = http.request({
-            hostname: '127.0.0.1',
-            port: BACKEND_PORT,
-            path: apiPath,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload),
-            },
-        }, res => {
-            let data = '';
-            res.on('data', d => data += d);
-            res.on('end', () => {
-                try {
-                    const parsed = JSON.parse(data);
-                    resolve({ status: res.statusCode, data: parsed });
-                } catch {
-                    resolve({ status: res.statusCode, data: { detail: data } });
-                }
-            });
-        });
-        req.on('error', err => reject(err));
-        req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
-        req.write(payload);
-        req.end();
-    });
-}
+// Backend API connectivity has been intentionally removed.
 
 // ── Internet Connectivity Check ──────────────────────────────────────────────
 let isInternetOnline = false;
@@ -226,11 +60,6 @@ async function updateInternetStatus() {
         isInternetOnline = newStatus;
         console.log(`[CORTEX-CONNECTIVITY] status changed: ${isInternetOnline ? 'ONLINE' : 'OFFLINE'}`);
         mainWindow?.webContents.send('internet-status', { online: isInternetOnline });
-
-        // Notify the Python backend so it can switch AI model modes
-        try {
-            await postToBackend('/api/v1/system/internet-status', { online: isInternetOnline });
-        } catch (_) { /* backend may not be up yet */ }
     }
 }
 
@@ -430,37 +259,21 @@ function registerIpcHandlers() {
         }
     });
 
-    // ── Auth API proxies ────────────────────────────────────────────────────
+    // ── Auth API proxies (disabled while backend is being redesigned) ──────
     ipcMain.handle('auth-register', async (_e, body) => {
-        try {
-            return await postToBackend('/api/v1/auth/register', body);
-        } catch (err) {
-            return { status: 0, data: { detail: 'Backend is not running. Please start the server.' } };
-        }
+        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
     });
 
     ipcMain.handle('auth-login', async (_e, body) => {
-        try {
-            return await postToBackend('/api/v1/auth/login', body);
-        } catch (err) {
-            return { status: 0, data: { detail: 'Backend is not running. Please start the server.' } };
-        }
+        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
     });
 
     ipcMain.handle('auth-forgot-password', async (_e, body) => {
-        try {
-            return await postToBackend('/api/v1/auth/forgot-password', body);
-        } catch (err) {
-            return { status: 0, data: { detail: 'Backend is not running. Please start the server.' } };
-        }
+        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
     });
 
     ipcMain.handle('auth-reset-password', async (_e, body) => {
-        try {
-            return await postToBackend('/api/v1/auth/reset-password', body);
-        } catch (err) {
-            return { status: 0, data: { detail: 'Backend is not running.' } };
-        }
+        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
     });
 
     ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
@@ -478,7 +291,7 @@ function registerIpcHandlers() {
         } catch (e) { return { error: e.message }; }
     });
 
-    // ── Upload PDF — forward to FastAPI backend ──────────────────────────────
+    // ── Upload PDF — local-only path while backend is being redesigned ──────
     ipcMain.handle('upload-pdf', async (_event, userId) => {
         try {
             const result = await dialog.showOpenDialog(mainWindow, {
@@ -491,75 +304,29 @@ function registerIpcHandlers() {
             if (result.canceled || result.filePaths.length === 0) return { canceled: true };
 
             const filePath = result.filePaths[0];
-            const filename = path.basename(filePath);
-
-            // Try to upload via FastAPI; fall back to old local engine if backend is down
-            try {
-                const FormData = require('form-data');
-                const fileStream = fs.createReadStream(filePath);
-                const fd = new FormData();
-                fd.append('file', fileStream, filename);
-                fd.append('user_id', userId || 'local-user');
-
-                // Node's built-in http to avoid a fetch polyfill dep
-                const uploadResult = await new Promise((resolve, reject) => {
-                    const req = http.request({
-                        hostname: '127.0.0.1',
-                        port: BACKEND_PORT,
-                        path: '/api/v1/documents/upload',
-                        method: 'POST',
-                        headers: fd.getHeaders(),
-                    }, res => {
-                        let body = '';
-                        res.on('data', d => body += d);
-                        res.on('end', () => {
-                            try { resolve(JSON.parse(body)); }
-                            catch { resolve({ error: 'Invalid response' }); }
-                        });
-                    });
-                    req.on('error', reject);
-                    fd.pipe(req);
-                });
-                return { success: true, ...uploadResult };
-            } catch (_apiErr) {
-                // Backend unavailable — fall back to legacy local pipeline
-                const chunks = await extractPdfText(filePath);
-                const db = getDatabase();
-                const title = path.basename(filePath, '.pdf');
-                for (const chunk of chunks) {
-                    const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
-                    if (embeddingsEngine?.isReady()) {
-                        const vector = await embeddingsEngine.embed(chunk.content);
-                        db.insertEmbedding(docId, vector);
-                    }
+            const chunks = await extractPdfText(filePath);
+            const db = getDatabase();
+            const title = path.basename(filePath, '.pdf');
+            for (const chunk of chunks) {
+                const docId = db.insertDocument(title, 'Uploaded', chunk.content, chunk.chunkIndex);
+                if (embeddingsEngine?.isReady()) {
+                    const vector = await embeddingsEngine.embed(chunk.content);
+                    db.insertEmbedding(docId, vector);
                 }
-                return { success: true, title, chunks: chunks.length, source: 'local' };
             }
+            return { success: true, title, chunks: chunks.length, source: 'local' };
         } catch (e) { return { error: e.message }; }
     });
 
-    // ── Stats — prefer FastAPI; fall back to local DB ────────────────────────
+    // ── Stats — local DB only ────────────────────────────────────────────────
     ipcMain.handle('get-stats', async () => {
-        try {
-            const res = await new Promise((resolve, reject) => {
-                const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, r => {
-                    let b = ''; r.on('data', d => b += d);
-                    r.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(null); } });
-                });
-                req.on('error', reject);
-                req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
-            });
-            if (res?.subsystems) return res;
-        } catch (_) { }
         try { return getDatabase()?.getStats() ?? { documents: 0, embeddings: 0 }; }
         catch { return { documents: 0, embeddings: 0 }; }
     });
 
     // ── Backend status ──────────────────────────────────────────────────────
     ipcMain.handle('backend-ready', async () => {
-        try {
-            return await isBackendReachable(2000);
-        } catch { return false; }
+        return false;
     });
 
     // ── Internet status ─────────────────────────────────────────────────────
@@ -626,20 +393,10 @@ app.disableHardwareAcceleration();
 app.whenReady().then(async () => {
     registerIpcHandlers();
     await initializeServices();
-    startPythonBackend();
     createWindow();
 
-    // Notify renderer when backend becomes ready
-    waitForBackend().then(async (ready) => {
-        const finalReady = ready || await isPortOpen(BACKEND_PORT);
-        if (finalReady) {
-            console.log('[Cortex] Python backend ready:', true);
-            mainWindow?.webContents.send('backend-status', { ready: true });
-            return;
-        }
-        console.log('[Cortex] Python backend not reachable yet.');
-        mainWindow?.webContents.send('backend-status', { ready: false });
-    });
+    // Backend connectivity intentionally disabled during redesign.
+    mainWindow?.webContents.send('backend-status', { ready: false });
 
     // Start 10-second internet connectivity checks
     startInternetChecks();
@@ -650,9 +407,6 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-    stopPythonBackend();
     if (internetCheckInterval) clearInterval(internetCheckInterval);
     if (process.platform !== 'darwin') app.quit();
 });
-
-app.on('before-quit', () => stopPythonBackend());

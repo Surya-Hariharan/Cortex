@@ -59,6 +59,10 @@ export default function App() {
     const [deleteConfirm, setDeleteConfirm] = useState({ visible: false, targetId: null, title: '' });
     const [showDeleteAllChats, setShowDeleteAllChats] = useState(false);
 
+    // ── Banners ──────────────────────────────────────────────────────────────
+    const [showStorageHint, setShowStorageHint] = useState(false);
+    const [showOfflinePrep, setShowOfflinePrep] = useState(false);
+
     // ── Chat Session Management ──────────────────────────────────────────
     const [chatSessions, setChatSessions] = useState(() => {
         try { return JSON.parse(localStorage.getItem('cortex-chat-sessions') || '[]'); } catch { return []; }

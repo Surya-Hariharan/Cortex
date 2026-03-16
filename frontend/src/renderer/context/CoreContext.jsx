@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { backendStatus, system as systemApi } from '../../services/api.js';
+import { ensureDeviceProfile } from '../../system/deviceCapability.js';
+import { saveLocalIdentity, clearLocalIdentity, getMeshConsent, setMeshConsent as persistMeshConsent } from '../../offline/offlineIdentity.js';
 
 const CoreContext = createContext();
 

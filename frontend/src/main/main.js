@@ -12,6 +12,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
 const https = require('https');
+const net = require('net');
 require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
 
 // ── Python Backend ────────────────────────────────────────────────────────────
@@ -34,19 +35,53 @@ function findPython() {
     }) || 'python';
 }
 
-async function startPythonBackend() {
-    // Check if something is already running on the port
-    const isRunning = await new Promise(resolve => {
+function isBackendHealthy(timeoutMs = 1000) {
+    return new Promise(resolve => {
         const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
             res.resume();
             resolve(res.statusCode < 500);
         });
         req.on('error', () => resolve(false));
-        req.setTimeout(500, () => { req.destroy(); resolve(false); });
+        req.setTimeout(timeoutMs, () => { req.destroy(); resolve(false); });
     });
+}
+
+function isPortOpen(port, host = '127.0.0.1', timeoutMs = 800) {
+    return new Promise(resolve => {
+        const socket = net.createConnection({ port, host });
+        let settled = false;
+        const done = (value) => {
+            if (settled) return;
+            settled = true;
+            socket.destroy();
+            resolve(value);
+        };
+        socket.on('connect', () => done(true));
+        socket.on('error', () => done(false));
+        socket.setTimeout(timeoutMs, () => done(false));
+    });
+}
+
+async function startPythonBackend() {
+    // Healthy backend already available: reuse it.
+    const isRunning = await isBackendHealthy(1000);
 
     if (isRunning) {
         console.log(`[Cortex] Using already running backend on port ${BACKEND_PORT}.`);
+        return;
+    }
+
+    // If the port is occupied by a backend that is still booting, avoid
+    // launching another process that would fail with EADDRINUSE.
+    const portOpen = await isPortOpen(BACKEND_PORT);
+    if (portOpen) {
+        console.log(`[Cortex] Port ${BACKEND_PORT} is in use. Waiting for backend health...`);
+        const ready = await waitForBackend(45000);
+        if (ready) {
+            console.log(`[Cortex] Reused backend that was already starting on port ${BACKEND_PORT}.`);
+        } else {
+            console.error(`[Cortex] Port ${BACKEND_PORT} is occupied by another process that is not responding as Cortex backend.`);
+        }
         return;
     }
 
@@ -56,10 +91,18 @@ async function startPythonBackend() {
     pythonProcess = spawn(
         py,
         ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(BACKEND_PORT), '--log-level', 'warning'],
-        { cwd: root, stdio: 'pipe' }
+        {
+            cwd: root,
+            stdio: 'pipe',
+            env: {
+                ...process.env,
+                PYTHONIOENCODING: 'utf-8',
+                PYTHONUTF8: '1',
+            },
+        }
     );
-    pythonProcess.stdout.on('data', d => console.log('[Python]', d.toString().trim()));
-    pythonProcess.stderr.on('data', d => console.error('[Python]', d.toString().trim()));
+    pythonProcess.stdout.on('data', d => console.log('[Python]', d.toString('utf8').trim()));
+    pythonProcess.stderr.on('data', d => console.error('[Python]', d.toString('utf8').trim()));
     pythonProcess.on('exit', code => {
         console.log('[Cortex] Python backend exited with code', code);
         pythonProcess = null;
@@ -74,7 +117,7 @@ function stopPythonBackend() {
 }
 
 // Ping the backend until it answers (max 30s)
-function waitForBackend(timeout = 30000) {
+function waitForBackend(timeout = 60000) {
     return new Promise(resolve => {
         const start = Date.now();
         const tryPing = () => {

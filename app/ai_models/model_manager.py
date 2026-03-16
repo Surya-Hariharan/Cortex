@@ -57,7 +57,7 @@ class ModelManager:
         if self._embeddings is None:
             with self._lock:
                 if self._embeddings is None:
-                    logger.info("Loading EmbeddingModel…")
+                    logger.info("Loading EmbeddingModel...")
                     self._embeddings = EmbeddingModel()
         self._update_last_used("embeddings")
         return self._embeddings
@@ -67,7 +67,7 @@ class ModelManager:
         if self._llm is None:
             with self._lock:
                 if self._llm is None:
-                    logger.info("Loading LLMModel…")
+                    logger.info("Loading LLMModel...")
                     self._llm = LLMModel()
         self._update_last_used("llm")
         return self._llm
@@ -77,7 +77,7 @@ class ModelManager:
         if self._whisper is None:
             with self._lock:
                 if self._whisper is None:
-                    logger.info("Loading WhisperModel…")
+                    logger.info("Loading WhisperModel...")
                     self._whisper = WhisperModel()
         self._update_last_used("whisper")
         return self._whisper

@@ -18,7 +18,6 @@ export const meshController = {
     },
 
     async stop() {
-        if (!running) return;
         try {
             await window.electronAPI?.meshStop?.();
         } catch {

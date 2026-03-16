@@ -40,6 +40,19 @@ export const CoreProvider = ({ children }) => {
     // ── Privacy Mode ──────────────────────────────────────────────────────────
     const [privacyMode, setPrivacyModeState] = useState(false);
 
+    // ── App Mode (ONLINE / OFFLINE) ────────────────────────────────────────────
+    const [appMode, setAppMode] = useState('ONLINE');
+
+    // ── Mesh Consent ─────────────────────────────────────────────────────────
+    const [meshEnabled, setMeshEnabledState] = useState(() => getMeshConsent());
+    const toggleMeshConsent = useCallback(() => {
+        setMeshEnabledState(prev => {
+            const next = !prev;
+            persistMeshConsent(next);
+            return next;
+        });
+    }, []);
+
     // ── UI States ─────────────────────────────────────────────────────────────
     const [toast, setToast] = useState(null);
     const [userStream, setUserStream] = useState(localStorage.getItem('cortex-user-stream'));
@@ -158,16 +171,23 @@ export const CoreProvider = ({ children }) => {
         return () => mediaQuery.removeEventListener('change', updateTheme);
     }, [theme]);
 
-    const login = (profile) => {
+    const login = (profile, mode = 'ONLINE') => {
         if (profile?.name) setUsername(profile.name);
         localStorage.setItem('cortex-auth-session', 'active');
         window.electronAPI?.saveSession?.(profile ?? {});
+        setAppMode(mode);
         setIsAuthenticated(true);
+        // Persist offline identity for future offline logins
+        saveLocalIdentity(profile);
+        // Run device capability detection (non-blocking, once per install)
+        ensureDeviceProfile().catch(() => {});
     };
 
     const logout = () => {
         localStorage.removeItem('cortex-auth-session');
         localStorage.removeItem('cortex-auth-profile');
+        clearLocalIdentity();
+        setAppMode('ONLINE');
         window.electronAPI?.logout?.();
     };
 
@@ -187,6 +207,8 @@ export const CoreProvider = ({ children }) => {
         isOnline,
         isNetworkOnline,
         isInternetOnline,
+        appMode, setAppMode,
+        meshEnabled, toggleMeshConsent,
         privacyMode, togglePrivacyMode,
         toast, setToast, showToast,
         userStream, setUserStream,

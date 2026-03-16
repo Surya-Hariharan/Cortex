@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
-import { ArrowRight, ChevronDown, GraduationCap, Lock, Mail, School, UserCircle2, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowRight, ChevronDown, GraduationCap, Lock, Mail, School, UserCircle2, Check, Eye, EyeOff, Loader2, WifiOff, Radio } from 'lucide-react';
 import WindowControls from '../layout/WindowControls';
 import { DISTRICTS_TN, COLLEGES_TN, DEGREE_OPTIONS, COURSES_BY_DEGREE } from './authData';
+import { hasLocalIdentity, getLocalIdentity } from '../../../offline/offlineIdentity.js';
+import { useMeshDiscovery } from '../../../mesh/useMeshDiscovery.js';
 
 const SelectField = memo(function SelectField({ label, value, onChange, options, disabled = false, placeholder = 'Select' }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -108,6 +110,37 @@ export default function AuthPortal({ onAuthSuccess }) {
     const [mode, setMode] = useState('signin');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // ── Offline login detection ──────────────────────────────────────────────
+    const [isOffline, setIsOffline] = useState(false);
+    const canContinueOffline = isOffline && hasLocalIdentity();
+    const { nearbyPeers, isMeshAvailable } = useMeshDiscovery();
+
+    useEffect(() => {
+        const check = () => setIsOffline(!navigator.onLine);
+        check();
+        window.addEventListener('online', check);
+        window.addEventListener('offline', check);
+        return () => {
+            window.removeEventListener('online', check);
+            window.removeEventListener('offline', check);
+        };
+    }, []);
+
+    const handleContinueOffline = () => {
+        const identity = getLocalIdentity();
+        if (!identity) return;
+        // Restore profile from localStorage and login in OFFLINE mode
+        const rawProfile = localStorage.getItem('cortex-auth-profile');
+        const profile = rawProfile ? JSON.parse(rawProfile) : { name: identity.displayName, email: identity.email };
+        localStorage.setItem('cortex-auth-session', 'active');
+        onAuthSuccess?.(profile, 'OFFLINE');
+    };
+
+    const handleConnectMesh = () => {
+        // Stub: future mesh connection logic
+        console.log('[Cortex] Mesh connect requested');
+    };
 
     const [signinEmail, setSigninEmail] = useState('');
     const [signinPassword, setSigninPassword] = useState('');
@@ -446,6 +479,34 @@ export default function AuthPortal({ onAuthSuccess }) {
                                 <button type="submit" className="w-full rounded-xl bg-synapse-600 hover:bg-synapse-700 text-white py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors">
                                     Login <ArrowRight size={16} />
                                 </button>
+
+                                {/* Offline Login */}
+                                {canContinueOffline && (
+                                    <button
+                                        type="button"
+                                        onClick={handleContinueOffline}
+                                        className="w-full rounded-xl border border-slate-300 dark:border-dark-600 bg-slate-50 dark:bg-dark-800 text-slate-700 dark:text-dark-200 py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-dark-700"
+                                    >
+                                        <WifiOff size={15} /> Continue Offline
+                                    </button>
+                                )}
+
+                                {/* Mesh Discovery Indicator */}
+                                {isOffline && isMeshAvailable && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-center text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1.5">
+                                            <Radio size={13} className="animate-pulse" />
+                                            Nearby campus knowledge network available.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleConnectMesh}
+                                            className="w-full rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 py-2 text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                                        >
+                                            Connect to Mesh
+                                        </button>
+                                    </div>
+                                )}
                             </form>
                         )}
 

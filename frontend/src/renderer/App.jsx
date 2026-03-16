@@ -14,7 +14,8 @@ import CreateProjectModal from './components/layout/CreateProjectModal';
 import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus, projects as projectsApi, getUserId } from '../services/api.js';
-import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff } from 'lucide-react';
+import { wasStorageHintShown, markStorageHintShown } from '../offline/offlineIdentity.js';
+import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff, Info } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
 const TABS = [
@@ -34,7 +35,7 @@ const MemoAIEngine = React.memo(AIEngine);
 export default function App() {
     const {
         isAuthenticated, username, setUsername, theme, setTheme,
-        isOnline, isNetworkOnline, toast, setToast, showToast,
+        isOnline, isNetworkOnline, appMode, toast, setToast, showToast,
         userStream, setUserStream, login, logout
     } = useCore();
 

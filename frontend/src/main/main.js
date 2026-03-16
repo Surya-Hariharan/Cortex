@@ -630,9 +630,15 @@ app.whenReady().then(async () => {
     createWindow();
 
     // Notify renderer when backend becomes ready
-    waitForBackend().then(ready => {
-        console.log('[Cortex] Python backend ready:', ready);
-        mainWindow?.webContents.send('backend-status', { ready });
+    waitForBackend().then(async (ready) => {
+        const finalReady = ready || await isPortOpen(BACKEND_PORT);
+        if (finalReady) {
+            console.log('[Cortex] Python backend ready:', true);
+            mainWindow?.webContents.send('backend-status', { ready: true });
+            return;
+        }
+        console.log('[Cortex] Python backend not reachable yet.');
+        mainWindow?.webContents.send('backend-status', { ready: false });
     });
 
     // Start 10-second internet connectivity checks

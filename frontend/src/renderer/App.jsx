@@ -15,7 +15,7 @@ import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus, projects as projectsApi, getUserId } from '../services/api.js';
 import { wasStorageHintShown, markStorageHintShown } from '../offline/offlineIdentity.js';
-import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff, Info } from 'lucide-react';
+import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff, Info, Loader2 } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
 const TABS = [
@@ -163,6 +163,22 @@ export default function App() {
         );
         return () => unsub();
     }, []);
+
+    // Storage awareness banner — show once per install after login
+    useEffect(() => {
+        if (isAuthenticated && !wasStorageHintShown()) {
+            setShowStorageHint(true);
+        }
+    }, [isAuthenticated]);
+
+    // Offline intelligence prep banner — show on first workspace entry while offline
+    useEffect(() => {
+        if (isAuthenticated && appMode === 'OFFLINE' && activeTab === 'workspace') {
+            setShowOfflinePrep(true);
+            const timer = setTimeout(() => setShowOfflinePrep(false), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [isAuthenticated, appMode, activeTab]);
 
     // Ctrl+K / Command Palette shortcuts
     useEffect(() => {
@@ -539,6 +555,30 @@ export default function App() {
                 <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-dark-950 relative">
                     {/* Drag strip across top of main area */}
                     <div className="h-8 w-full absolute top-0 left-0 bg-transparent z-50 pointer-events-none" style={{ WebkitAppRegion: 'drag' }} />
+
+                    {/* ── Storage Awareness Banner (once per install) ─────────────── */}
+                    {showStorageHint && (
+                        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 text-xs font-medium z-40 relative mt-8">
+                            <span className="flex items-center gap-2">
+                                <Info size={14} />
+                                Cortex stores study knowledge locally for offline intelligence.
+                            </span>
+                            <button
+                                onClick={() => { setShowStorageHint(false); markStorageHintShown(); }}
+                                className="p-0.5 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors flex-shrink-0"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── Offline Intelligence Prep Banner ────────────────────────── */}
+                    {showOfflinePrep && (
+                        <div className={`flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-300 text-xs font-medium z-40 relative ${showStorageHint ? '' : 'mt-8'}`}>
+                            <Loader2 size={13} className="animate-spin" />
+                            Preparing offline intelligence...
+                        </div>
+                    )}
 
                     <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
                         {activeTab === 'home' && <MemoHomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}

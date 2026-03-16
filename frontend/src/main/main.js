@@ -35,11 +35,11 @@ function findPython() {
     }) || 'python';
 }
 
-function isBackendHealthy(timeoutMs = 1000) {
+function isBackendReachable(timeoutMs = 1000) {
     return new Promise(resolve => {
         const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
             res.resume();
-            resolve(res.statusCode < 500);
+            resolve(true);
         });
         req.on('error', () => resolve(false));
         req.setTimeout(timeoutMs, () => { req.destroy(); resolve(false); });
@@ -63,8 +63,8 @@ function isPortOpen(port, host = '127.0.0.1', timeoutMs = 800) {
 }
 
 async function startPythonBackend() {
-    // Healthy backend already available: reuse it.
-    const isRunning = await isBackendHealthy(1000);
+    // Reachable backend already available: reuse it.
+    const isRunning = await isBackendReachable(1000);
 
     if (isRunning) {
         console.log(`[Cortex] Using already running backend on port ${BACKEND_PORT}.`);
@@ -123,7 +123,7 @@ function waitForBackend(timeout = 60000) {
         const tryPing = () => {
             const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, res => {
                 res.resume();
-                if (res.statusCode < 500) { resolve(true); return; }
+                if (res.statusCode) { resolve(true); return; }
                 retry();
             });
             req.on('error', retry);
@@ -194,7 +194,6 @@ async function checkInternetConnectivity() {
             if (res.status < 500) return true;
         } catch (_err) {
             clearTimeout(timer);
-            console.log(`[CORTEX-CONNECTIVITY] probe failed: ${url}`);
         }
     }
     return false;
@@ -549,14 +548,7 @@ function registerIpcHandlers() {
     // ── Backend status ──────────────────────────────────────────────────────
     ipcMain.handle('backend-ready', async () => {
         try {
-            return await new Promise((resolve) => {
-                const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, r => {
-                    r.on('data', () => {});
-                    r.on('end', () => resolve(r.statusCode < 500));
-                });
-                req.on('error', () => resolve(false));
-                req.setTimeout(2000, () => { req.destroy(); resolve(false); });
-            });
+            return await isBackendReachable(2000);
         } catch { return false; }
     });
 

@@ -61,6 +61,16 @@ POSTGRES_BOOTSTRAP_SQL: list[str] = [
         END IF;
     END $$
     """,
+    """
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'documents' AND column_name = 'stream'
+        ) THEN
+            ALTER TABLE documents ADD COLUMN stream VARCHAR;
+        END IF;
+    END $$
+    """,
     # Core app indexes.
     "CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_projects_user_deleted ON projects(user_id, deleted_at)",

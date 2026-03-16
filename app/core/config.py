@@ -40,11 +40,6 @@ class Settings(BaseSettings):
     PORT: int = 8765
     RELOAD: bool = False
 
-    # ── Database ─────────────────────────────────────────────────────────────
-    SQLITE_URL: str = f"sqlite+aiosqlite:///{DATA_DIR / 'database' / 'cortex.db'}"
-    # Cloud override: set in .env to use Supabase/Postgres instead of SQLite
-    DATABASE_URL: str = ""
-
     # ── Vector Store ─────────────────────────────────────────────────────────
     VECTOR_STORE_PATH: Path = DATA_DIR / "vector_store"
     VECTOR_DIM: int = 384          # BGE-small embedding dim
@@ -83,11 +78,6 @@ class Settings(BaseSettings):
 
     # ── Data directories ─────────────────────────────────────────────────────
     DATA_DIR: Path = DATA_DIR   # root-level data/ directory
-
-    # ── Supabase ──────────────────────────────────────────────────────────────
-    SUPABASE_URL: str = ""
-    SUPABASE_ANON_KEY: str = ""
-    SUPABASE_SERVICE_ROLE_KEY: str = ""   # optional; needed for admin ops
 
     # ── Security ─────────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production"

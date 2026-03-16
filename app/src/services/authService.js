@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const { pool } = require('../db/pool');
+const { pool } = require('../../../supabase/db/pool');
 const { registerOrUpdateDevice } = require('./deviceService');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/tokens');
 const { randomToken, sha256 } = require('../utils/crypto');
@@ -138,14 +138,17 @@ async function signup(payload) {
     );
 
     const user = inserted.rows[0];
-    const device = await registerOrUpdateDevice({
-      userId: user.id,
-      fingerprint: normalized.device?.fingerprint || 'unknown-device',
-      ram: normalized.device?.ram,
-      cpu: normalized.device?.cpu,
-      gpu: normalized.device?.gpu,
-      npu: normalized.device?.npu,
-    });
+    const device = await registerOrUpdateDevice(
+      {
+        userId: user.id,
+        fingerprint: normalized.device?.fingerprint || 'unknown-device',
+        ram: normalized.device?.ram,
+        cpu: normalized.device?.cpu,
+        gpu: normalized.device?.gpu,
+        npu: normalized.device?.npu,
+      },
+      client
+    );
 
     const { accessToken, refreshToken } = await createSession(client, {
       userId: user.id,
@@ -185,14 +188,17 @@ async function login({ email, password, device }) {
       throw new Error('Invalid credentials');
     }
 
-    const deviceRow = await registerOrUpdateDevice({
-      userId: user.id,
-      fingerprint: device?.fingerprint || 'unknown-device',
-      ram: device?.ram,
-      cpu: device?.cpu,
-      gpu: device?.gpu,
-      npu: device?.npu,
-    });
+    const deviceRow = await registerOrUpdateDevice(
+      {
+        userId: user.id,
+        fingerprint: device?.fingerprint || 'unknown-device',
+        ram: device?.ram,
+        cpu: device?.cpu,
+        gpu: device?.gpu,
+        npu: device?.npu,
+      },
+      client
+    );
 
     const { accessToken, refreshToken } = await createSession(client, {
       userId: user.id,

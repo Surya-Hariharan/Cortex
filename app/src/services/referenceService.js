@@ -1,4 +1,4 @@
-const { pool } = require('../db/pool');
+const { pool } = require('../../../supabase/db/pool');
 
 async function getDistricts() {
   const { rows } = await pool.query('SELECT id, name, state FROM districts ORDER BY name ASC');

@@ -1,6 +1,6 @@
-const { pool } = require('../db/pool');
+const { pool } = require('../../../supabase/db/pool');
 
-async function registerOrUpdateDevice({ userId, fingerprint, ram, cpu, gpu, npu }) {
+async function registerOrUpdateDevice({ userId, fingerprint, ram, cpu, gpu, npu }, db = pool) {
   const query = `
     INSERT INTO devices (user_id, fingerprint, ram, cpu, gpu, npu, last_seen)
     VALUES ($1, $2, $3, $4, $5, $6, now())
@@ -14,7 +14,7 @@ async function registerOrUpdateDevice({ userId, fingerprint, ram, cpu, gpu, npu 
     RETURNING id, user_id, fingerprint, ram, cpu, gpu, npu, last_seen
   `;
 
-  const result = await pool.query(query, [userId, fingerprint, ram ?? null, cpu ?? null, gpu ?? null, npu ?? null]);
+  const result = await db.query(query, [userId, fingerprint, ram ?? null, cpu ?? null, gpu ?? null, npu ?? null]);
   return result.rows[0];
 }
 

@@ -1,4 +1,4 @@
-const { pool } = require('../src/db/pool');
+const { pool } = require('../db/pool');
 
 const districts = [
   'Ariyalur','Chengalpattu','Chennai','Coimbatore','Cuddalore','Dharmapuri','Dindigul',

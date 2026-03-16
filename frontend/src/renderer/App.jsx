@@ -15,6 +15,7 @@ import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus, projects as projectsApi, getUserId } from '../services/api.js';
 import { wasStorageHintShown, markStorageHintShown } from '../offline/offlineIdentity.js';
+import { ensureDeviceProfile } from '../system/deviceCapability.js';
 import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff, Info, Loader2 } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
@@ -36,7 +37,7 @@ export default function App() {
     const {
         isAuthenticated, username, setUsername, theme, setTheme,
         isOnline, isNetworkOnline, appMode, toast, setToast, showToast,
-        userStream, setUserStream, login, logout
+        userStream, setUserStream, login, logout, offlineEngineReady
     } = useCore();
 
     const [activeTab, setActiveTab] = useState('knowledge');
@@ -76,6 +77,10 @@ export default function App() {
     useEffect(() => {
         localStorage.setItem('cortex-chat-sessions', JSON.stringify(chatSessions.slice(0, 50)));
     }, [chatSessions]);
+
+    useEffect(() => {
+        ensureDeviceProfile().catch(() => {});
+    }, []);
 
     // Load projects from backend on auth
     useEffect(() => {
@@ -173,12 +178,28 @@ export default function App() {
 
     // Offline intelligence prep banner — show on first workspace entry while offline
     useEffect(() => {
-        if (isAuthenticated && appMode === 'OFFLINE' && activeTab === 'workspace') {
-            setShowOfflinePrep(true);
-            const timer = setTimeout(() => setShowOfflinePrep(false), 3000);
-            return () => clearTimeout(timer);
+        if (!isAuthenticated || appMode !== 'OFFLINE' || activeTab !== 'workspace') {
+            setShowOfflinePrep(false);
+            return;
         }
-    }, [isAuthenticated, appMode, activeTab]);
+
+        if (offlineEngineReady) {
+            setShowOfflinePrep(false);
+            return;
+        }
+
+        setShowOfflinePrep(true);
+        // Safety fallback: hide banner if readiness event never arrives.
+        const timer = setTimeout(() => setShowOfflinePrep(false), 12000);
+
+        const onReady = () => setShowOfflinePrep(false);
+        window.addEventListener('offline-engine-ready', onReady);
+
+        return () => {
+            window.removeEventListener('offline-engine-ready', onReady);
+            clearTimeout(timer);
+        };
+    }, [isAuthenticated, appMode, activeTab, offlineEngineReady]);
 
     // Ctrl+K / Command Palette shortcuts
     useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { backendStatus, system as systemApi } from '../../services/api.js';
-import { ensureDeviceProfile } from '../../system/deviceCapability.js';
 import { saveLocalIdentity, clearLocalIdentity, getMeshConsent, setMeshConsent as persistMeshConsent } from '../../offline/offlineIdentity.js';
+import { meshController } from '../../mesh/meshController.js';
 
 const CoreContext = createContext();
 
@@ -45,6 +45,36 @@ export const CoreProvider = ({ children }) => {
 
     // ── Mesh Consent ─────────────────────────────────────────────────────────
     const [meshEnabled, setMeshEnabledState] = useState(() => getMeshConsent());
+    const [offlineEngineReady, setOfflineEngineReady] = useState(false);
+
+    useEffect(() => {
+        if (meshEnabled) {
+            meshController.start();
+        } else {
+            meshController.stop();
+        }
+    }, [meshEnabled]);
+
+    useEffect(() => {
+        window.electronAPI?.getOfflineEngineStatus?.().then((ready) => {
+            if (ready) {
+                setOfflineEngineReady(true);
+                window.dispatchEvent(new Event('offline-engine-ready'));
+            }
+        }).catch(() => {});
+
+        const unsubOfflineReady = window.electronAPI?.onOfflineEngineReady?.(({ ready }) => {
+            if (ready) {
+                setOfflineEngineReady(true);
+                window.dispatchEvent(new Event('offline-engine-ready'));
+            }
+        });
+
+        return () => {
+            unsubOfflineReady?.();
+        };
+    }, []);
+
     const toggleMeshConsent = useCallback(() => {
         setMeshEnabledState(prev => {
             const next = !prev;
@@ -179,8 +209,6 @@ export const CoreProvider = ({ children }) => {
         setIsAuthenticated(true);
         // Persist offline identity for future offline logins
         saveLocalIdentity(profile);
-        // Run device capability detection (non-blocking, once per install)
-        ensureDeviceProfile().catch(() => {});
     };
 
     const logout = () => {
@@ -207,6 +235,7 @@ export const CoreProvider = ({ children }) => {
         isOnline,
         isNetworkOnline,
         isInternetOnline,
+        offlineEngineReady,
         appMode, setAppMode,
         meshEnabled, toggleMeshConsent,
         privacyMode, togglePrivacyMode,

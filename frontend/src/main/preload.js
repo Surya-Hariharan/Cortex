@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getStats: () => ipcRenderer.invoke('get-stats'),
     shareToNetwork: (docId) => ipcRenderer.invoke('share-to-network', docId),
     getPeers: () => ipcRenderer.invoke('get-peers'),
+    meshStart: () => ipcRenderer.invoke('mesh-start'),
+    meshStop: () => ipcRenderer.invoke('mesh-stop'),
     getPerfStats: () => ipcRenderer.invoke('get-perf-stats'),
     addNote: (note) => ipcRenderer.invoke('add-note', note),
     getNotes: () => ipcRenderer.invoke('get-notes'),
@@ -14,6 +16,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleNoteComplete: (id) => ipcRenderer.invoke('toggle-note-complete', id),
     // ── Backend status ────────────────────────────────────────────────────────
     backendReady: () => ipcRenderer.invoke('backend-ready'),
+    getOfflineEngineStatus: () => ipcRenderer.invoke('get-offline-engine-status'),
+    onOfflineEngineReady: (cb) => {
+        ipcRenderer.on('offline-engine-ready', (_e, status) => cb(status));
+        return () => ipcRenderer.removeAllListeners('offline-engine-ready');
+    },
     onBackendStatus: (cb) => {
         ipcRenderer.on('backend-status', (_e, status) => cb(status));
         return () => ipcRenderer.removeAllListeners('backend-status');

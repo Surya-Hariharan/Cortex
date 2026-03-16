@@ -67,10 +67,23 @@ class PeerDiscovery {
      */
     stop() {
         this.running = false;
-        if (this.broadcastTimer) clearInterval(this.broadcastTimer);
-        if (this.cleanupTimer) clearInterval(this.cleanupTimer);
+        if (this.broadcastTimer) {
+            clearInterval(this.broadcastTimer);
+            this.broadcastTimer = null;
+        }
+        if (this.cleanupTimer) {
+            clearInterval(this.cleanupTimer);
+            this.cleanupTimer = null;
+        }
         if (this.socket) {
             try { this.socket.close(); } catch (_) {}
+            this.socket = null;
+        }
+        if (this.peers.size > 0) {
+            this.peers.clear();
+            if (this.onPeersChanged) {
+                this.onPeersChanged(this.getPeers());
+            }
         }
     }
 

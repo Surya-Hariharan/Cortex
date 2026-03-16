@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from '
 import { ArrowRight, ChevronDown, GraduationCap, Lock, Mail, School, UserCircle2, Check, Eye, EyeOff, Loader2, WifiOff, Radio } from 'lucide-react';
 import WindowControls from '../layout/WindowControls';
 import { DISTRICTS_TN, COLLEGES_TN, DEGREE_OPTIONS, COURSES_BY_DEGREE } from './authData';
-import { hasLocalIdentity, getLocalIdentity } from '../../../offline/offlineIdentity.js';
+import { hasLocalIdentity, getValidatedLocalIdentity, setMeshConsent } from '../../../offline/offlineIdentity.js';
 import { useMeshDiscovery } from '../../../mesh/useMeshDiscovery.js';
 
 const SelectField = memo(function SelectField({ label, value, onChange, options, disabled = false, placeholder = 'Select' }) {
@@ -114,6 +114,7 @@ export default function AuthPortal({ onAuthSuccess }) {
     // ── Offline login detection ──────────────────────────────────────────────
     const [isOffline, setIsOffline] = useState(false);
     const canContinueOffline = isOffline && hasLocalIdentity();
+    const canContinueGuest = isOffline && !hasLocalIdentity();
     const { nearbyPeers, isMeshAvailable } = useMeshDiscovery();
 
     useEffect(() => {
@@ -127,14 +128,36 @@ export default function AuthPortal({ onAuthSuccess }) {
         };
     }, []);
 
-    const handleContinueOffline = () => {
-        const identity = getLocalIdentity();
+    const handleContinueOffline = async () => {
+        const identity = await getValidatedLocalIdentity();
         if (!identity) return;
+
         // Restore profile from localStorage and login in OFFLINE mode
         const rawProfile = localStorage.getItem('cortex-auth-profile');
         const profile = rawProfile ? JSON.parse(rawProfile) : { name: identity.displayName, email: identity.email };
         localStorage.setItem('cortex-auth-session', 'active');
         onAuthSuccess?.(profile, 'OFFLINE');
+    };
+
+    const handleContinueGuest = () => {
+        const guestProfile = {
+            id: `guest-${Date.now()}`,
+            name: 'Guest User',
+            email: 'guest@local.cortex',
+            guest: true,
+            cloudSyncEnabled: false,
+            meshSharingEnabled: false,
+        };
+
+        localStorage.setItem('cortex-guest-session', JSON.stringify({
+            startedAt: new Date().toISOString(),
+            userId: guestProfile.id,
+        }));
+        localStorage.setItem('cortex-auth-profile', JSON.stringify(guestProfile));
+        localStorage.setItem('cortex-auth-session', 'active');
+        localStorage.setItem('cortex-cloud-sync-enabled', 'false');
+        setMeshConsent(false);
+        onAuthSuccess?.(guestProfile, 'OFFLINE');
     };
 
     const handleConnectMesh = () => {
@@ -488,6 +511,16 @@ export default function AuthPortal({ onAuthSuccess }) {
                                         className="w-full rounded-xl border border-slate-300 dark:border-dark-600 bg-slate-50 dark:bg-dark-800 text-slate-700 dark:text-dark-200 py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-dark-700"
                                     >
                                         <WifiOff size={15} /> Continue Offline
+                                    </button>
+                                )}
+
+                                {canContinueGuest && (
+                                    <button
+                                        type="button"
+                                        onClick={handleContinueGuest}
+                                        className="w-full rounded-xl border border-slate-300 dark:border-dark-600 bg-slate-50 dark:bg-dark-800 text-slate-700 dark:text-dark-200 py-2.5 text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-dark-700"
+                                    >
+                                        <WifiOff size={15} /> Continue in Guest Mode
                                     </button>
                                 )}
 

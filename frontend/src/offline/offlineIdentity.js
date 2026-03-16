@@ -7,30 +7,50 @@
  * localStorage key: "cortex-local-identity"
  */
 
+import { generateIdentityHash } from './identityIntegrity.js';
+
 const IDENTITY_KEY = 'cortex-local-identity';
 const STORAGE_HINT_KEY = 'cortex-storage-hint-shown';
+const DEVICE_ID_KEY = 'cortex-device-id';
+const GUEST_SESSION_KEY = 'cortex-guest-session';
+
+function getOrCreateDeviceId() {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const generated = `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(DEVICE_ID_KEY, generated);
+    return generated;
+}
 
 /**
  * Save local identity after a successful online login.
  * @param {Object} profile — the profile object from auth
  */
 export function saveLocalIdentity(profile) {
-    if (!profile) return;
-    try {
+    if (!profile) return Promise.resolve();
+
+    return (async () => {
+        const userId = profile.id || profile.userId || profile.email || 'local';
+        const deviceId = getOrCreateDeviceId();
+        const token = btoa(JSON.stringify({
+            ts: Date.now(),
+            email: profile.email,
+        }));
+        const integrityHash = await generateIdentityHash({ userId }, deviceId);
+
         const identity = {
-            userId: profile.id || profile.userId || profile.email || 'local',
+            userId,
             email: profile.email || '',
             displayName: profile.name || profile.displayName || '',
-            encryptedSessionToken: btoa(JSON.stringify({
-                ts: Date.now(),
-                email: profile.email,
-            })),
-            lastLoginAt: new Date().toISOString(),
+            token,
+            deviceId,
+            integrityHash,
         };
+
         localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
-    } catch (err) {
-        console.warn('[Cortex] Failed to save local identity:', err);
-    }
+    })().catch(() => {
+        // Keep auth flow non-blocking when localStorage or hashing fails.
+    });
 }
 
 /**
@@ -42,6 +62,30 @@ export function getLocalIdentity() {
         const raw = localStorage.getItem(IDENTITY_KEY);
         return raw ? JSON.parse(raw) : null;
     } catch {
+        return null;
+    }
+}
+
+export async function getValidatedLocalIdentity() {
+    const identity = getLocalIdentity();
+    if (!identity) return null;
+
+    const requiredKeys = ['userId', 'email', 'displayName', 'token', 'deviceId', 'integrityHash'];
+    const hasAllFields = requiredKeys.every((key) => !!identity[key]);
+    if (!hasAllFields) {
+        clearLocalIdentity();
+        return null;
+    }
+
+    try {
+        const expectedHash = await generateIdentityHash({ userId: identity.userId }, identity.deviceId);
+        if (expectedHash !== identity.integrityHash) {
+            clearLocalIdentity();
+            return null;
+        }
+        return identity;
+    } catch {
+        clearLocalIdentity();
         return null;
     }
 }
@@ -58,6 +102,10 @@ export function hasLocalIdentity() {
  */
 export function clearLocalIdentity() {
     localStorage.removeItem(IDENTITY_KEY);
+}
+
+export function clearGuestSession() {
+    localStorage.removeItem(GUEST_SESSION_KEY);
 }
 
 // ── Storage Hint Banner ────────────────────────────────────────────────────

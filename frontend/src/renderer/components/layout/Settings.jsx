@@ -8,6 +8,7 @@ import {
 import DocumentStatus from '../DocumentStatus';
 import PerformanceTab from '../PerformanceTab';
 import { getMeshConsent, setMeshConsent } from '../../../offline/offlineIdentity.js';
+import { meshController } from '../../../mesh/meshController.js';
 
 /* ─────────────────────────────────────────────────────────────
    Reusable primitives
@@ -357,6 +358,11 @@ function DataControlsPanel({ onToast }) {
     const handleMeshToggle = (val) => {
         setMeshEnabled(val);
         setMeshConsent(val);
+        if (val) {
+            meshController.start();
+        } else {
+            meshController.stop();
+        }
     };
 
     const handleExport = () => {

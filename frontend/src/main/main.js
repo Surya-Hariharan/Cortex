@@ -99,6 +99,7 @@ const { PeerDiscovery } = require('../services/network/peerDiscovery');
 let mainWindow;
 let embeddingsEngine;
 let peerDiscovery;
+let offlineEngineReady = false;
 
 // ── Window ───────────────────────────────────────────────────────────────────
 function createWindow() {
@@ -150,6 +151,12 @@ function createWindow() {
 
     mainWindow.on('closed', () => { mainWindow = null; });
 
+    mainWindow.webContents.on('did-finish-load', () => {
+        if (offlineEngineReady) {
+            mainWindow?.webContents.send('offline-engine-ready', { ready: true });
+        }
+    });
+
     mainWindow.on('maximize', () => mainWindow?.webContents.send('window-maximize-change', true));
     mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window-maximize-change', false));
 
@@ -196,6 +203,7 @@ async function initializeServices() {
         embeddingsEngine = new EmbeddingsEngine(modelDir);
         await embeddingsEngine.initialize();
         console.log('[Cortex] Embeddings engine initialized');
+        offlineEngineReady = true;
 
         peerDiscovery = new PeerDiscovery();
         peerDiscovery.start();
@@ -205,6 +213,7 @@ async function initializeServices() {
         } catch (_) { }
         console.log('[Cortex] Peer discovery started');
     } catch (error) {
+        offlineEngineReady = false;
         console.error('[Cortex] Service init error:', error.message);
         console.log('[Cortex] Running with limited functionality — ensure native modules are rebuilt (npm run rebuild).');
         if (!peerDiscovery) {
@@ -329,6 +338,8 @@ function registerIpcHandlers() {
         return false;
     });
 
+    ipcMain.handle('get-offline-engine-status', () => offlineEngineReady);
+
     // ── Internet status ─────────────────────────────────────────────────────
     ipcMain.handle('get-internet-status', () => isInternetOnline);
 
@@ -348,6 +359,19 @@ function registerIpcHandlers() {
     ipcMain.handle('get-peers', () => {
         const real = peerDiscovery?.getPeers() ?? [];
         return { peers: real };
+    });
+
+    ipcMain.handle('mesh-start', () => {
+        if (!peerDiscovery) {
+            peerDiscovery = new PeerDiscovery();
+        }
+        peerDiscovery.start();
+        return { success: true };
+    });
+
+    ipcMain.handle('mesh-stop', () => {
+        peerDiscovery?.stop();
+        return { success: true };
     });
 
     // ── Notes ────────────────────────────────────────────────────────────────

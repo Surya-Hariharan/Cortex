@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
 import { ArrowRight, ChevronDown, GraduationCap, Lock, Mail, School, UserCircle2, Check, Eye, EyeOff, Loader2, WifiOff, Radio } from 'lucide-react';
 import WindowControls from '../layout/WindowControls';
-import { DISTRICTS_TN, COLLEGES_TN, DEGREE_OPTIONS, COURSES_BY_DEGREE } from './authData';
 import { hasLocalIdentity, getValidatedLocalIdentity, setMeshConsent } from '../../../offline/offlineIdentity.js';
 import { useMeshDiscovery } from '../../../mesh/useMeshDiscovery.js';
+import { auth as authApi, reference as referenceApi } from '../../../services/api.js';
+import { ensureDeviceProfile } from '../../../system/deviceCapability.js';
 
 const SelectField = memo(function SelectField({ label, value, onChange, options, disabled = false, placeholder = 'Select' }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -110,6 +111,13 @@ export default function AuthPortal({ onAuthSuccess }) {
     const [mode, setMode] = useState('signin');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [referencesLoading, setReferencesLoading] = useState(false);
+    const [dependentOptionsLoading, setDependentOptionsLoading] = useState(false);
+    const [referencesError, setReferencesError] = useState('');
+    const [districts, setDistricts] = useState([]);
+    const [degrees, setDegrees] = useState([]);
+    const [colleges, setColleges] = useState([]);
+    const [courses, setCourses] = useState([]);
 
     // ── Offline login detection ──────────────────────────────────────────────
     const [isOffline, setIsOffline] = useState(false);
@@ -189,18 +197,124 @@ export default function AuthPortal({ onAuthSuccess }) {
         confirmPassword: '',
     });
 
+    const districtByName = useMemo(
+        () => new Map(districts.map((item) => [item.name, item.id])),
+        [districts]
+    );
+
+    const degreeByName = useMemo(
+        () => new Map(degrees.map((item) => [item.name, item.id])),
+        [degrees]
+    );
+
+    const collegeByName = useMemo(
+        () => new Map(colleges.map((item) => [item.name, item.id])),
+        [colleges]
+    );
+
+    const courseByName = useMemo(
+        () => new Map(courses.map((item) => [item.name, item.id])),
+        [courses]
+    );
+
+    const districtOptions = useMemo(() => districts.map((item) => item.name), [districts]);
+    const degreeOptions = useMemo(() => degrees.map((item) => item.name), [degrees]);
+
+    useEffect(() => {
+        let active = true;
+        async function fetchBaseReferences() {
+            setReferencesLoading(true);
+            setReferencesError('');
+
+            try {
+                const [districtRows, degreeRows] = await Promise.all([
+                    referenceApi.districts(),
+                    referenceApi.degrees(),
+                ]);
+                if (!active) return;
+                setDistricts(Array.isArray(districtRows) ? districtRows : []);
+                setDegrees(Array.isArray(degreeRows) ? degreeRows : []);
+            } catch {
+                if (!active) return;
+                setReferencesError('Could not load reference data from server.');
+                setDistricts([]);
+                setDegrees([]);
+            } finally {
+                if (active) setReferencesLoading(false);
+            }
+        }
+
+        fetchBaseReferences();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let active = true;
+        async function fetchColleges() {
+            const districtId = districtByName.get(form.location);
+            if (!districtId) {
+                setColleges([]);
+                return;
+            }
+
+            try {
+                setDependentOptionsLoading(true);
+                const rows = await referenceApi.colleges(districtId);
+                if (!active) return;
+                setColleges(Array.isArray(rows) ? rows : []);
+            } catch {
+                if (!active) return;
+                setColleges([]);
+            } finally {
+                if (active) setDependentOptionsLoading(false);
+            }
+        }
+
+        fetchColleges();
+        return () => {
+            active = false;
+        };
+    }, [form.location, districtByName]);
+
+    useEffect(() => {
+        let active = true;
+        async function fetchCourses() {
+            const degreeId = degreeByName.get(form.degree);
+            if (!degreeId) {
+                setCourses([]);
+                return;
+            }
+
+            try {
+                setDependentOptionsLoading(true);
+                const rows = await referenceApi.courses(degreeId);
+                if (!active) return;
+                setCourses(Array.isArray(rows) ? rows : []);
+            } catch {
+                if (!active) return;
+                setCourses([]);
+            } finally {
+                if (active) setDependentOptionsLoading(false);
+            }
+        }
+
+        fetchCourses();
+        return () => {
+            active = false;
+        };
+    }, [form.degree, degreeByName]);
+
     const availableColleges = useMemo(() => {
         if (!form.location) return [];
-        return COLLEGES_TN
-            .filter((c) => c.district === form.location)
-            .map((c) => `${c.name} (${c.abbr})`)
-            .sort((a, b) => a.localeCompare(b));
-    }, [form.location]);
+        return colleges.map((item) => item.name).sort((a, b) => a.localeCompare(b));
+    }, [form.location, colleges]);
 
     const availableCourses = useMemo(() => {
         if (!form.degree) return [];
-        return COURSES_BY_DEGREE[form.degree] || [];
-    }, [form.degree]);
+        return courses.map((item) => item.name).sort((a, b) => a.localeCompare(b));
+    }, [form.degree, courses]);
 
     const yearOptions = useMemo(() => {
         if (form.userType === 'Alumni') {
@@ -227,6 +341,30 @@ export default function AuthPortal({ onAuthSuccess }) {
         });
     }, []);
 
+    const toGenderValue = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'prefer not to say') return 'prefer_not_to_say';
+        return normalized;
+    };
+
+    async function buildDevicePayload() {
+        const profile = await ensureDeviceProfile();
+        let fingerprint = localStorage.getItem('cortex-device-fingerprint');
+        if (!fingerprint) {
+            const uid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+            fingerprint = `cortex-${uid}`;
+            localStorage.setItem('cortex-device-fingerprint', fingerprint);
+        }
+
+        return {
+            fingerprint,
+            ram: profile?.ramGB ?? null,
+            cpu: profile?.cpuCores ?? null,
+            gpu: profile?.gpuAvailable ?? null,
+            npu: profile?.npuAvailable ?? null,
+        };
+    }
+
     async function handleRegister(e) {
         e.preventDefault();
         setError('');
@@ -252,43 +390,56 @@ export default function AuthPortal({ onAuthSuccess }) {
             return;
         }
 
+        const districtId = districtByName.get(form.location);
+        const collegeId = collegeByName.get(form.college);
+        const degreeId = degreeByName.get(form.degree);
+        const courseId = courseByName.get(form.course);
+
+        if (!districtId || !collegeId || !degreeId || !courseId) {
+            setError('Please select valid district, college, degree and course from server data.');
+            return;
+        }
+
         setLoading(true);
         try {
-            const res = await window.electronAPI?.authRegister({
-                name: form.name,
+            const payload = {
                 email: form.email,
                 password: form.password,
-                phone: form.phone,
-                gender: form.gender,
-                location: form.location,
-                college: form.college,
-                degree: form.degree,
-                course: form.course,
-                user_type: form.userType,
-                year_of_study: form.yearOfStudy,
-            });
+                full_name: form.name,
+                gender: toGenderValue(form.gender),
+                district_id: districtId,
+                college_id: collegeId,
+                student_status: form.userType === 'Alumni' ? 'alumni' : 'student',
+                year_of_study: form.userType === 'Student' ? Number(form.yearOfStudy) : null,
+                graduation_year: form.userType === 'Alumni' ? Number(form.yearOfStudy) : null,
+                degree_id: degreeId,
+                course_id: courseId,
+                device: await buildDevicePayload(),
+            };
 
-            if (!res || res.status === 0) {
-                // Backend unreachable — offline fallback
+            const res = await authApi.signup(payload);
+            const profile = {
+                ...res.user,
+                name: res.user?.full_name || form.name,
+                email: res.user?.email || form.email,
+            };
+
+            localStorage.setItem('cortex-access-token', res.accessToken || '');
+            localStorage.setItem('cortex-refresh-token', res.refreshToken || '');
+            localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
+            localStorage.setItem('cortex-auth-session', 'active');
+            localStorage.setItem('cortex-auth-redirect', 'workspace');
+            onAuthSuccess?.(profile, 'ONLINE');
+        } catch (err) {
+            if (err?.networkError) {
                 localStorage.setItem('cortex-auth-profile', JSON.stringify(form));
                 localStorage.setItem('cortex-auth-session', 'active');
-                onAuthSuccess?.(form);
+                localStorage.setItem('cortex-auth-redirect', 'workspace');
+                onAuthSuccess?.(form, 'OFFLINE');
                 return;
             }
 
-            if (res.status === 201 || res.status === 200) {
-                const profile = res.data;
-                localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
-                localStorage.setItem('cortex-auth-session', 'active');
-                onAuthSuccess?.(profile);
-            } else {
-                setError(res.data?.detail || 'Registration failed.');
-            }
-        } catch {
-            // Offline fallback
-            localStorage.setItem('cortex-auth-profile', JSON.stringify(form));
-            localStorage.setItem('cortex-auth-session', 'active');
-            onAuthSuccess?.(form);
+            setError(err?.data?.error || err?.data?.detail || err?.message || 'Registration failed.');
         } finally {
             setLoading(false);
         }
@@ -305,19 +456,39 @@ export default function AuthPortal({ onAuthSuccess }) {
 
         setLoading(true);
         try {
-            const res = await window.electronAPI?.authLogin({
+            const res = await authApi.login({
                 email: signinEmail.trim(),
                 password: signinPassword,
+                device: await buildDevicePayload(),
             });
 
-            if (!res || res.status === 0) {
-                // Backend unreachable — offline fallback via localStorage
+            const profile = {
+                ...res.user,
+                name: res.user?.full_name || res.user?.name || 'Cortex User',
+            };
+
+            localStorage.setItem('cortex-access-token', res.accessToken || '');
+            localStorage.setItem('cortex-refresh-token', res.refreshToken || '');
+            localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
+            localStorage.setItem('cortex-auth-session', 'active');
+            localStorage.setItem('cortex-auth-redirect', 'workspace');
+
+            if (profile.must_change_password) {
+                setResetEmail(signinEmail);
+                setSuccessMsg('Your password must be changed. Check your email for a reset code.');
+                switchMode('forgot_otp');
+                return;
+            }
+            onAuthSuccess?.(profile, 'ONLINE');
+        } catch (err) {
+            if (err?.networkError) {
                 const raw = localStorage.getItem('cortex-auth-profile');
                 if (raw) {
                     const profile = JSON.parse(raw);
                     if (profile.email === signinEmail && profile.password === signinPassword) {
                         localStorage.setItem('cortex-auth-session', 'active');
-                        onAuthSuccess?.(profile);
+                        localStorage.setItem('cortex-auth-redirect', 'workspace');
+                        onAuthSuccess?.(profile, 'OFFLINE');
                         return;
                     }
                 }
@@ -325,23 +496,7 @@ export default function AuthPortal({ onAuthSuccess }) {
                 return;
             }
 
-            if (res.status === 200) {
-                const profile = res.data;
-                localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
-                localStorage.setItem('cortex-auth-session', 'active');
-                // If backend flagged a required password change, go straight to OTP reset
-                if (profile.must_change_password) {
-                    setResetEmail(signinEmail);
-                    setSuccessMsg('Your password must be changed. Check your email for a reset code.');
-                    switchMode('forgot_otp');
-                    return;
-                }
-                onAuthSuccess?.(profile);
-            } else {
-                setError(res.data?.detail || 'Invalid credentials.');
-            }
-        } catch {
-            setError('Cannot reach the server. Please ensure the app is fully started.');
+            setError(err?.data?.error || err?.data?.detail || err?.message || 'Invalid credentials.');
         } finally {
             setLoading(false);
         }
@@ -546,16 +701,33 @@ export default function AuthPortal({ onAuthSuccess }) {
                         {mode === 'register' && (
                             <form className="space-y-4 max-h-[72vh] overflow-y-auto pr-1 scrollbar-thin" onSubmit={handleRegister}>
                                 <div className="grid sm:grid-cols-2 gap-3">
+                                    {referencesLoading && (
+                                        <div className="sm:col-span-2 text-xs font-semibold text-slate-500 dark:text-dark-400 inline-flex items-center gap-2">
+                                            <Loader2 size={14} className="animate-spin" />
+                                            Loading district, degree, college and course data...
+                                        </div>
+                                    )}
+                                    {referencesError && (
+                                        <div className="sm:col-span-2 text-xs font-semibold text-red-500">
+                                            {referencesError}
+                                        </div>
+                                    )}
+                                    {dependentOptionsLoading && (
+                                        <div className="sm:col-span-2 text-xs font-semibold text-slate-500 dark:text-dark-400 inline-flex items-center gap-2">
+                                            <Loader2 size={14} className="animate-spin" />
+                                            Updating colleges and courses...
+                                        </div>
+                                    )}
                                     <InputField label="Name" value={form.name} onChange={(v) => updateForm('name', v)} placeholder="Full name" />
                                     <SelectField label="Gender" value={form.gender} onChange={(v) => updateForm('gender', v)} options={['Male', 'Female', 'Other', 'Prefer not to say']} />
                                     <InputField label="Phone Number" value={form.phone} onChange={(v) => updateForm('phone', v)} placeholder="10-digit mobile" />
                                     <InputField label="Personal Email" value={form.email} onChange={(v) => updateForm('email', v)} type="email" placeholder="name@gmail.com" />
-                                    <SelectField label="Location" value={form.location} onChange={(v) => updateForm('location', v)} options={DISTRICTS_TN} placeholder="Select district" />
-                                    <SelectField label="College" value={form.college} onChange={(v) => updateForm('college', v)} options={availableColleges} disabled={!form.location} placeholder={form.location ? 'Select college' : 'Select location first'} />
+                                    <SelectField label="Location" value={form.location} onChange={(v) => updateForm('location', v)} options={districtOptions} disabled={referencesLoading || districtOptions.length === 0} placeholder="Select district" />
+                                    <SelectField label="College" value={form.college} onChange={(v) => updateForm('college', v)} options={availableColleges} disabled={!form.location || referencesLoading || dependentOptionsLoading} placeholder={form.location ? 'Select college' : 'Select location first'} />
                                     <SelectField label="Student / Alumni" value={form.userType} onChange={(v) => updateForm('userType', v)} options={['Student', 'Alumni']} />
                                     <SelectField label={form.userType === 'Alumni' ? 'Graduation Year' : 'Year of Study'} value={form.yearOfStudy} onChange={(v) => updateForm('yearOfStudy', v)} options={yearOptions} />
-                                    <SelectField label="Degree" value={form.degree} onChange={(v) => updateForm('degree', v)} options={DEGREE_OPTIONS} placeholder="Select degree" />
-                                    <SelectField label="Course" value={form.course} onChange={(v) => updateForm('course', v)} options={availableCourses} disabled={!form.degree} placeholder={form.degree ? 'Select course' : 'Select degree first'} />
+                                    <SelectField label="Degree" value={form.degree} onChange={(v) => updateForm('degree', v)} options={degreeOptions} disabled={referencesLoading || degreeOptions.length === 0} placeholder="Select degree" />
+                                    <SelectField label="Course" value={form.course} onChange={(v) => updateForm('course', v)} options={availableCourses} disabled={!form.degree || referencesLoading || dependentOptionsLoading} placeholder={form.degree ? 'Select course' : 'Select degree first'} />
                                     <InputField label="Password" value={form.password} onChange={(v) => updateForm('password', v)} type="password" placeholder="Create password" />
                                     <InputField label="Confirm Password" value={form.confirmPassword} onChange={(v) => updateForm('confirmPassword', v)} type="password" placeholder="Confirm password" />
                                 </div>

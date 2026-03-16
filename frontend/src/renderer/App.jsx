@@ -318,7 +318,14 @@ export default function App() {
     };
 
     if (!isAuthenticated) {
-        return <AuthPortal onAuthSuccess={login} />;
+        return (
+            <AuthPortal
+                onAuthSuccess={(profile, mode) => {
+                    login(profile, mode);
+                    setActiveTab('workspace');
+                }}
+            />
+        );
     }
 
     return (

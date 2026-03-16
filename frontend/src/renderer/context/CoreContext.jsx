@@ -15,7 +15,7 @@ export const CoreProvider = ({ children }) => {
             const savedProfile = localStorage.getItem('cortex-auth-profile');
             if (savedProfile) {
                 const parsed = JSON.parse(savedProfile);
-                return parsed.name || 'Surya Hariharan';
+                return parsed.name || parsed.full_name || 'Surya Hariharan';
             }
         } catch { /* ignore */ }
         return 'Surya Hariharan';
@@ -210,7 +210,7 @@ export const CoreProvider = ({ children }) => {
     }, [theme]);
 
     const login = (profile, mode = 'ONLINE') => {
-        if (profile?.name) setUsername(profile.name);
+        if (profile?.name || profile?.full_name) setUsername(profile.name || profile.full_name);
         localStorage.setItem('cortex-auth-session', 'active');
         window.electronAPI?.saveSession?.(profile ?? {});
         setAppMode(mode);

@@ -549,15 +549,14 @@ function registerIpcHandlers() {
     // ── Backend status ──────────────────────────────────────────────────────
     ipcMain.handle('backend-ready', async () => {
         try {
-            const res = await new Promise((resolve, reject) => {
+            return await new Promise((resolve) => {
                 const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/v1/system/health`, r => {
-                    let b = ''; r.on('data', d => b += d);
+                    r.on('data', () => {});
                     r.on('end', () => resolve(r.statusCode < 500));
                 });
                 req.on('error', () => resolve(false));
                 req.setTimeout(2000, () => { req.destroy(); resolve(false); });
             });
-            return res;
         } catch { return false; }
     });
 

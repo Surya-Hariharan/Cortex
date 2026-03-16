@@ -105,10 +105,9 @@ class ModelManager:
         now = time.time()
         unloaded = []
         for name in list(self._last_used.keys()):
-            if now - self._last_used[name] > ttl_seconds:
-                if self.unload_model(name):
-                    unloaded.append(name)
-                    del self._last_used[name]
+            if now - self._last_used[name] > ttl_seconds and self.unload_model(name):
+                unloaded.append(name)
+                del self._last_used[name]
         return unloaded
 
     def status(self) -> dict:

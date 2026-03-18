@@ -7,7 +7,9 @@
   "license": "MIT",
   "scripts": {
     "start": "npm run build && electron .",
-    "dev": "concurrently \"webpack --config config/webpack.config.js --watch\" \"wait-on dist/renderer/index.html && electron .\"",
+    "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:backend\"",
+    "dev:renderer": "concurrently \"webpack --config config/webpack.config.js --watch\" \"wait-on dist/renderer/index.html && electron .\"",
+    "dev:backend": "npm --prefix ../app run start",
     "build": "cross-env NODE_ENV=production webpack --config config/webpack.config.js --mode production",
     "build:watch": "webpack --config config/webpack.config.js --watch",
     "rebuild": "npx @electron/rebuild -f -w better-sqlite3 -w onnxruntime-node",

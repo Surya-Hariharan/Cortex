@@ -1,0 +1,10 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file: .env
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

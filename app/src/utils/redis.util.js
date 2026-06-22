@@ -1,4 +1,5 @@
 const Redis = require('ioredis');
+const { logger } = require('./logger');
 
 let client = null;
 
@@ -8,7 +9,7 @@ function getRedisClient() {
   if (!url) return null;
   client = new Redis(url, { lazyConnect: true, enableOfflineQueue: false });
   client.on('error', (err) => {
-    console.error('[Redis] connection error:', err.message);
+    logger.error({ err }, '[Redis] connection error');
   });
   return client;
 }

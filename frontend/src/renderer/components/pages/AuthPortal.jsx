@@ -432,10 +432,7 @@ export default function AuthPortal({ onAuthSuccess }) {
             onAuthSuccess?.(profile, 'ONLINE');
         } catch (err) {
             if (err?.networkError) {
-                localStorage.setItem('cortex-auth-profile', JSON.stringify(form));
-                localStorage.setItem('cortex-auth-session', 'active');
-                localStorage.setItem('cortex-auth-redirect', 'workspace');
-                onAuthSuccess?.(form, 'OFFLINE');
+                setError('Cannot reach the server. Please try again when connected.');
                 return;
             }
 
@@ -482,16 +479,6 @@ export default function AuthPortal({ onAuthSuccess }) {
             onAuthSuccess?.(profile, 'ONLINE');
         } catch (err) {
             if (err?.networkError) {
-                const raw = localStorage.getItem('cortex-auth-profile');
-                if (raw) {
-                    const profile = JSON.parse(raw);
-                    if (profile.email === signinEmail && profile.password === signinPassword) {
-                        localStorage.setItem('cortex-auth-session', 'active');
-                        localStorage.setItem('cortex-auth-redirect', 'workspace');
-                        onAuthSuccess?.(profile, 'OFFLINE');
-                        return;
-                    }
-                }
                 setError('Cannot reach the server. Please ensure the app is fully started.');
                 return;
             }

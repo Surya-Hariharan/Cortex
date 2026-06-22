@@ -15,10 +15,10 @@ export const CoreProvider = ({ children }) => {
             const savedProfile = localStorage.getItem('cortex-auth-profile');
             if (savedProfile) {
                 const parsed = JSON.parse(savedProfile);
-                return parsed.name || parsed.full_name || 'Surya Hariharan';
+                return parsed.name || parsed.full_name || null;
             }
         } catch { /* ignore */ }
-        return 'Surya Hariharan';
+        return null;
     });
 
     // ── Theme State ──────────────────────────────────────────────────────────

@@ -80,7 +80,8 @@ class Settings(BaseSettings):
     DATA_DIR: Path = DATA_DIR   # root-level data/ directory
 
     # ── Security ─────────────────────────────────────────────────────────────
-    SECRET_KEY: str = "change-me-in-production"
+    # SECRET_KEY has no default — the application refuses to start if this is not set.
+    SECRET_KEY: str
     CORS_ORIGINS: list[str] = [
         "http://localhost",
         "http://127.0.0.1",
@@ -90,8 +91,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8080",
-        "file://",  # For Electron apps
-        "*"  # Allow all origins for development - remove in production
+        "file://",  # For Electron renderer (file:// protocol)
     ]
 
     # ── SMTP (for forgot-password email) ─────────────────────────────────────

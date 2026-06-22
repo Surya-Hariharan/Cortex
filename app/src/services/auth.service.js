@@ -1,9 +1,60 @@
 const bcrypt = require('bcrypt');
 const { pool } = require('../../../supabase/db/pool');
 const { registerOrUpdateDevice } = require('./device.service');
-const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/tokens.util');
+const { signAccessToken, signRefreshToken } = require('../utils/tokens.util');
 const { randomToken, sha256 } = require('../utils/crypto.util');
+const { getRedisClient } = require('../utils/redis.util');
 
+// ── Per-email login rate limiting ─────────────────────────────────────────────
+const LOGIN_ATTEMPT_MAX = 5;
+const LOGIN_ATTEMPT_WINDOW_S = 15 * 60;
+
+async function checkLoginRateLimit(email) {
+  const redis = getRedisClient();
+  if (!redis) return;
+  try {
+    const count = Number((await redis.get(`login_attempts:${email}`)) || 0);
+    if (count >= LOGIN_ATTEMPT_MAX) {
+      throw new Error('Too many failed login attempts. Try again in 15 minutes.');
+    }
+  } catch (err) {
+    if (err.message.includes('Too many failed')) throw err;
+    // Redis unavailable — fail open
+  }
+}
+
+async function recordLoginFailure(email) {
+  const redis = getRedisClient();
+  if (!redis) return;
+  try {
+    const key = `login_attempts:${email}`;
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, LOGIN_ATTEMPT_WINDOW_S);
+  } catch {
+    // fail open
+  }
+}
+
+async function resetLoginAttempts(email) {
+  const redis = getRedisClient();
+  if (!redis) return;
+  try {
+    await redis.del(`login_attempts:${email}`);
+  } catch {
+    // fail open
+  }
+}
+
+// ── TTL parser ────────────────────────────────────────────────────────────────
+function parseTtlToMs(ttl) {
+  const match = /^(\d+)([smhd])$/.exec(String(ttl));
+  if (!match) throw new Error(`Invalid TTL format: ${ttl}`);
+  const n = Number(match[1]);
+  const units = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  return n * units[match[2]];
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function normalizeSignupPayload(input) {
   return {
     email: String(input.email || '').trim().toLowerCase(),
@@ -16,6 +67,7 @@ function normalizeSignupPayload(input) {
     graduation_year: input.graduation_year == null || input.graduation_year === '' ? null : Number(input.graduation_year),
     degree_id: Number(input.degree_id),
     course_id: Number(input.course_id),
+    phone_number: input.phone_number ? String(input.phone_number).trim() : null,
     password: String(input.password || ''),
     device: input.device || null,
   };
@@ -61,6 +113,7 @@ function buildPublicUser(row) {
     graduation_year: row.graduation_year,
     degree_id: row.degree_id,
     course_id: row.course_id,
+    phone_number: row.phone_number || null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -70,15 +123,8 @@ async function createSession(client, { userId, deviceId }) {
   const refreshRaw = randomToken(64);
   const refreshHash = sha256(refreshRaw);
 
-  const refreshJwt = signRefreshToken({
-    sub: userId,
-    sid: null,
-    did: deviceId,
-    rtk: refreshRaw,
-  });
-
-  const decodedRefresh = verifyRefreshToken(refreshJwt);
-  const expiresAt = new Date(decodedRefresh.exp * 1000);
+  const refreshTtl = process.env.JWT_REFRESH_TTL || '7d';
+  const expiresAt = new Date(Date.now() + parseTtlToMs(refreshTtl));
 
   const inserted = await client.query(
     `INSERT INTO sessions (user_id, device_id, refresh_token, expires_at)
@@ -89,7 +135,6 @@ async function createSession(client, { userId, deviceId }) {
 
   const session = inserted.rows[0];
   const accessToken = signAccessToken({ sub: userId, sid: session.id, did: deviceId });
-
   const refreshToken = signRefreshToken({
     sub: userId,
     sid: session.id,
@@ -100,6 +145,7 @@ async function createSession(client, { userId, deviceId }) {
   return { session, accessToken, refreshToken };
 }
 
+// ── Public service functions ──────────────────────────────────────────────────
 async function signup(payload) {
   const normalized = normalizeSignupPayload(payload);
   const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
@@ -112,15 +158,16 @@ async function signup(payload) {
 
     const existing = await client.query('SELECT id FROM users WHERE email = $1', [normalized.email]);
     if (existing.rowCount > 0) {
-      throw new Error('Email is already registered');
+      throw new Error('Account creation failed. Please check your details.');
     }
 
     const passwordHash = await bcrypt.hash(normalized.password, rounds);
     const inserted = await client.query(
       `INSERT INTO users (
         email, password_hash, full_name, gender, district_id, college_id,
-        student_status, year_of_study, graduation_year, degree_id, course_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        student_status, year_of_study, graduation_year, degree_id, course_id,
+        phone_number
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *`,
       [
         normalized.email,
@@ -134,6 +181,7 @@ async function signup(payload) {
         normalized.graduation_year,
         normalized.degree_id,
         normalized.course_id,
+        normalized.phone_number,
       ]
     );
 
@@ -172,8 +220,10 @@ async function signup(payload) {
 
 async function login({ email, password, device }) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  const client = await pool.connect();
 
+  await checkLoginRateLimit(normalizedEmail);
+
+  const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
@@ -206,6 +256,7 @@ async function login({ email, password, device }) {
     });
 
     await client.query('COMMIT');
+    await resetLoginAttempts(normalizedEmail);
 
     return {
       accessToken,
@@ -213,7 +264,10 @@ async function login({ email, password, device }) {
       user: buildPublicUser(user),
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
+    if (error.message === 'Invalid credentials') {
+      await recordLoginFailure(normalizedEmail);
+    }
     throw error;
   } finally {
     client.release();
@@ -221,6 +275,7 @@ async function login({ email, password, device }) {
 }
 
 async function refresh(refreshToken) {
+  const { verifyRefreshToken } = require('../utils/tokens.util');
   const decoded = verifyRefreshToken(refreshToken);
   const refreshRaw = decoded.rtk;
   const refreshHash = sha256(refreshRaw);
@@ -246,6 +301,7 @@ async function refresh(refreshToken) {
 }
 
 async function logout({ userId, refreshToken }) {
+  const { verifyRefreshToken } = require('../utils/tokens.util');
   const decoded = verifyRefreshToken(refreshToken);
   if (decoded.sub !== userId) {
     throw new Error('Token subject mismatch');

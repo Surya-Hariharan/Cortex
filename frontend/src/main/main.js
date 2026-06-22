@@ -9,7 +9,51 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
+
+// ── Encrypted token store (electron-store) ────────────────────────────────────
+const Store = require('electron-store');
+const _tokenStore = new Store({
+  name: 'cortex-tokens',
+  encryptionKey: process.env.CORTEX_STORE_KEY || 'cortex-token-store-key',
+});
+
+// ── Postgres pool + bcrypt/nodemailer for forgot-password ─────────────────────
+const { pool: _pgPool } = require('../../../supabase/db/pool');
+const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
+
+let _smtpTransporter = null;
+function _getSmtpTransporter() {
+  if (_smtpTransporter) return _smtpTransporter;
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) {
+    throw new Error('SMTP not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD.');
+  }
+  const port = Number(SMTP_PORT || 587);
+  _smtpTransporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port,
+    secure: port === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+  });
+  return _smtpTransporter;
+}
+
+function _generateOtp(length = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let otp = '';
+  const bytes = crypto.randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    otp += chars[bytes[i] % chars.length];
+  }
+  return otp;
+}
+
+function _hashOtp(otp) {
+  return crypto.createHash('sha256').update(otp).digest('hex');
+}
 
 // Backend API connectivity has been intentionally removed.
 
@@ -268,21 +312,101 @@ function registerIpcHandlers() {
         }
     });
 
-    // ── Auth API proxies (disabled while backend is being redesigned) ──────
-    ipcMain.handle('auth-register', async (_e, body) => {
-        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
+    // ── Auth API proxies (legacy IPC — register/login still disabled) ──────
+    ipcMain.handle('auth-register', async (_e, _body) => {
+        return { status: 0, data: { detail: 'Use the direct backend API for registration.' } };
     });
 
-    ipcMain.handle('auth-login', async (_e, body) => {
-        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
+    ipcMain.handle('auth-login', async (_e, _body) => {
+        return { status: 0, data: { detail: 'Use the direct backend API for login.' } };
     });
 
-    ipcMain.handle('auth-forgot-password', async (_e, body) => {
-        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
+    // ── Token store IPC handlers (electron-store backed) ───────────────────
+    ipcMain.handle('token-save', (_e, access, refresh) => {
+        _tokenStore.set('accessToken', access || '');
+        _tokenStore.set('refreshToken', refresh || '');
     });
 
-    ipcMain.handle('auth-reset-password', async (_e, body) => {
-        return { status: 0, data: { detail: 'Auth API is disabled during backend redesign.' } };
+    ipcMain.handle('token-get-access', () => _tokenStore.get('accessToken') || null);
+    ipcMain.handle('token-get-refresh', () => _tokenStore.get('refreshToken') || null);
+
+    ipcMain.handle('token-clear', () => {
+        _tokenStore.delete('accessToken');
+        _tokenStore.delete('refreshToken');
+    });
+
+    // ── Forgot-password: generate OTP, store hash, send email ─────────────
+    ipcMain.handle('auth-forgot-password', async (_e, { email }) => {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        try {
+            const userResult = await _pgPool.query(
+                'SELECT id FROM users WHERE email = $1',
+                [normalizedEmail]
+            );
+            if (userResult.rowCount > 0) {
+                const userId = userResult.rows[0].id;
+                const otp = _generateOtp(8);
+                const tokenHash = _hashOtp(otp);
+                const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+                await _pgPool.query(
+                    'DELETE FROM password_reset_tokens WHERE user_id = $1',
+                    [userId]
+                );
+                await _pgPool.query(
+                    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+                     VALUES ($1, $2, $3)`,
+                    [userId, tokenHash, expiresAt]
+                );
+
+                const transporter = _getSmtpTransporter();
+                const fromName = process.env.SMTP_FROM_NAME || 'Cortex';
+                const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+                await transporter.sendMail({
+                    from: `${fromName} <${fromEmail}>`,
+                    to: normalizedEmail,
+                    subject: 'Cortex — Password Reset Code',
+                    text: `Your password reset code is: ${otp}\n\nIt expires in 15 minutes. If you did not request this, ignore this email.`,
+                    html: `<p>Your password reset code is: <strong>${otp}</strong></p><p>It expires in 15 minutes. If you did not request this, ignore this email.</p>`,
+                });
+            }
+            // Always 200 — prevent email enumeration
+            return { status: 200, data: { message: 'If that email is registered, you will receive a reset code.' } };
+        } catch (err) {
+            console.error('[auth-forgot-password]', err.message);
+            return { status: 500, data: { detail: 'Failed to process request. Please try again.' } };
+        }
+    });
+
+    // ── Reset password: verify OTP, hash new password, update user ────────
+    ipcMain.handle('auth-reset-password', async (_e, { token, new_password }) => {
+        try {
+            if (!token || !new_password || new_password.length < 8) {
+                return { status: 400, data: { detail: 'Invalid request. Password must be at least 8 characters.' } };
+            }
+
+            const tokenHash = _hashOtp(String(token).toUpperCase().trim());
+            const tokenResult = await _pgPool.query(
+                `SELECT user_id FROM password_reset_tokens
+                 WHERE token_hash = $1 AND expires_at > now()`,
+                [tokenHash]
+            );
+
+            if (tokenResult.rowCount === 0) {
+                return { status: 400, data: { detail: 'Invalid or expired reset code.' } };
+            }
+
+            const userId = tokenResult.rows[0].user_id;
+            const passwordHash = await bcrypt.hash(String(new_password), 12);
+
+            await _pgPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+            await _pgPool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+
+            return { status: 200, data: { message: 'Password reset successfully.' } };
+        } catch (err) {
+            console.error('[auth-reset-password]', err.message);
+            return { status: 500, data: { detail: 'Reset failed. Please try again.' } };
+        }
     });
 
     ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });

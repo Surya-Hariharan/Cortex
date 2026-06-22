@@ -6,8 +6,18 @@ const { requestSchemaValidator } = require('../validators/request-schema.validat
 const { enumValidator } = require('../validators/enum.validator');
 const { academicIntegrityValidator } = require('../validators/academic-integrity.validator');
 const { asyncHandler } = require('../utils/async-handler.util');
+const { validatePasswordPolicy } = require('../utils/auth-validation.util');
 
 const router = express.Router();
+
+function passwordPolicyMiddleware(req, res, next) {
+  try {
+    validatePasswordPolicy(req.body.password);
+    next();
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+}
 
 router.post(
   '/signup',
@@ -36,11 +46,13 @@ router.post(
       graduation_year: 'number',
       degree_id: 'number',
       course_id: 'number',
+      phone_number: 'string',
     },
   }),
   enumValidator('gender', ['male', 'female', 'other', 'prefer_not_to_say']),
   enumValidator('student_status', ['student', 'alumni']),
   academicIntegrityValidator,
+  passwordPolicyMiddleware,
   asyncHandler(authController.signup)
 );
 

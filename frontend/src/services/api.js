@@ -1,9 +1,4 @@
-/**
- * Cortex API client.
- *
- * Provides a real backend API connection for auth/reference flows while
- * preserving fallback stubs for domains that are still offline-first.
- */
+import { getAccessToken } from './storage/tokenStore.js';
 
 const DEFAULT_BACKEND_URL = 'http://localhost:8080';
 
@@ -137,14 +132,14 @@ export const auth = {
     signup: (payload) => apiClient.request('/auth/signup', { method: 'POST', body: payload }),
     login: (payload) => apiClient.request('/auth/login', { method: 'POST', body: payload }),
     refresh: (refreshToken) => apiClient.request('/auth/refresh', { method: 'POST', body: { refreshToken } }),
-    logout: (accessToken, refreshToken) =>
-        apiClient.request('/auth/logout', {
+    logout: async (refreshToken) => {
+        const accessToken = await getAccessToken();
+        return apiClient.request('/auth/logout', {
             method: 'POST',
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
+            headers: { Authorization: `Bearer ${accessToken || ''}` },
             body: { refreshToken },
-        }),
+        });
+    },
 };
 
 export const reference = {

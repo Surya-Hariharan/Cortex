@@ -4,6 +4,7 @@ import WindowControls from '../layout/WindowControls';
 import { hasLocalIdentity, getValidatedLocalIdentity, setMeshConsent } from '../../../offline/offlineIdentity.js';
 import { useMeshDiscovery } from '../../../mesh/useMeshDiscovery.js';
 import { auth as authApi, reference as referenceApi } from '../../../services/api.js';
+import { saveTokens } from '../../../services/storage/tokenStore.js';
 import { ensureDeviceProfile } from '../../../system/deviceCapability.js';
 
 const SelectField = memo(function SelectField({ label, value, onChange, options, disabled = false, placeholder = 'Select' }) {
@@ -424,8 +425,7 @@ export default function AuthPortal({ onAuthSuccess }) {
                 email: res.user?.email || form.email,
             };
 
-            localStorage.setItem('cortex-access-token', res.accessToken || '');
-            localStorage.setItem('cortex-refresh-token', res.refreshToken || '');
+            saveTokens(res.accessToken || '', res.refreshToken || '');
             localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
             localStorage.setItem('cortex-auth-session', 'active');
             localStorage.setItem('cortex-auth-redirect', 'workspace');
@@ -464,8 +464,7 @@ export default function AuthPortal({ onAuthSuccess }) {
                 name: res.user?.full_name || res.user?.name || 'Cortex User',
             };
 
-            localStorage.setItem('cortex-access-token', res.accessToken || '');
-            localStorage.setItem('cortex-refresh-token', res.refreshToken || '');
+            saveTokens(res.accessToken || '', res.refreshToken || '');
             localStorage.setItem('cortex-auth-profile', JSON.stringify(profile));
             localStorage.setItem('cortex-auth-session', 'active');
             localStorage.setItem('cortex-auth-redirect', 'workspace');

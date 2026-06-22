@@ -16,9 +16,11 @@
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.1",
     "helmet": "^7.1.0",
+    "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.14",
     "pg": "^8.13.0",
+    "rate-limit-redis": "^5.0.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {

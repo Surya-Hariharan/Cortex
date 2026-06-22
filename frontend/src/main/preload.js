@@ -61,4 +61,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     authLogin: (data) => ipcRenderer.invoke('auth-login', data),
     authForgotPassword: (data) => ipcRenderer.invoke('auth-forgot-password', data),
     authResetPassword: (data) => ipcRenderer.invoke('auth-reset-password', data),
+    // Token store (electron-store backed, encrypted on disk)
+    tokenSave: (access, refresh) => ipcRenderer.invoke('token-save', access, refresh),
+    tokenGetAccess: () => ipcRenderer.invoke('token-get-access'),
+    tokenGetRefresh: () => ipcRenderer.invoke('token-get-refresh'),
+    tokenClear: () => ipcRenderer.invoke('token-clear'),
 });

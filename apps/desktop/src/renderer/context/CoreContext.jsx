@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { backendStatus, system as systemApi } from '../../services/api.js';
-import { saveLocalIdentity, clearLocalIdentity, getMeshConsent, setMeshConsent as persistMeshConsent } from '../../offline/offlineIdentity.js';
-import { meshController } from '../../mesh/meshController.js';
+import { saveLocalIdentity, clearLocalIdentity, getMeshConsent, setMeshConsent as persistMeshConsent } from '../../services/offline/offlineIdentity.js';
+import { meshController } from '../../services/mesh/meshController.js';
 
 const CoreContext = createContext();
 
@@ -184,7 +184,7 @@ export const CoreProvider = ({ children }) => {
 
     // Auto-switch backend mode when real internet connectivity changes
     useEffect(() => {
-        systemApi.setInternetStatus(isInternetOnline).catch(() => { });
+        systemApi.health().catch(() => { });
     }, [isInternetOnline]);
 
     // Theme injection

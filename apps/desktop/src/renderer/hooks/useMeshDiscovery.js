@@ -10,8 +10,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { mesh } from '../services/api.js';
-import { getMeshConsent } from '../offline/offlineIdentity.js';
+import { mesh } from '../../services/api.js';
+import { getMeshConsent } from '../../services/offline/offlineIdentity.js';
 
 const POLL_INTERVAL = 5000;
 

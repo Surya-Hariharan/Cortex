@@ -1,7 +1,7 @@
 const request = require('supertest');
 
 // Manual factories prevent Jest from evaluating real modules that pull in pool.js
-jest.mock('../../../supabase/db/pool', () => ({
+jest.mock('../../../../database/pool', () => ({
     pool: { connect: jest.fn(), query: jest.fn() },
 }));
 

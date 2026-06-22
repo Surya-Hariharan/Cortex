@@ -2,7 +2,7 @@ const path = require('path');
 const { createRequire } = require('module');
 const dotenv = require('dotenv');
 
-const requireFromApp = createRequire(path.resolve(__dirname, '../../app/package.json'));
+const requireFromApp = createRequire(path.resolve(__dirname, '../apps/server/package.json'));
 
 let Pool;
 try {

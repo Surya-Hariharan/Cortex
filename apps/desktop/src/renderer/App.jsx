@@ -1,21 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import HomePage from './components/pages/HomePage';
-import Knowledge from './components/pages/Knowledge';
-import Workspace from './components/pages/Workspace';
-import Campus from './components/pages/Campus';
-import Activity from './components/pages/Activity';
-import AIEngine from './components/pages/AIEngine';
-import ProjectView from './components/pages/ProjectView';
-import AuthPortal from './components/pages/AuthPortal';
-import Settings from './components/layout/Settings';
-import CommandPalette from './components/layout/CommandPalette';
-import StreamSelectorModal from './components/layout/StreamSelectorModal';
-import CreateProjectModal from './components/layout/CreateProjectModal';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+
+// ── Lazy-loaded page chunks ───────────────────────────────────────────────────
+// Each page is a separate webpack chunk, loaded only when first visited.
+const HomePage     = lazy(() => import('./components/pages/HomePage'));
+const Knowledge    = lazy(() => import('./components/pages/Knowledge'));
+const Workspace    = lazy(() => import('./components/pages/Workspace'));
+const Campus       = lazy(() => import('./components/pages/Campus'));
+const Activity     = lazy(() => import('./components/pages/Activity'));
+const AIEngine     = lazy(() => import('./components/pages/AIEngine'));
+const ProjectView  = lazy(() => import('./components/pages/ProjectView'));
+const AuthPortal   = lazy(() => import('./components/pages/AuthPortal'));
+
+// ── Lazy-loaded layout chunks ─────────────────────────────────────────────────
+const Settings           = lazy(() => import('./components/layout/Settings'));
+const CommandPalette     = lazy(() => import('./components/layout/CommandPalette'));
+const StreamSelectorModal = lazy(() => import('./components/layout/StreamSelectorModal'));
+const CreateProjectModal  = lazy(() => import('./components/layout/CreateProjectModal'));
+
+// Layout primitives used on every render stay eagerly loaded
 import WindowControls from './components/layout/WindowControls';
 import Toast from './components/layout/Toast';
 import { backendStatus, projects as projectsApi, getUserId } from '../services/api.js';
-import { wasStorageHintShown, markStorageHintShown } from '../offline/offlineIdentity.js';
-import { ensureDeviceProfile } from '../system/deviceCapability.js';
+import { wasStorageHintShown, markStorageHintShown } from '../services/offline/offlineIdentity.js';
+import { ensureDeviceProfile } from '../services/system/deviceCapability.js';
 import { Search, FileText, Globe, Zap, Plus, User, LogOut, PanelLeftClose, PanelLeft, Monitor, MoreHorizontal, Trash2, Edit, Copy, ChevronRight, Folder, FolderOpen, FolderPlus, Home, BookOpen, Users, Activity as ActivityIcon, Cpu, X, Wifi, WifiOff, Info, Loader2 } from 'lucide-react';
 import { useCore } from './context/CoreContext';
 
@@ -26,12 +33,19 @@ const TABS = [
     { id: 'campus', label: 'Community', icon: <Users size={16} /> },
 ];
 
-const MemoHomePage = React.memo(HomePage);
-const MemoKnowledge = React.memo(Knowledge);
-const MemoWorkspace = React.memo(Workspace);
-const MemoCampus = React.memo(Campus);
-const MemoActivity = React.memo(Activity);
-const MemoAIEngine = React.memo(AIEngine);
+// React.lazy components are already deferred; memo wrapping is applied inside each module.
+// PageShell wraps any lazy page with a minimal inline fallback.
+function PageShell({ children }) {
+    return (
+        <Suspense fallback={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6B7280' }}>
+                <span>Loading…</span>
+            </div>
+        }>
+            {children}
+        </Suspense>
+    );
+}
 
 export default function App() {
     const {
@@ -319,12 +333,14 @@ export default function App() {
 
     if (!isAuthenticated) {
         return (
-            <AuthPortal
-                onAuthSuccess={(profile, mode) => {
-                    login(profile, mode);
-                    setActiveTab('workspace');
-                }}
-            />
+            <PageShell>
+                <AuthPortal
+                    onAuthSuccess={(profile, mode) => {
+                        login(profile, mode);
+                        setActiveTab('workspace');
+                    }}
+                />
+            </PageShell>
         );
     }
 
@@ -609,24 +625,26 @@ export default function App() {
                     )}
 
                     <main className="flex-1 overflow-hidden h-full" style={{ WebkitAppRegion: 'no-drag' }}>
-                        {activeTab === 'home' && <MemoHomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} />}
-                        {activeTab === 'knowledge' && <MemoKnowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} chatKey={currentChatKey} savedChatState={savedChatState} onFirstSearch={handleFirstSearch} onSearchComplete={handleSearchComplete} />}
-                        {activeTab === 'workspace' && <MemoWorkspace onToast={showToast} />}
-                        {activeTab === 'campus' && <MemoCampus onToast={showToast} />}
-                        {activeTab === 'activity' && <MemoActivity />}
-                        {activeTab === 'ai-engine' && <MemoAIEngine />}
+                        {activeTab === 'home' && <PageShell><HomePage onTabChange={setActiveTab} onUploadPdf={uploadPdf} /></PageShell>}
+                        {activeTab === 'knowledge' && <PageShell><Knowledge onToast={showToast} onUploadPdf={uploadPdf} userStream={userStream} chatKey={currentChatKey} savedChatState={savedChatState} onFirstSearch={handleFirstSearch} onSearchComplete={handleSearchComplete} /></PageShell>}
+                        {activeTab === 'workspace' && <PageShell><Workspace onToast={showToast} /></PageShell>}
+                        {activeTab === 'campus' && <PageShell><Campus onToast={showToast} /></PageShell>}
+                        {activeTab === 'activity' && <PageShell><Activity /></PageShell>}
+                        {activeTab === 'ai-engine' && <PageShell><AIEngine /></PageShell>}
                         {activeTab === 'project' && (() => {
                             const proj = projects.find(p => p.id === activeProjectId);
                             return proj ? (
-                                <ProjectView
-                                    project={proj}
-                                    onToast={showToast}
-                                    onNewChat={(projectId, text) => {
-                                        showToast(`New chat started in ${proj.title}`, 'success');
-                                    }}
-                                    onRenameProject={handleRenameProject}
-                                    onDeleteProject={handleDeleteProject}
-                                />
+                                <PageShell>
+                                    <ProjectView
+                                        project={proj}
+                                        onToast={showToast}
+                                        onNewChat={(projectId, text) => {
+                                            showToast(`New chat started in ${proj.title}`, 'success');
+                                        }}
+                                        onRenameProject={handleRenameProject}
+                                        onDeleteProject={handleDeleteProject}
+                                    />
+                                </PageShell>
                             ) : null;
                         })()}
                     </main>
@@ -698,10 +716,12 @@ export default function App() {
                 </div>
 
                 {showStreamSelector && (
-                    <StreamSelectorModal
-                        onSelect={handleStreamSelect}
-                        onSkip={handleStreamSkip}
-                    />
+                    <PageShell>
+                        <StreamSelectorModal
+                            onSelect={handleStreamSelect}
+                            onSkip={handleStreamSkip}
+                        />
+                    </PageShell>
                 )}
 
                 {/* ── Window Controls + Connectivity (fixed top-right) ───────────── */}
@@ -734,20 +754,22 @@ export default function App() {
                 </div>
 
                 {/* ── Settings Modal ──────────────────────────────── */}
-                <Settings
-                    open={showProfileModal}
-                    onClose={() => setShowProfileModal(false)}
-                    theme={theme}
-                    setTheme={setTheme}
-                    username={username}
-                    setUsername={setUsername}
-                    userStream={userStream}
-                    setShowStreamSelector={setShowStreamSelector}
-                    perfProvider={perfProvider}
-                    setPerfProvider={setPerfProvider}
-                    onToast={showToast}
-                    onLogout={logout}
-                />
+                <PageShell>
+                    <Settings
+                        open={showProfileModal}
+                        onClose={() => setShowProfileModal(false)}
+                        theme={theme}
+                        setTheme={setTheme}
+                        username={username}
+                        setUsername={setUsername}
+                        userStream={userStream}
+                        setShowStreamSelector={setShowStreamSelector}
+                        perfProvider={perfProvider}
+                        setPerfProvider={setPerfProvider}
+                        onToast={showToast}
+                        onLogout={logout}
+                    />
+                </PageShell>
                 {/* Delete all chats confirmation */}
                 {showDeleteAllChats && (
                     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" style={{ WebkitAppRegion: 'no-drag' }}>
@@ -808,20 +830,24 @@ export default function App() {
                 </div>
 
                 {/* Command Palette */}
-                <CommandPalette
-                    isOpen={showCommandPalette}
-                    onClose={() => setShowCommandPalette(false)}
-                    onNavigate={(tab) => setActiveTab(tab)}
-                    onUploadPdf={uploadPdf}
-                    onToast={showToast}
-                />
+                <PageShell>
+                    <CommandPalette
+                        isOpen={showCommandPalette}
+                        onClose={() => setShowCommandPalette(false)}
+                        onNavigate={(tab) => setActiveTab(tab)}
+                        onUploadPdf={uploadPdf}
+                        onToast={showToast}
+                    />
+                </PageShell>
 
                 {/* Create Project Modal */}
                 {showCreateProject && (
-                    <CreateProjectModal
-                        onClose={() => setShowCreateProject(false)}
-                        onCreate={handleCreateProject}
-                    />
+                    <PageShell>
+                        <CreateProjectModal
+                            onClose={() => setShowCreateProject(false)}
+                            onCreate={handleCreateProject}
+                        />
+                    </PageShell>
                 )}
             </div>
         </div>

@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
-const { pool } = require('../../../supabase/db/pool');
+const { v4: uuidv4 } = require('uuid');
+const { pool } = require('../../../../database/pool');
 const { registerOrUpdateDevice } = require('./device.service');
 const { signAccessToken, signRefreshToken } = require('../utils/tokens.util');
 const { randomToken, sha256 } = require('../utils/crypto.util');
@@ -30,9 +31,7 @@ async function recordLoginFailure(email) {
     const key = `login_attempts:${email}`;
     const count = await redis.incr(key);
     if (count === 1) await redis.expire(key, LOGIN_ATTEMPT_WINDOW_S);
-  } catch {
-    // fail open
-  }
+  } catch { /* fail open */ }
 }
 
 async function resetLoginAttempts(email) {
@@ -40,9 +39,7 @@ async function resetLoginAttempts(email) {
   if (!redis) return;
   try {
     await redis.del(`login_attempts:${email}`);
-  } catch {
-    // fail open
-  }
+  } catch { /* fail open */ }
 }
 
 // ── TTL parser ────────────────────────────────────────────────────────────────
@@ -54,7 +51,7 @@ function parseTtlToMs(ttl) {
   return n * units[match[2]];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Payload normalisation ─────────────────────────────────────────────────────
 function normalizeSignupPayload(input) {
   return {
     email: String(input.email || '').trim().toLowerCase(),
@@ -119,18 +116,21 @@ function buildPublicUser(row) {
   };
 }
 
-async function createSession(client, { userId, deviceId }) {
+// ── Session creation ──────────────────────────────────────────────────────────
+// familyId: pass the existing family UUID when rotating; omit for a fresh login.
+async function createSession(client, { userId, deviceId, familyId }) {
   const refreshRaw = randomToken(64);
   const refreshHash = sha256(refreshRaw);
+  const family = familyId || uuidv4();
 
   const refreshTtl = process.env.JWT_REFRESH_TTL || '7d';
   const expiresAt = new Date(Date.now() + parseTtlToMs(refreshTtl));
 
   const inserted = await client.query(
-    `INSERT INTO sessions (user_id, device_id, refresh_token, expires_at)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, user_id, device_id, expires_at, created_at`,
-    [userId, deviceId, refreshHash, expiresAt]
+    `INSERT INTO sessions (user_id, device_id, refresh_token, expires_at, token_family)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, user_id, device_id, expires_at, created_at, token_family`,
+    [userId, deviceId, refreshHash, expiresAt, family]
   );
 
   const session = inserted.rows[0];
@@ -140,6 +140,7 @@ async function createSession(client, { userId, deviceId }) {
     sid: session.id,
     did: deviceId,
     rtk: refreshRaw,
+    fam: family,
   });
 
   return { session, accessToken, refreshToken };
@@ -153,13 +154,10 @@ async function signup(payload) {
 
   try {
     await client.query('BEGIN');
-
     await assertAcademicIntegrity(client, normalized);
 
     const existing = await client.query('SELECT id FROM users WHERE email = $1', [normalized.email]);
-    if (existing.rowCount > 0) {
-      throw new Error('Account creation failed. Please check your details.');
-    }
+    if (existing.rowCount > 0) throw new Error('Account creation failed. Please check your details.');
 
     const passwordHash = await bcrypt.hash(normalized.password, rounds);
     const inserted = await client.query(
@@ -170,18 +168,10 @@ async function signup(payload) {
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *`,
       [
-        normalized.email,
-        passwordHash,
-        normalized.full_name,
-        normalized.gender,
-        normalized.district_id,
-        normalized.college_id,
-        normalized.student_status,
-        normalized.year_of_study,
-        normalized.graduation_year,
-        normalized.degree_id,
-        normalized.course_id,
-        normalized.phone_number,
+        normalized.email, passwordHash, normalized.full_name, normalized.gender,
+        normalized.district_id, normalized.college_id, normalized.student_status,
+        normalized.year_of_study, normalized.graduation_year, normalized.degree_id,
+        normalized.course_id, normalized.phone_number,
       ]
     );
 
@@ -190,26 +180,18 @@ async function signup(payload) {
       {
         userId: user.id,
         fingerprint: normalized.device?.fingerprint || 'unknown-device',
-        ram: normalized.device?.ram,
-        cpu: normalized.device?.cpu,
-        gpu: normalized.device?.gpu,
-        npu: normalized.device?.npu,
+        ram: normalized.device?.ram, cpu: normalized.device?.cpu,
+        gpu: normalized.device?.gpu, npu: normalized.device?.npu,
       },
       client
     );
 
     const { accessToken, refreshToken } = await createSession(client, {
-      userId: user.id,
-      deviceId: device.id,
+      userId: user.id, deviceId: device.id, familyId: null,
     });
 
     await client.query('COMMIT');
-
-    return {
-      accessToken,
-      refreshToken,
-      user: buildPublicUser(user),
-    };
+    return { accessToken, refreshToken, user: buildPublicUser(user) };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -220,7 +202,6 @@ async function signup(payload) {
 
 async function login({ email, password, device }) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
-
   await checkLoginRateLimit(normalizedEmail);
 
   const client = await pool.connect();
@@ -228,84 +209,125 @@ async function login({ email, password, device }) {
     await client.query('BEGIN');
 
     const result = await client.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
-    if (result.rowCount === 0) {
-      throw new Error('Invalid credentials');
-    }
+    if (result.rowCount === 0) throw new Error('Invalid credentials');
 
     const user = result.rows[0];
     const valid = await bcrypt.compare(String(password || ''), user.password_hash);
-    if (!valid) {
-      throw new Error('Invalid credentials');
-    }
+    if (!valid) throw new Error('Invalid credentials');
 
     const deviceRow = await registerOrUpdateDevice(
       {
         userId: user.id,
         fingerprint: device?.fingerprint || 'unknown-device',
-        ram: device?.ram,
-        cpu: device?.cpu,
-        gpu: device?.gpu,
-        npu: device?.npu,
+        ram: device?.ram, cpu: device?.cpu, gpu: device?.gpu, npu: device?.npu,
       },
       client
     );
 
     const { accessToken, refreshToken } = await createSession(client, {
-      userId: user.id,
-      deviceId: deviceRow.id,
+      userId: user.id, deviceId: deviceRow.id, familyId: null,
     });
 
     await client.query('COMMIT');
     await resetLoginAttempts(normalizedEmail);
-
-    return {
-      accessToken,
-      refreshToken,
-      user: buildPublicUser(user),
-    };
+    return { accessToken, refreshToken, user: buildPublicUser(user) };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    if (error.message === 'Invalid credentials') {
-      await recordLoginFailure(normalizedEmail);
-    }
+    if (error.message === 'Invalid credentials') await recordLoginFailure(normalizedEmail);
     throw error;
   } finally {
     client.release();
   }
 }
 
+// ── Refresh with rotation + reuse detection ───────────────────────────────────
+// Protocol (IETF oauth-security-topics §4.14):
+//   FOUND  → rotate atomically: delete old row, insert new row in same family.
+//   NOT FOUND → check previous_token_hash; if matches → theft → revoke family.
 async function refresh(refreshToken) {
   const { verifyRefreshToken } = require('../utils/tokens.util');
   const decoded = verifyRefreshToken(refreshToken);
-  const refreshRaw = decoded.rtk;
+  const { rtk: refreshRaw, fam: family, sid, sub: userId } = decoded;
+
+  if (!refreshRaw) throw new Error('Invalid refresh token');
+
   const refreshHash = sha256(refreshRaw);
 
+  // Fetch current session by ID + user + token hash
   const sessionResult = await pool.query(
-    `SELECT s.id, s.user_id, s.device_id, s.expires_at
-     FROM sessions s
-     WHERE s.id = $1 AND s.user_id = $2 AND s.refresh_token = $3`,
-    [decoded.sid, decoded.sub, refreshHash]
+    `SELECT id, user_id, device_id, expires_at, token_family
+     FROM sessions
+     WHERE id = $1 AND user_id = $2 AND refresh_token = $3`,
+    [sid, userId, refreshHash]
   );
 
   if (sessionResult.rowCount === 0) {
+    // Reuse detection: was this the most-recently-rotated-out token for this family?
+    if (family) {
+      const reuseCheck = await pool.query(
+        `SELECT id FROM sessions
+         WHERE token_family = $1 AND previous_token_hash = $2
+         LIMIT 1`,
+        [family, refreshHash]
+      );
+      if (reuseCheck.rowCount > 0) {
+        // Stolen token reused — invalidate entire family immediately
+        await pool.query('DELETE FROM sessions WHERE token_family = $1', [family]);
+      }
+    }
     throw new Error('Invalid refresh token');
   }
 
   const session = sessionResult.rows[0];
   if (new Date(session.expires_at).getTime() < Date.now()) {
+    await pool.query('DELETE FROM sessions WHERE id = $1', [session.id]);
     throw new Error('Refresh token expired');
   }
 
-  const accessToken = signAccessToken({ sub: session.user_id, sid: session.id, did: session.device_id });
-  return { accessToken };
+  // Atomic rotation: delete old session, insert new one in the same family
+  const refreshRawNew = randomToken(64);
+  const refreshHashNew = sha256(refreshRawNew);
+  const refreshTtl = process.env.JWT_REFRESH_TTL || '7d';
+  const expiresAt = new Date(Date.now() + parseTtlToMs(refreshTtl));
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query('DELETE FROM sessions WHERE id = $1', [session.id]);
+
+    const newRow = await client.query(
+      `INSERT INTO sessions
+         (user_id, device_id, refresh_token, previous_token_hash, expires_at, token_family)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [session.user_id, session.device_id, refreshHashNew, refreshHash, expiresAt, session.token_family]
+    );
+
+    await client.query('COMMIT');
+
+    const newSid = newRow.rows[0].id;
+    const accessToken = signAccessToken({
+      sub: session.user_id, sid: newSid, did: session.device_id,
+    });
+    const newRefreshToken = signRefreshToken({
+      sub: session.user_id, sid: newSid, did: session.device_id,
+      rtk: refreshRawNew, fam: session.token_family,
+    });
+
+    return { accessToken, refreshToken: newRefreshToken };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function logout({ userId, refreshToken }) {
   const { verifyRefreshToken } = require('../utils/tokens.util');
   const decoded = verifyRefreshToken(refreshToken);
-  if (decoded.sub !== userId) {
-    throw new Error('Token subject mismatch');
-  }
+  if (decoded.sub !== userId) throw new Error('Token subject mismatch');
 
   const refreshHash = sha256(decoded.rtk);
   await pool.query(
@@ -321,4 +343,6 @@ module.exports = {
   login,
   refresh,
   logout,
+  _parseTtlToMs: parseTtlToMs,
+  _createSession: createSession,
 };

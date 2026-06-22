@@ -1,4 +1,4 @@
-const { pool } = require('../../../supabase/db/pool');
+const { pool } = require('../../../../database/pool');
 
 async function writeAuditEvent({
   userId = null,

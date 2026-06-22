@@ -10,17 +10,22 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
+require('dotenv').config({ path: path.join(__dirname, '../../../../.env') });
 
 // ── Encrypted token store (electron-store) ────────────────────────────────────
 const Store = require('electron-store');
 const _tokenStore = new Store({
   name: 'cortex-tokens',
-  encryptionKey: process.env.CORTEX_STORE_KEY || 'cortex-token-store-key',
+  // In production CORTEX_STORE_KEY must be set; the fallback is development-only.
+  encryptionKey: process.env.CORTEX_STORE_KEY || (
+    process.env.NODE_ENV === 'production'
+      ? (() => { throw new Error('CORTEX_STORE_KEY is required in production'); })()
+      : 'cortex-dev-store-key'
+  ),
 });
 
 // ── Postgres pool + bcrypt/nodemailer for forgot-password ─────────────────────
-const { pool: _pgPool } = require('../../../supabase/db/pool');
+const { pool: _pgPool } = require('../../../../database/pool');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 
@@ -150,6 +155,7 @@ function deleteSession() {
 }
 
 // Services
+const { initKeyStore } = require('../services/storage/keyStore');
 const { initializeDatabase, getDatabase } = require('../services/storage/database');
 const { EmbeddingsEngine } = require('../services/ai/embeddings');
 const { extractPdfText } = require('../services/storage/pdfHandler');
@@ -174,7 +180,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: false,
+            sandbox: true,
         },
     });
 
@@ -183,15 +189,9 @@ function createWindow() {
         mainWindow.webContents.openDevTools({ mode: 'detach' });
     }
 
-    // Route: skip landing page for returning users who have a saved session.
-    const landingPath = path.join(__dirname, '../../landing.html');
     const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
 
-    if (hasSession() && fs.existsSync(rendererPath)) {
-        mainWindow.loadFile(rendererPath);
-    } else if (fs.existsSync(landingPath)) {
-        mainWindow.loadFile(landingPath);
-    } else if (fs.existsSync(rendererPath)) {
+    if (fs.existsSync(rendererPath)) {
         mainWindow.loadFile(rendererPath);
     } else {
         // Tell the user to run npm run build first
@@ -251,6 +251,10 @@ function createWindow() {
 // ── Service Initialization ───────────────────────────────────────────────────
 async function initializeServices() {
     try {
+        // Key store must be initialised before database (encryption depends on it)
+        initKeyStore(app.getPath('userData'));
+        console.log('[Cortex] Key store initialised');
+
         const dbPath = path.join(__dirname, '../../data/cortex.db');
         initializeDatabase(dbPath);
         console.log('[Cortex] Database initialized');
@@ -318,12 +322,9 @@ function registerIpcHandlers() {
 
     ipcMain.on('logout', () => {
         deleteSession();
-        const landingPath = path.join(__dirname, '../../landing.html');
         const rendererPath = path.join(__dirname, '../../dist/renderer/index.html');
         if (!mainWindow) return;
-        if (fs.existsSync(landingPath)) {
-            mainWindow.loadFile(landingPath);
-        } else if (fs.existsSync(rendererPath)) {
+        if (fs.existsSync(rendererPath)) {
             mainWindow.loadFile(rendererPath);
         }
     });

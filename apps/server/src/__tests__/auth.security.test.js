@@ -1,6 +1,6 @@
 const request = require('supertest');
 
-jest.mock('../../../supabase/db/pool', () => ({
+jest.mock('../../../../database/pool', () => ({
     pool: { connect: jest.fn(), query: jest.fn() },
 }));
 

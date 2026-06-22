@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const { pool } = require('../db/pool');
+const { pool } = require('../pool');
 
-const SQL_DIR = path.join(__dirname, '..', 'sql');
+const SQL_DIR = path.join(__dirname, '..', 'migrations');
 
 async function runMigrations() {
   const client = await pool.connect();

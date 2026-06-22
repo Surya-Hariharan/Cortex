@@ -1,11 +1,11 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
 import { ArrowRight, ChevronDown, GraduationCap, Lock, Mail, School, UserCircle2, Check, Eye, EyeOff, Loader2, WifiOff, Radio } from 'lucide-react';
 import WindowControls from '../layout/WindowControls';
-import { hasLocalIdentity, getValidatedLocalIdentity, setMeshConsent } from '../../../offline/offlineIdentity.js';
-import { useMeshDiscovery } from '../../../mesh/useMeshDiscovery.js';
+import { hasLocalIdentity, getValidatedLocalIdentity, setMeshConsent } from '../../../services/offline/offlineIdentity.js';
+import { useMeshDiscovery } from '../../hooks/useMeshDiscovery.js';
 import { auth as authApi, reference as referenceApi } from '../../../services/api.js';
 import { saveTokens } from '../../../services/storage/tokenStore.js';
-import { ensureDeviceProfile } from '../../../system/deviceCapability.js';
+import { ensureDeviceProfile } from '../../../services/system/deviceCapability.js';
 
 const SelectField = memo(function SelectField({ label, value, onChange, options, disabled = false, placeholder = 'Select' }) {
     const [isOpen, setIsOpen] = useState(false);

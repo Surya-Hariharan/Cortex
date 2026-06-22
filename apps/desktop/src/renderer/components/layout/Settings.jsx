@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import DocumentStatus from '../DocumentStatus';
 import PerformanceTab from '../PerformanceTab';
-import { getMeshConsent, setMeshConsent } from '../../../offline/offlineIdentity.js';
-import { meshController } from '../../../mesh/meshController.js';
+import { getMeshConsent, setMeshConsent } from '../../../services/offline/offlineIdentity.js';
+import { meshController } from '../../../services/mesh/meshController.js';
 
 /* ─────────────────────────────────────────────────────────────
    Reusable primitives

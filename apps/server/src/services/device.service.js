@@ -1,4 +1,4 @@
-const { pool } = require('../../../supabase/db/pool');
+const { pool } = require('../../../../database/pool');
 
 async function registerOrUpdateDevice({ userId, fingerprint, ram, cpu, gpu, npu, trusted = false }, db = pool) {
   const result = await db.query(

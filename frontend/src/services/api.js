@@ -73,10 +73,6 @@ export const apiClient = {
     },
 };
 
-function disabled(message = 'Backend API is disabled during redesign.') {
-    return Promise.resolve({ disabled: true, detail: message });
-}
-
 export function getUserId() {
     try {
         const raw = localStorage.getItem('cortex-auth-profile');
@@ -114,18 +110,6 @@ export const backendStatus = {
 
 export const system = {
     health: () => apiClient.request('/health'),
-    models: () => disabled(),
-    scheduler: () => disabled(),
-    resources: () => disabled(),
-    benchmark: () => disabled(),
-    loadModel: () => disabled(),
-    unloadModel: () => disabled(),
-    pauseScheduler: () => disabled(),
-    resumeScheduler: () => disabled(),
-    setRuntime: () => disabled(),
-    setInternetStatus: () => disabled(),
-    getMode: () => Promise.resolve({ mode: 'redesign_baseline' }),
-    setPrivacy: () => disabled(),
 };
 
 export const auth = {
@@ -155,107 +139,122 @@ export const reference = {
         ),
 };
 
-export const documents = {
-    upload: () => disabled(),
-    list: () => Promise.resolve([]),
-    get: () => disabled(),
-    update: () => disabled(),
-    delete: () => disabled(),
-    reindex: () => disabled(),
-};
-
-export const notes = {
-    create: () => disabled(),
-    list: () => Promise.resolve([]),
-    get: () => disabled(),
-    update: () => disabled(),
-    delete: () => disabled(),
-    setVisibility: () => disabled(),
-    browsePublic: () => Promise.resolve([]),
-    getShared: () => disabled(),
-    save: () => disabled(),
-};
-
-export const tasks = {
-    create: () => disabled(),
-    list: () => Promise.resolve([]),
-    get: () => disabled(),
-    update: () => disabled(),
-    delete: () => disabled(),
-};
-
-export const projects = {
-    create: () => disabled(),
-    list: () => Promise.resolve([]),
-    get: () => disabled(),
-    update: () => disabled(),
-    delete: () => disabled(),
-};
-
-export const search = {
-    query: () => Promise.resolve({ results: [] }),
-};
-
-export const chat = {
-    stream(_request, _onToken, _onDone, onError) {
-        const controller = new AbortController();
-        setTimeout(() => {
-            onError?.('Chat backend is disabled during redesign.');
-        }, 0);
-        return controller;
-    },
-    create: () => disabled(),
-    list: () => Promise.resolve([]),
-    get: () => disabled(),
-    messages: () => Promise.resolve([]),
-    delete: () => disabled(),
-};
-
-export const mesh = {
-    peers: () => Promise.resolve({ peers: [] }),
-    sync: () => disabled(),
-};
-
-export const transcription = {
-    transcribe: () => disabled(),
-};
-
 export async function isBackendReady() {
     return backendStatus.check();
 }
 
-export const groups = {
-    create: () => disabled(),
+const _notAvailable = (name) => () =>
+    Promise.reject(Object.assign(new Error(`${name} is not available in this release.`), { notAvailable: true }));
+
+// Future release: documents
+export const documents = {
+    upload: _notAvailable('documents.upload'),
     list: () => Promise.resolve([]),
-    get: () => disabled(),
-    delete: () => disabled(),
-    join: () => disabled(),
-    leave: () => disabled(),
-    updateSettings: () => disabled(),
-    blockMember: () => disabled(),
-    removeMember: () => disabled(),
-    getMessages: () => Promise.resolve([]),
-    sendMessage: () => disabled(),
+    get: _notAvailable('documents.get'),
+    update: _notAvailable('documents.update'),
+    delete: _notAvailable('documents.delete'),
+    reindex: _notAvailable('documents.reindex'),
 };
 
+// Future release: notes
+export const notes = {
+    create: _notAvailable('notes.create'),
+    list: () => Promise.resolve([]),
+    get: _notAvailable('notes.get'),
+    update: _notAvailable('notes.update'),
+    delete: _notAvailable('notes.delete'),
+    setVisibility: _notAvailable('notes.setVisibility'),
+    browsePublic: () => Promise.resolve([]),
+    getShared: _notAvailable('notes.getShared'),
+    save: _notAvailable('notes.save'),
+};
+
+// Future release: tasks
+export const tasks = {
+    create: _notAvailable('tasks.create'),
+    list: () => Promise.resolve([]),
+    get: _notAvailable('tasks.get'),
+    update: _notAvailable('tasks.update'),
+    delete: _notAvailable('tasks.delete'),
+};
+
+// Future release: projects
+export const projects = {
+    create: _notAvailable('projects.create'),
+    list: () => Promise.resolve([]),
+    get: _notAvailable('projects.get'),
+    update: _notAvailable('projects.update'),
+    delete: _notAvailable('projects.delete'),
+};
+
+// Future release: search
+export const search = {
+    query: () => Promise.resolve({ results: [] }),
+};
+
+// Future release: chat
+export const chat = {
+    stream(_request, _onToken, _onDone, onError) {
+        const controller = new AbortController();
+        setTimeout(() => {
+            onError?.('Chat is not available in this release.');
+        }, 0);
+        return controller;
+    },
+    create: _notAvailable('chat.create'),
+    list: () => Promise.resolve([]),
+    get: _notAvailable('chat.get'),
+    messages: () => Promise.resolve([]),
+    delete: _notAvailable('chat.delete'),
+};
+
+// Future release: mesh
+export const mesh = {
+    peers: () => Promise.resolve({ peers: [] }),
+    sync: _notAvailable('mesh.sync'),
+};
+
+// Future release: transcription
+export const transcription = {
+    transcribe: _notAvailable('transcription.transcribe'),
+};
+
+// Future release: groups
+export const groups = {
+    create: _notAvailable('groups.create'),
+    list: () => Promise.resolve([]),
+    get: _notAvailable('groups.get'),
+    delete: _notAvailable('groups.delete'),
+    join: _notAvailable('groups.join'),
+    leave: _notAvailable('groups.leave'),
+    updateSettings: _notAvailable('groups.updateSettings'),
+    blockMember: _notAvailable('groups.blockMember'),
+    removeMember: _notAvailable('groups.removeMember'),
+    getMessages: () => Promise.resolve([]),
+    sendMessage: _notAvailable('groups.sendMessage'),
+};
+
+// Future release: activity
 export const activity = {
     stats: () => Promise.resolve({}),
     chart: () => Promise.resolve([]),
     feed: () => Promise.resolve([]),
 };
 
+// Future release: notifications
 export const notifications = {
     list: () => Promise.resolve([]),
-    create: () => disabled(),
-    markRead: () => disabled(),
-    markAllRead: () => disabled(),
-    deleteOne: () => disabled(),
-    deleteAll: () => disabled(),
+    create: _notAvailable('notifications.create'),
+    markRead: _notAvailable('notifications.markRead'),
+    markAllRead: _notAvailable('notifications.markAllRead'),
+    deleteOne: _notAvailable('notifications.deleteOne'),
+    deleteAll: _notAvailable('notifications.deleteAll'),
 };
 
+// Future release: engagement
 export const engagement = {
-    recordView: () => disabled(),
-    recordDownload: () => disabled(),
-    rate: () => disabled(),
+    recordView: _notAvailable('engagement.recordView'),
+    recordDownload: _notAvailable('engagement.recordDownload'),
+    rate: _notAvailable('engagement.rate'),
     entityStats: () => Promise.resolve({}),
 };

@@ -1,42 +1,19 @@
-import React, { useState } from 'react';
-import { BarChart3, Bell } from 'lucide-react';
-import MyContributions from '../MyContributions';
-import Notifications from '../Notifications';
-
-const SUB_TABS = [
-    { id: 'contributions', label: 'My Contributions', icon: <BarChart3 size={16} /> },
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={16} /> },
-];
+import React from 'react';
+import { BarChart3, Clock } from 'lucide-react';
 
 export default function Activity() {
-    const [activeTab, setActiveTab] = useState('contributions');
-
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-dark-950">
-            {/* Sub-Tab Bar */}
-            <div className="flex-shrink-0 px-6 pt-5 pb-0 bg-white dark:bg-dark-950 z-30">
-                <div className="max-w-[1240px] mx-auto">
-                    <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-dark-900/80 rounded-2xl w-fit">
-                        {SUB_TABS.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${activeTab === tab.id
-                                        ? 'bg-white dark:bg-dark-800 text-synapse-600 dark:text-synapse-400 shadow-sm border border-slate-200/60 dark:border-dark-700/60'
-                                        : 'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-dark-200'
-                                    }`}
-                            >
-                                {tab.icon} {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+        <div className="h-full flex flex-col items-center justify-center bg-white dark:bg-dark-950 text-center px-8">
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-dark-900/40 border border-slate-200 dark:border-dark-800/40 flex items-center justify-center mb-5">
+                <BarChart3 size={26} className="text-slate-400 dark:text-dark-500" />
             </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-hidden">
-                {activeTab === 'contributions' && <MyContributions />}
-                {activeTab === 'notifications' && <Notifications />}
+            <h2 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-2">Activity</h2>
+            <p className="text-sm text-slate-500 dark:text-dark-400 max-w-xs leading-relaxed mb-4">
+                Contribution history, engagement metrics, and notification centre are not yet available in this release.
+            </p>
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-dark-500 font-medium">
+                <Clock size={13} />
+                Coming in a future release
             </div>
         </div>
     );

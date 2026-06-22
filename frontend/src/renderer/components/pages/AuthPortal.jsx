@@ -169,11 +169,6 @@ export default function AuthPortal({ onAuthSuccess }) {
         onAuthSuccess?.(guestProfile, 'OFFLINE');
     };
 
-    const handleConnectMesh = () => {
-        // Stub: future mesh connection logic
-        console.log('[Cortex] Mesh connect requested');
-    };
-
     const [signinEmail, setSigninEmail] = useState('');
     const [signinPassword, setSigninPassword] = useState('');
 
@@ -667,19 +662,10 @@ export default function AuthPortal({ onAuthSuccess }) {
 
                                 {/* Mesh Discovery Indicator */}
                                 {isOffline && isMeshAvailable && (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-center text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1.5">
-                                            <Radio size={13} className="animate-pulse" />
-                                            Nearby campus knowledge network available.
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={handleConnectMesh}
-                                            className="w-full rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 py-2 text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                                        >
-                                            Connect to Mesh
-                                        </button>
-                                    </div>
+                                    <p className="text-xs text-center text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1.5">
+                                        <Radio size={13} className="animate-pulse" />
+                                        {nearbyPeers.length} nearby peer{nearbyPeers.length !== 1 ? 's' : ''} detected.
+                                    </p>
                                 )}
                             </form>
                         )}

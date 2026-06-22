@@ -55,6 +55,22 @@ function _hashOtp(otp) {
   return crypto.createHash('sha256').update(otp).digest('hex');
 }
 
+// Per-email rate limiter for forgot-password IPC: max 5 attempts per 15 min.
+const _fpAttempts = new Map();
+function _forgotPasswordAllowed(email) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  const max = 5;
+  const entry = _fpAttempts.get(email) || { count: 0, resetAt: now + windowMs };
+  if (now > entry.resetAt) {
+    entry.count = 0;
+    entry.resetAt = now + windowMs;
+  }
+  entry.count += 1;
+  _fpAttempts.set(email, entry);
+  return entry.count <= max;
+}
+
 // Backend API connectivity has been intentionally removed.
 
 // ── Internet Connectivity Check ──────────────────────────────────────────────
@@ -338,6 +354,9 @@ function registerIpcHandlers() {
     // ── Forgot-password: generate OTP, store hash, send email ─────────────
     ipcMain.handle('auth-forgot-password', async (_e, { email }) => {
         const normalizedEmail = String(email || '').trim().toLowerCase();
+        if (!_forgotPasswordAllowed(normalizedEmail)) {
+            return { status: 429, data: { detail: 'Too many password reset attempts. Please try again later.' } };
+        }
         try {
             const userResult = await _pgPool.query(
                 'SELECT id FROM users WHERE email = $1',

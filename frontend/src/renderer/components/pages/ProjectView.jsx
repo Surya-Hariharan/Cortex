@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     Folder, Plus, Mic, ChevronDown, Upload, FileText,
     Bookmark, Trash2, MoreHorizontal, Search, Settings,
-    ArrowUp, Pencil, X
+    ArrowUp, Pencil, X, Info
 } from 'lucide-react';
 
 const SORT_OPTIONS = ['Newest', 'Oldest'];
@@ -78,6 +78,11 @@ export default function ProjectView({ project, onNewChat, onToast, onDeleteProje
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-dark-950 overflow-hidden">
+            {/* Session-only notice */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-300 text-xs font-medium flex-shrink-0">
+                <Info size={13} className="flex-shrink-0" />
+                Projects are local to this session — chat and file sync will be available in a future release.
+            </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-2xl mx-auto px-6 pt-12 pb-10">
 

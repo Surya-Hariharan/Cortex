@@ -178,7 +178,8 @@ class EmbeddingsEngine {
         const vec = new Array(this.embeddingDim).fill(0);
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
-            vec[i % this.embeddingDim] += (c * (i + 1)) % 1.0;
+            // % 256 keeps values in [0,255] so the vector is always non-zero for non-empty text
+            vec[i % this.embeddingDim] += (c * (i + 1)) % 256;
         }
         const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
         return vec.map(v => v / norm);

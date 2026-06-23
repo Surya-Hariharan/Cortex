@@ -304,7 +304,8 @@ describe('SearchTab — search interaction', () => {
         const { default: SearchTab } = await import('../renderer/components/SearchTab.jsx');
         const { container } = render(wrap(<SearchTab onToast={noop} onUploadPdf={noop} onFirstSearch={noop} onSearchComplete={noop} />));
         await act(async () => {});
-        const input = container.querySelector('input');
+        // Use type="text" to skip the hidden file input
+        const input = container.querySelector('input[type="text"]');
         if (input) {
             await act(async () => {
                 fireEvent.change(input, { target: { value: 'machine learning' } });
@@ -317,7 +318,8 @@ describe('SearchTab — search interaction', () => {
         const { default: SearchTab } = await import('../renderer/components/SearchTab.jsx');
         const { container } = render(wrap(<SearchTab onToast={noop} onUploadPdf={noop} onFirstSearch={noop} onSearchComplete={noop} />));
         await act(async () => {});
-        const input = container.querySelector('input');
+        // Use type="text" to skip the hidden file input
+        const input = container.querySelector('input[type="text"]');
         if (input) {
             await act(async () => {
                 fireEvent.change(input, { target: { value: 'quantum physics' } });
@@ -496,8 +498,10 @@ describe('UploadNoteModal', () => {
         const { default: UploadNoteModal } = await import('../renderer/components/shared/UploadNoteModal.jsx');
         const { container } = render(wrap(<UploadNoteModal isOpen onClose={noop} onToast={noop} />));
         await act(async () => {});
-        // Try to find and interact with inputs
-        const inputs = container.querySelectorAll('input, textarea');
+        // Skip file inputs — only interact with text-type inputs and textareas
+        const inputs = Array.from(container.querySelectorAll('input, textarea')).filter(
+            el => el.tagName === 'TEXTAREA' || (el.type !== 'file' && el.type !== 'checkbox' && el.type !== 'radio')
+        );
         if (inputs.length > 0) {
             await act(async () => {
                 fireEvent.change(inputs[0], { target: { value: 'Test title' } });

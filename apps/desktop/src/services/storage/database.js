@@ -1,4 +1,3 @@
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { encryptText, decryptText, encryptEmbedding, decryptEmbedding } = require('./encryption');
@@ -9,6 +8,10 @@ let db = null;
  * Initialize SQLite database with schema
  */
 function initializeDatabase(dbPath) {
+    // Lazy-load the native addon so the module can be imported in test environments
+    // where the Electron-compiled binary is unavailable.
+    const Database = require('better-sqlite3');
+
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });

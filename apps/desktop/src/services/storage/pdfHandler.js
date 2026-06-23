@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const pdfParse = require('pdf-parse');
 
 /**
  * Extract text from a PDF file and chunk it
@@ -10,6 +9,11 @@ const pdfParse = require('pdf-parse');
  * @returns {Promise<Array<{content: string, chunkIndex: number}>>}
  */
 async function extractPdfText(filePath, chunkSize = 512, overlap = 50) {
+    // Lazy-load so the module can be imported in test environments without triggering
+    // pdfjs-dist's worker initialization, which hangs in vitest's worker threads.
+    // Use .default || mod to support both the real CJS export and ESM-interop mocks.
+    const pdfParseModule = require('pdf-parse');
+    const pdfParse = pdfParseModule.default || pdfParseModule;
     const buffer = fs.readFileSync(filePath);
     const data = await pdfParse(buffer);
     const text = data.text || '';

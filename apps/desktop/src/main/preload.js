@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getNotes: () => ipcRenderer.invoke('get-notes'),
     deleteNote: (id) => ipcRenderer.invoke('delete-note', id),
     toggleNoteComplete: (id) => ipcRenderer.invoke('toggle-note-complete', id),
+    // ── Workspace Pages ───────────────────────────────────────────────────────
+    createPage: (id, title, content, parentId) => ipcRenderer.invoke('create-page', id, title, content, parentId),
+    updatePage: (id, title, content) => ipcRenderer.invoke('update-page', id, title, content),
+    getPage: (id) => ipcRenderer.invoke('get-page', id),
+    getPages: () => ipcRenderer.invoke('get-pages'),
+    deletePage: (id) => ipcRenderer.invoke('delete-page', id),
     // ── Backend status ────────────────────────────────────────────────────────
     backendReady: () => ipcRenderer.invoke('backend-ready'),
     getOfflineEngineStatus: () => ipcRenderer.invoke('get-offline-engine-status'),

@@ -180,145 +180,12 @@ export default function AuthPortal({ onAuthSuccess }) {
 
     const [form, setForm] = useState({
         name: '',
-        gender: '',
-        phone: '',
         email: '',
-        location: '',
-        college: '',
-        userType: 'Student',
-        yearOfStudy: '',
-        degree: '',
-        course: '',
         password: '',
         confirmPassword: '',
     });
 
-    const districtByName = useMemo(
-        () => new Map(districts.map((item) => [item.name, item.id])),
-        [districts]
-    );
-
-    const degreeByName = useMemo(
-        () => new Map(degrees.map((item) => [item.name, item.id])),
-        [degrees]
-    );
-
-    const collegeByName = useMemo(
-        () => new Map(colleges.map((item) => [item.name, item.id])),
-        [colleges]
-    );
-
-    const courseByName = useMemo(
-        () => new Map(courses.map((item) => [item.name, item.id])),
-        [courses]
-    );
-
-    const districtOptions = useMemo(() => districts.map((item) => item.name), [districts]);
-    const degreeOptions = useMemo(() => degrees.map((item) => item.name), [degrees]);
-
-    useEffect(() => {
-        let active = true;
-        async function fetchBaseReferences() {
-            setReferencesLoading(true);
-            setReferencesError('');
-
-            try {
-                const [districtRows, degreeRows] = await Promise.all([
-                    referenceApi.districts(),
-                    referenceApi.degrees(),
-                ]);
-                if (!active) return;
-                setDistricts(Array.isArray(districtRows) ? districtRows : []);
-                setDegrees(Array.isArray(degreeRows) ? degreeRows : []);
-            } catch {
-                if (!active) return;
-                setReferencesError('Could not load reference data from server.');
-                setDistricts([]);
-                setDegrees([]);
-            } finally {
-                if (active) setReferencesLoading(false);
-            }
-        }
-
-        fetchBaseReferences();
-        return () => {
-            active = false;
-        };
-    }, []);
-
-    useEffect(() => {
-        let active = true;
-        async function fetchColleges() {
-            const districtId = districtByName.get(form.location);
-            if (!districtId) {
-                setColleges([]);
-                return;
-            }
-
-            try {
-                setDependentOptionsLoading(true);
-                const rows = await referenceApi.colleges(districtId);
-                if (!active) return;
-                setColleges(Array.isArray(rows) ? rows : []);
-            } catch {
-                if (!active) return;
-                setColleges([]);
-            } finally {
-                if (active) setDependentOptionsLoading(false);
-            }
-        }
-
-        fetchColleges();
-        return () => {
-            active = false;
-        };
-    }, [form.location, districtByName]);
-
-    useEffect(() => {
-        let active = true;
-        async function fetchCourses() {
-            const degreeId = degreeByName.get(form.degree);
-            if (!degreeId) {
-                setCourses([]);
-                return;
-            }
-
-            try {
-                setDependentOptionsLoading(true);
-                const rows = await referenceApi.courses(degreeId);
-                if (!active) return;
-                setCourses(Array.isArray(rows) ? rows : []);
-            } catch {
-                if (!active) return;
-                setCourses([]);
-            } finally {
-                if (active) setDependentOptionsLoading(false);
-            }
-        }
-
-        fetchCourses();
-        return () => {
-            active = false;
-        };
-    }, [form.degree, degreeByName]);
-
-    const availableColleges = useMemo(() => {
-        if (!form.location) return [];
-        return colleges.map((item) => item.name).sort((a, b) => a.localeCompare(b));
-    }, [form.location, colleges]);
-
-    const availableCourses = useMemo(() => {
-        if (!form.degree) return [];
-        return courses.map((item) => item.name).sort((a, b) => a.localeCompare(b));
-    }, [form.degree, courses]);
-
-    const yearOptions = useMemo(() => {
-        if (form.userType === 'Alumni') {
-            const currentYear = new Date().getFullYear();
-            return Array.from({ length: 30 }, (_, i) => String(currentYear - i));
-        }
-        return ['1', '2', '3', '4', '5'];
-    }, [form.userType]);
+    // Reference fetching removed for local-first
 
     const switchMode = (nextMode) => {
         if (nextMode === mode) return;
@@ -328,20 +195,8 @@ export default function AuthPortal({ onAuthSuccess }) {
     };
 
     const updateForm = useCallback((field, value) => {
-        setForm((prev) => {
-            const next = { ...prev, [field]: value };
-            if (field === 'location') next.college = '';
-            if (field === 'degree') next.course = '';
-            if (field === 'userType') next.yearOfStudy = '';
-            return next;
-        });
+        setForm((prev) => ({ ...prev, [field]: value }));
     }, []);
-
-    const toGenderValue = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        if (normalized === 'prefer not to say') return 'prefer_not_to_say';
-        return normalized;
-    };
 
     async function buildDevicePayload() {
         const profile = await ensureDeviceProfile();
@@ -365,10 +220,7 @@ export default function AuthPortal({ onAuthSuccess }) {
         e.preventDefault();
         setError('');
 
-        const required = [
-            'name', 'gender', 'phone', 'email', 'location',
-            'college', 'userType', 'yearOfStudy', 'degree', 'course', 'password', 'confirmPassword'
-        ];
+        const required = ['name', 'email', 'password', 'confirmPassword'];
         const missing = required.find((k) => !form[k]);
         if (missing) {
             setError('Please fill all required fields.');
@@ -386,30 +238,12 @@ export default function AuthPortal({ onAuthSuccess }) {
             return;
         }
 
-        const districtId = districtByName.get(form.location);
-        const collegeId = collegeByName.get(form.college);
-        const degreeId = degreeByName.get(form.degree);
-        const courseId = courseByName.get(form.course);
-
-        if (!districtId || !collegeId || !degreeId || !courseId) {
-            setError('Please select valid district, college, degree and course from server data.');
-            return;
-        }
-
         setLoading(true);
         try {
             const payload = {
                 email: form.email,
                 password: form.password,
                 full_name: form.name,
-                gender: toGenderValue(form.gender),
-                district_id: districtId,
-                college_id: collegeId,
-                student_status: form.userType === 'Alumni' ? 'alumni' : 'student',
-                year_of_study: form.userType === 'Student' ? Number(form.yearOfStudy) : null,
-                graduation_year: form.userType === 'Alumni' ? Number(form.yearOfStudy) : null,
-                degree_id: degreeId,
-                course_id: courseId,
                 device: await buildDevicePayload(),
             };
 
@@ -673,33 +507,8 @@ export default function AuthPortal({ onAuthSuccess }) {
                         {mode === 'register' && (
                             <form className="space-y-4 max-h-[72vh] overflow-y-auto pr-1 scrollbar-thin" onSubmit={handleRegister}>
                                 <div className="grid sm:grid-cols-2 gap-3">
-                                    {referencesLoading && (
-                                        <div className="sm:col-span-2 text-xs font-semibold text-slate-500 dark:text-dark-400 inline-flex items-center gap-2">
-                                            <Loader2 size={14} className="animate-spin" />
-                                            Loading district, degree, college and course data...
-                                        </div>
-                                    )}
-                                    {referencesError && (
-                                        <div className="sm:col-span-2 text-xs font-semibold text-red-500">
-                                            {referencesError}
-                                        </div>
-                                    )}
-                                    {dependentOptionsLoading && (
-                                        <div className="sm:col-span-2 text-xs font-semibold text-slate-500 dark:text-dark-400 inline-flex items-center gap-2">
-                                            <Loader2 size={14} className="animate-spin" />
-                                            Updating colleges and courses...
-                                        </div>
-                                    )}
                                     <InputField label="Name" value={form.name} onChange={(v) => updateForm('name', v)} placeholder="Full name" />
-                                    <SelectField label="Gender" value={form.gender} onChange={(v) => updateForm('gender', v)} options={['Male', 'Female', 'Other', 'Prefer not to say']} />
-                                    <InputField label="Phone Number" value={form.phone} onChange={(v) => updateForm('phone', v)} placeholder="10-digit mobile" />
                                     <InputField label="Personal Email" value={form.email} onChange={(v) => updateForm('email', v)} type="email" placeholder="name@gmail.com" />
-                                    <SelectField label="Location" value={form.location} onChange={(v) => updateForm('location', v)} options={districtOptions} disabled={referencesLoading || districtOptions.length === 0} placeholder="Select district" />
-                                    <SelectField label="College" value={form.college} onChange={(v) => updateForm('college', v)} options={availableColleges} disabled={!form.location || referencesLoading || dependentOptionsLoading} placeholder={form.location ? 'Select college' : 'Select location first'} />
-                                    <SelectField label="Student / Alumni" value={form.userType} onChange={(v) => updateForm('userType', v)} options={['Student', 'Alumni']} />
-                                    <SelectField label={form.userType === 'Alumni' ? 'Graduation Year' : 'Year of Study'} value={form.yearOfStudy} onChange={(v) => updateForm('yearOfStudy', v)} options={yearOptions} />
-                                    <SelectField label="Degree" value={form.degree} onChange={(v) => updateForm('degree', v)} options={degreeOptions} disabled={referencesLoading || degreeOptions.length === 0} placeholder="Select degree" />
-                                    <SelectField label="Course" value={form.course} onChange={(v) => updateForm('course', v)} options={availableCourses} disabled={!form.degree || referencesLoading || dependentOptionsLoading} placeholder={form.degree ? 'Select course' : 'Select degree first'} />
                                     <InputField label="Password" value={form.password} onChange={(v) => updateForm('password', v)} type="password" placeholder="Create password" />
                                     <InputField label="Confirm Password" value={form.confirmPassword} onChange={(v) => updateForm('confirmPassword', v)} type="password" placeholder="Confirm password" />
                                 </div>

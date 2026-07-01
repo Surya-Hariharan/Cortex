@@ -1,78 +1,5 @@
 import { getAccessToken } from './storage/tokenStore.js';
 
-const DEFAULT_BACKEND_URL = 'http://localhost:8080';
-
-function resolveBaseUrl() {
-    try {
-        const stored = window?.localStorage?.getItem('cortex-backend-base-url');
-        if (stored) return stored.replace(/\/+$/, '');
-    } catch {
-        // Ignore localStorage access errors in constrained contexts.
-    }
-
-    const envUrl = typeof process !== 'undefined' ? process?.env?.CORTEX_BACKEND_URL : null;
-    if (envUrl) return String(envUrl).replace(/\/+$/, '');
-    return DEFAULT_BACKEND_URL;
-}
-
-function createApiError(message, extras = {}) {
-    const error = new Error(message);
-    Object.assign(error, extras);
-    return error;
-}
-
-async function parseResponseBody(response) {
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-        return response.json();
-    }
-    const text = await response.text();
-    return text ? { detail: text } : {};
-}
-
-export const apiClient = {
-    baseURL: resolveBaseUrl(),
-    async request(path, { method = 'GET', headers = {}, body, signal } = {}) {
-        const url = `${this.baseURL}${path.startsWith('/') ? path : `/${path}`}`;
-        const finalHeaders = { ...headers };
-
-        let finalBody = body;
-        if (body != null && typeof body === 'object' && !(body instanceof FormData)) {
-            finalBody = JSON.stringify(body);
-            if (!finalHeaders['Content-Type']) {
-                finalHeaders['Content-Type'] = 'application/json';
-            }
-        }
-
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: finalHeaders,
-                body: finalBody,
-                signal,
-            });
-
-            const data = await parseResponseBody(response);
-
-            if (!response.ok) {
-                throw createApiError(data?.error || data?.detail || `Request failed with status ${response.status}`, {
-                    status: response.status,
-                    data,
-                    networkError: false,
-                });
-            }
-
-            return data;
-        } catch (error) {
-            if (error?.networkError === false) throw error;
-            throw createApiError('Network request failed', {
-                cause: error,
-                networkError: true,
-            });
-        }
-    },
-};
-
 export function getUserId() {
     try {
         const raw = localStorage.getItem('cortex-auth-profile');
@@ -84,63 +11,81 @@ export function getUserId() {
 }
 
 export const backendStatus = {
-    online: false,
+    online: true,
     _listeners: new Set(),
-    _set(v) {
-        if (this.online !== v) {
-            this.online = v;
-            this._listeners.forEach((fn) => fn(v));
-        }
-    },
     subscribe(fn) {
         this._listeners.add(fn);
         return () => this._listeners.delete(fn);
     },
     async check() {
-        try {
-            await apiClient.request('/health');
-            this._set(true);
-            return true;
-        } catch {
-            this._set(false);
-            return false;
-        }
+        return true;
     },
 };
 
 export const system = {
-    health: () => apiClient.request('/health'),
+    health: () => Promise.resolve({ status: 'ok' }),
 };
 
 export const auth = {
-    signup: (payload) => apiClient.request('/auth/signup', { method: 'POST', body: payload }),
-    login: (payload) => apiClient.request('/auth/login', { method: 'POST', body: payload }),
-    refresh: (refreshToken) => apiClient.request('/auth/refresh', { method: 'POST', body: { refreshToken } }),
-    logout: async (refreshToken) => {
-        const accessToken = await getAccessToken();
-        return apiClient.request('/auth/logout', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken || ''}` },
-            body: { refreshToken },
-        });
+    signup: async (payload) => {
+        const res = await window.electronAPI.authRegister(payload);
+        if (res.status !== 200) throw { data: res.data };
+        return res.data;
+    },
+    login: async (payload) => {
+        const res = await window.electronAPI.authLogin(payload);
+        if (res.status !== 200) throw { data: res.data };
+        return res.data;
+    },
+    refresh: async () => ({}),
+    logout: async () => {
+        return { success: true };
     },
 };
 
+// Reference data is not used in local-first, return empty arrays to avoid breaking the UI temporarily
 export const reference = {
-    districts: () => apiClient.request('/reference/districts'),
-    colleges: (districtId) =>
-        apiClient.request(
-            districtId ? `/reference/colleges?districtId=${encodeURIComponent(String(districtId))}` : '/reference/colleges'
-        ),
-    degrees: () => apiClient.request('/reference/degrees'),
-    courses: (degreeId) =>
-        apiClient.request(
-            degreeId ? `/reference/courses?degreeId=${encodeURIComponent(String(degreeId))}` : '/reference/courses'
-        ),
+    districts: () => Promise.resolve([]),
+    colleges: () => Promise.resolve([]),
+    degrees: () => Promise.resolve([]),
+    courses: () => Promise.resolve([]),
+};
+
+export const workspacePages = {
+    create: async (id, title, content = '{}', parentId = null) => {
+        if (!window.electronAPI) return null;
+        const res = await window.electronAPI.createPage(id, title, content, parentId);
+        if (res.error) throw new Error(res.error);
+        return res;
+    },
+    update: async (id, title, content) => {
+        if (!window.electronAPI) return null;
+        const res = await window.electronAPI.updatePage(id, title, content);
+        if (res.error) throw new Error(res.error);
+        return res;
+    },
+    get: async (id) => {
+        if (!window.electronAPI) return null;
+        const res = await window.electronAPI.getPage(id);
+        if (res.error) throw new Error(res.error);
+        return res.page;
+    },
+    list: async () => {
+        if (!window.electronAPI) return [];
+        const res = await window.electronAPI.getPages();
+        if (res.error) throw new Error(res.error);
+        return res.pages;
+    },
+    delete: async (id) => {
+        if (!window.electronAPI) return null;
+        const res = await window.electronAPI.deletePage(id);
+        if (res.error) throw new Error(res.error);
+        return res;
+    }
 };
 
 export async function isBackendReady() {
-    return backendStatus.check();
+    return true;
 }
 
 const _notAvailable = (name) => () =>

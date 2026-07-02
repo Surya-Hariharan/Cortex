@@ -25,11 +25,17 @@ export const system = {
 };
 
 export const auth = {
-    initSession: async (payload, token) => {
-        const res = await window.electronAPI.cloudAuthInitSession(payload, token);
-        if (res.status && res.status !== 200) throw { data: res.data };
-        return res;
+    signup: async (payload) => {
+        const res = await window.electronAPI.authRegister(payload);
+        if (res.status !== 200) throw { data: res.data };
+        return res.data;
     },
+    login: async (payload) => {
+        const res = await window.electronAPI.authLogin(payload);
+        if (res.status !== 200) throw { data: res.data };
+        return res.data;
+    },
+    refresh: async () => ({}),
     logout: async () => {
         return { success: true };
     },

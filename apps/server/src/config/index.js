@@ -19,9 +19,18 @@ const config = {
     databaseUrl: process.env.DATABASE_URL || (isTest ? 'postgres://test:test@localhost:5432/cortex_server_test' : undefined),
     corsOrigins: (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
 
-    clerk: {
-        publishableKey: required('CLERK_PUBLISHABLE_KEY'),
-        secretKey: required('CLERK_SECRET_KEY'),
+    // Identity is Supabase Auth, not a local users table. `url`/`anonKey`/
+    // `serviceRoleKey` are only required lazily, the first time a Supabase
+    // client is actually constructed (see config/supabase.js) — mirrors how
+    // `databaseUrl` above is only required lazily by db/pool.js — so the
+    // process can still boot (e.g. for `GET /health`) without them set.
+    // `jwtSecret` IS required eagerly because every authenticated request
+    // needs it to verify the bearer token.
+    supabase: {
+        url: process.env.SUPABASE_URL || (isTest ? 'https://test.supabase.co' : undefined),
+        anonKey: process.env.SUPABASE_ANON_KEY || (isTest ? 'test-anon-key' : undefined),
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || (isTest ? 'test-service-role-key' : undefined),
+        jwtSecret: required('SUPABASE_JWT_SECRET', 'test-only-secret-not-for-production'),
     },
 
     emailProvider: process.env.EMAIL_PROVIDER || 'console',

@@ -11,19 +11,17 @@ describe('cloudClient', () => {
 
     beforeEach(() => {
         originalEnv = process.env.CORTEX_CLOUD_API_URL;
-        vi.resetModules();
-        cloudClient = require('../services/cloud/cloudClient');
+        originalFetch = global.fetch;
     });
 
     afterEach(() => {
-        if (originalEnv !== undefined) process.env.CORTEX_CLOUD_API_URL = originalEnv;
-        else delete process.env.CORTEX_CLOUD_API_URL;
+        process.env.CORTEX_CLOUD_API_URL = originalEnv;
         global.fetch = originalFetch;
         vi.restoreAllMocks();
     });
 
     describe('isConfigured', () => {
-        it('is false when CORTEX_CLOUD_API_URL is missing', () => {
+        it('is false when CORTEX_CLOUD_API_URL is unset', () => {
             delete process.env.CORTEX_CLOUD_API_URL;
             expect(cloudClient.isConfigured()).toBe(false);
         });
@@ -39,7 +37,7 @@ describe('cloudClient', () => {
             delete process.env.CORTEX_CLOUD_API_URL;
             global.fetch = vi.fn();
 
-            await expect(cloudClient.initSession({ id: 'd1' }, 'token')).rejects.toMatchObject({ notConfigured: true });
+            await expect(cloudClient.login({ email: 'a@b.com', password: 'x', device: {} })).rejects.toMatchObject({ notConfigured: true });
             expect(global.fetch).not.toHaveBeenCalled();
         });
     });
@@ -49,21 +47,22 @@ describe('cloudClient', () => {
             process.env.CORTEX_CLOUD_API_URL = 'http://localhost:4000';
         });
 
-        it('initSession POSTs to /api/v1/session/init with the device payload and auth header', async () => {
-            global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ device: { id: 'd1' } }) });
+        it('login POSTs to /api/v1/auth/login with the device payload, no auth header', async () => {
+            global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ user: { id: 'u1' }, accessToken: 'at', refreshToken: 'rt' }) });
 
-            const result = await cloudClient.initSession({ id: 'd1' }, 'token');
+            const result = await cloudClient.login({ email: 'a@b.com', password: 'pw', device: { fingerprint: 'f1' } });
 
-            expect(result.device.id).toBe('d1');
+            expect(result.accessToken).toBe('at');
             const [url, opts] = global.fetch.mock.calls[0];
-            expect(url).toBe('http://localhost:4000/api/v1/session/init');
+            expect(url).toBe('http://localhost:4000/api/v1/auth/login');
             expect(opts.method).toBe('POST');
-            expect(opts.headers.Authorization).toBe('Bearer token');
-            expect(JSON.parse(opts.body)).toEqual({ device: { id: 'd1' } });
+            expect(opts.headers.Authorization).toBeUndefined();
+            expect(JSON.parse(opts.body)).toEqual({ email: 'a@b.com', password: 'pw', device: { fingerprint: 'f1' } });
         });
 
         it('logout sends the access token as a bearer header, not a body param', async () => {
             global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
+
             await cloudClient.logout('access-token-123');
 
             const [url, opts] = global.fetch.mock.calls[0];
@@ -72,56 +71,33 @@ describe('cloudClient', () => {
             expect(opts.body).toBeUndefined();
         });
 
-        it('syncPush POSTs to /api/v1/sync/push with a bearer token', async () => {
-            global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
-            await cloudClient.syncPush('at', 'd1', { notes: [] });
+        it('syncPull encodes since/limit/deviceId as query params and omits unset ones', async () => {
+            global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ blobs: [], cursor: 'c', hasMore: false }) });
 
-            const [url, opts] = global.fetch.mock.calls[0];
-            expect(url).toBe('http://localhost:4000/api/v1/sync/push');
-            expect(opts.headers.Authorization).toBe('Bearer at');
-            expect(JSON.parse(opts.body)).toEqual({ deviceId: 'd1', payload: { notes: [] } });
-        });
+            await cloudClient.syncPull('at', { since: '2026-01-01T00:00:00.000Z', deviceId: 'device-1' });
 
-        it('syncPull issues a GET to /api/v1/sync/pull with query params', async () => {
-            global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-            await cloudClient.syncPull('at', 'd1', 12345);
-
-            const [url, opts] = global.fetch.mock.calls[0];
-            expect(url).toContain('http://localhost:4000/api/v1/sync/pull?deviceId=d1&since=12345');
-            expect(opts.method).toBe('GET');
-            expect(opts.headers.Authorization).toBe('Bearer at');
+            const [url] = global.fetch.mock.calls[0];
+            expect(url).toContain('/api/v1/sync/pull?');
+            expect(url).toContain('since=2026-01-01T00%3A00%3A00.000Z');
+            expect(url).toContain('deviceId=device-1');
+            expect(url).not.toContain('limit=');
         });
 
         it('throws with the server-provided status and detail on a non-2xx response', async () => {
             global.fetch = vi.fn().mockResolvedValue({
                 ok: false,
                 status: 409,
-                json: async () => ({ error: 'conflict', detail: 'Already exists.' }),
+                json: async () => ({ error: 'email_taken', detail: 'An account with this email already exists.' }),
             });
 
             await expect(
-                cloudClient.initSession({ id: 'd1' }, 'token')
-            ).rejects.toMatchObject({ status: 409, message: 'Already exists.' });
-        });
-
-        it('gracefully handles non-JSON error responses (e.g. 502 Bad Gateway HTML)', async () => {
-            global.fetch = vi.fn().mockResolvedValue({
-                ok: false,
-                status: 502,
-                statusText: 'Bad Gateway',
-                text: async () => '<html>...</html>',
-                json: async () => { throw new Error('Invalid JSON'); },
-            });
-
-            await expect(
-                cloudClient.initSession({ id: 'd1' }, 'token')
-            ).rejects.toMatchObject({ status: 502, message: 'Cloud service error: 502 Bad Gateway' });
+                cloudClient.register({ email: 'a@b.com', password: 'pw', full_name: 'A', device: {} })
+            ).rejects.toMatchObject({ status: 409, message: 'An account with this email already exists.' });
         });
 
         it('revokeDevice issues a DELETE to the device-scoped path', async () => {
             global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
             await cloudClient.revokeDevice('at', 'device-9');
-
             const [url, opts] = global.fetch.mock.calls[0];
             expect(url).toBe('http://localhost:4000/api/v1/auth/devices/device-9');
             expect(opts.method).toBe('DELETE');

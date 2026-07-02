@@ -1,56 +1,83 @@
-const devicesRepo = require('../repositories/devices.repository');
-const usersRepo = require('../repositories/users.repository');
-const activityLog = require('../services/activityLog.service');
+const authService = require('../services/auth.service');
 const { asyncHandler } = require('../utils/asyncHandler');
-const { ApiError } = require('../middleware/errorHandler');
 
-// Replaces the old login/register flow. 
-// Called by the desktop app after Clerk authenticates them, to register the device.
-const initSession = asyncHandler(async (req, res) => {
-    const { device } = req.body;
-    
-    // Ensure the user exists in our local DB (since Clerk handles the primary identity)
-    await usersRepo.upsertProfile(req.user.id, { 
-        displayName: req.user.email?.split('@')[0] || 'Cortex User'
-    });
+const register = asyncHandler(async (req, res) => {
+    const result = await authService.register(req.body);
+    await authService.requestEmailVerification(result.user.id, result.user.email);
+    res.status(201).json(result);
+});
 
-    const isNewDevice = !(await devicesRepo.findByFingerprint(req.user.id, device.fingerprint));
-    const deviceRow = await devicesRepo.upsertDevice({ userId: req.user.id, ...device });
-    
-    await activityLog.record(req.user.id, isNewDevice ? 'device_registered' : 'session_started', { 
-        resourceType: 'device', 
-        resourceId: deviceRow.id 
-    });
+const login = asyncHandler(async (req, res) => {
+    const result = await authService.login(req.body);
+    res.status(200).json(result);
+});
 
-    res.status(200).json({ device: deviceRow });
+const refresh = asyncHandler(async (req, res) => {
+    const result = await authService.refresh(req.body);
+    res.status(200).json(result);
+});
+
+// Authenticated — signs out the session tied to the presented access token.
+const logout = asyncHandler(async (req, res) => {
+    const result = await authService.logout(req.accessToken);
+    res.status(200).json(result);
+});
+
+const logoutAll = asyncHandler(async (req, res) => {
+    const result = await authService.signOutAllDevices(req.user.id, req.accessToken);
+    res.status(200).json(result);
+});
+
+const requestEmailVerification = asyncHandler(async (req, res) => {
+    await authService.requestEmailVerification(req.user.id, req.user.email);
+    res.status(200).json({ message: 'Verification code sent.' });
+});
+
+const confirmEmailVerification = asyncHandler(async (req, res) => {
+    const result = await authService.confirmEmailVerification(req.user.email, req.body.token);
+    res.status(200).json(result);
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+    const result = await authService.requestPasswordReset(req.body.email);
+    res.status(200).json(result);
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const result = await authService.resetPassword(req.body);
+    res.status(200).json(result);
 });
 
 const listDevices = asyncHandler(async (req, res) => {
-    const devices = await devicesRepo.listForUser(req.user.id);
+    const devices = await authService.listDevices(req.user.id);
     res.status(200).json({ devices });
 });
 
 const revokeDevice = asyncHandler(async (req, res) => {
-    await devicesRepo.revoke(req.params.deviceId, req.user.id);
-    await activityLog.record(req.user.id, 'device_revoked', { resourceType: 'device', resourceId: req.params.deviceId });
-    res.status(200).json({ success: true });
+    const result = await authService.revokeDevice(req.params.deviceId, req.user.id);
+    res.status(200).json(result);
 });
 
 const setDeviceKey = asyncHandler(async (req, res) => {
-    const device = await devicesRepo.setWrappedUserKey(req.params.deviceId, req.user.id, req.body.wrappedUserKey);
-    if (!device) throw new ApiError(404, 'not_found', 'Device not found.');
-    res.status(200).json({ success: true });
+    const result = await authService.setDeviceWrappedKey(req.params.deviceId, req.user.id, req.body.wrappedUserKey);
+    res.status(200).json(result);
 });
 
 const deleteAccount = asyncHandler(async (req, res) => {
-    // Clerk handles the actual deletion, this just records it locally or cleans up
-    await activityLog.record(req.user.id, 'account_deleted');
-    // Note: To fully delete from Clerk, a webhook should be used.
-    res.status(200).json({ success: true, message: 'Local data marked for deletion.' });
+    const result = await authService.deleteAccount(req.user.id, req.user.email);
+    res.status(200).json(result);
 });
 
 module.exports = {
-    initSession,
+    register,
+    login,
+    refresh,
+    logout,
+    logoutAll,
+    requestEmailVerification,
+    confirmEmailVerification,
+    forgotPassword,
+    resetPassword,
     listDevices,
     revokeDevice,
     setDeviceKey,

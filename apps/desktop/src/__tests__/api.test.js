@@ -74,26 +74,39 @@ describe('api (local-first)', () => {
 
     // ── auth (routed through electronAPI IPC) ───────────────────────────────
     describe('auth', () => {
-        it('initSession delegates to electronAPI.cloudAuthInitSession and returns data', async () => {
+        it('signup delegates to electronAPI.authRegister and returns data', async () => {
             window.electronAPI = {
-                cloudAuthInitSession: vi.fn().mockResolvedValue({ status: 200, data: { device: { id: 'd1' } } })
+                authRegister: vi.fn().mockResolvedValue({ status: 200, data: { id: 'u1' } }),
             };
-            const payload = { device: { id: 'd1' } };
-            const result = await auth.initSession(payload, 'token');
-            expect(window.electronAPI.cloudAuthInitSession).toHaveBeenCalledWith(payload, 'token');
-            expect(result).toEqual({ status: 200, data: { device: { id: 'd1' } } });
+            const payload = { email: 'a@b.com', password: 'pw' };
+            const result = await auth.signup(payload);
+            expect(window.electronAPI.authRegister).toHaveBeenCalledWith(payload);
+            expect(result).toEqual({ id: 'u1' });
         });
 
-        it('initSession throws with data on non-200 status', async () => {
+        it('signup throws with data on non-200 status', async () => {
             window.electronAPI = {
-                cloudAuthInitSession: vi.fn().mockResolvedValue({ status: 400, data: { error: 'invalid' } })
+                authRegister: vi.fn().mockResolvedValue({ status: 400, data: { error: 'taken' } }),
             };
-            await expect(auth.initSession({ device: { id: 'd1' } }, 'token')).rejects.toEqual({
-                data: { error: 'invalid' },
+            await expect(auth.signup({ email: 'a@b.com' })).rejects.toMatchObject({
+                data: { error: 'taken' },
             });
         });
 
-        it('logout resolves successfully', async () => {
+        it('login delegates to electronAPI.authLogin and returns data', async () => {
+            window.electronAPI = {
+                authLogin: vi.fn().mockResolvedValue({ status: 200, data: { id: 'u1' } }),
+            };
+            const result = await auth.login({ email: 'a@b.com', password: 'pw' });
+            expect(window.electronAPI.authLogin).toHaveBeenCalled();
+            expect(result).toEqual({ id: 'u1' });
+        });
+
+        it('refresh resolves an empty object (no remote session)', async () => {
+            expect(await auth.refresh()).toEqual({});
+        });
+
+        it('logout resolves success locally', async () => {
             expect(await auth.logout()).toEqual({ success: true });
         });
     });

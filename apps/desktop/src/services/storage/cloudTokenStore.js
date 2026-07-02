@@ -15,14 +15,17 @@ const { encryptText, decryptText } = require('./encryption');
 const FILENAME = 'cortex-cloud-session.json';
 
 let _filePath = null;
-let _memorySession = null;
 
 function initCloudTokenStore(userDataPath) {
     _filePath = path.join(userDataPath, FILENAME);
-    _memorySession = getCloudSessionFromDisk();
 }
 
-function getCloudSessionFromDisk() {
+function saveCloudSession(session) {
+    if (!_filePath) throw new Error('[cloudTokenStore] Not initialised. Call initCloudTokenStore(userDataPath) first.');
+    fs.writeFileSync(_filePath, encryptText(JSON.stringify(session)), { mode: 0o600 });
+}
+
+function getCloudSession() {
     if (!_filePath || !fs.existsSync(_filePath)) return null;
     try {
         return JSON.parse(decryptText(fs.readFileSync(_filePath, 'utf8')));
@@ -31,29 +34,8 @@ function getCloudSessionFromDisk() {
     }
 }
 
-function saveCloudSession(session) {
-    if (!_filePath) throw new Error('[cloudTokenStore] Not initialised. Call initCloudTokenStore(userDataPath) first.');
-    _memorySession = session;
-    fs.writeFileSync(_filePath, encryptText(JSON.stringify(session)), { mode: 0o600 });
-}
-
-function getCloudSession() {
-    return _memorySession;
-}
-
-function updateAccessToken(token) {
-    if (_memorySession) {
-        _memorySession.accessToken = token;
-        // Don't write to disk on every token refresh to save I/O
-    } else {
-        // We might get a token before initSession finishes, though unlikely
-        _memorySession = { accessToken: token };
-    }
-}
-
 function clearCloudSession() {
-    _memorySession = null;
     if (_filePath && fs.existsSync(_filePath)) fs.unlinkSync(_filePath);
 }
 
-module.exports = { initCloudTokenStore, saveCloudSession, getCloudSession, clearCloudSession, updateAccessToken };
+module.exports = { initCloudTokenStore, saveCloudSession, getCloudSession, clearCloudSession };

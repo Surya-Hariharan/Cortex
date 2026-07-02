@@ -426,28 +426,32 @@ function registerIpcHandlers() {
         contentKey.clearContentKey();
     }
 
-    // initSession augments the device payload with this device's public
+    // register/login augment the device payload with this device's public
     // key (deviceKeys is main-process-only Node crypto, unreachable from the
-    // renderer) and, on success, establishes this device's copy of the cloud
+    // renderer) and, on success, establish this device's copy of the cloud
     // content key (syncEngine.ensureDeviceEnrolled) so sync can run.
-    ipcMain.handle('cloud-auth-init-session', async (_e, { device }, token) => {
+    ipcMain.handle('cloud-auth-register', async (_e, { email, password, full_name, device }) => {
         if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
         try {
-            const result = await cloudClient.initSession({ ...device, publicKey: deviceKeys.getPublicKey() }, token);
-            // Result is { device: { ... } }. Wait, where does user come from?
-            // Actually, we can just save the token to our cloud session store.
-            // But we need the user object. We'll rely on the React app to supply the profile.
-            // Let's just save the device for now, we'll update cloudSession later.
-            saveCloudSession({ device: result.device, accessToken: token });
+            const result = await cloudClient.register({ email, password, full_name, device: { ...device, publicKey: deviceKeys.getPublicKey() } });
+            saveCloudSession(result);
             await syncEngine.ensureDeviceEnrolled(result.device);
-            return { success: true, device: result.device };
+            return { success: true, user: result.user };
         } catch (error) {
             return { success: false, error: error.data?.detail || error.message };
         }
     });
 
-    ipcMain.on('cloud-update-token', (_e, token) => {
-        cloudTokenStore.updateAccessToken(token);
+    ipcMain.handle('cloud-auth-login', async (_e, { email, password, device }) => {
+        if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+        try {
+            const result = await cloudClient.login({ email, password, device: { ...device, publicKey: deviceKeys.getPublicKey() } });
+            saveCloudSession(result);
+            await syncEngine.ensureDeviceEnrolled(result.device);
+            return { success: true, user: result.user };
+        } catch (error) {
+            return { success: false, error: error.data?.detail || error.message };
+        }
     });
 
     ipcMain.handle('cloud-auth-logout', async () => {

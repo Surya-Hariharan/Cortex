@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, BookOpen, GraduationCap } from 'lucide-react';
-import SearchTab from '../SearchTab';
-import Library from '../Library';
-import AcademicHub from '../AcademicHub';
+import SearchTab from '../panels/SearchTab';
+import Library from './Library';
+import AcademicHub from './AcademicHub';
 
 const SUB_TABS = [
     { id: 'search', label: 'Search', icon: <Search size={16} /> },

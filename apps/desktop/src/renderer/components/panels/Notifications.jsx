@@ -3,7 +3,7 @@ import {
     Bell, Download, Star, Users, Upload, CheckCheck, Zap,
     MessageSquare, Trash2, Check, AlertCircle, Award, X
 } from 'lucide-react';
-import { notifications as notifApi, getUserId } from '../../services/api.js';
+import { notifications as notifApi, getUserId } from '../../../services/api.js';
 
 const TYPE_CONFIG = {
     download:  { icon: <Download size={18} />,      color: 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' },

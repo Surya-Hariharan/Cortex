@@ -260,7 +260,7 @@ describe('Workspace — task tab interactions', () => {
 
 describe('StudyGroups — group list and modals', () => {
     it('shows groups and allows clicking create modal', async () => {
-        const { default: StudyGroups } = await import('../renderer/components/StudyGroups.jsx');
+        const { default: StudyGroups } = await import('../renderer/components/pages/StudyGroups.jsx');
         const { container } = render(wrap(<StudyGroups onToast={noop} />));
         await act(async () => {});
         // Try to click create group button
@@ -274,7 +274,7 @@ describe('StudyGroups — group list and modals', () => {
     });
 
     it('allows clicking join group button', async () => {
-        const { default: StudyGroups } = await import('../renderer/components/StudyGroups.jsx');
+        const { default: StudyGroups } = await import('../renderer/components/pages/StudyGroups.jsx');
         const { container } = render(wrap(<StudyGroups onToast={noop} />));
         await act(async () => {});
         const joinBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Join'));
@@ -285,7 +285,7 @@ describe('StudyGroups — group list and modals', () => {
     });
 
     it('can click a group to view it', async () => {
-        const { default: StudyGroups } = await import('../renderer/components/StudyGroups.jsx');
+        const { default: StudyGroups } = await import('../renderer/components/pages/StudyGroups.jsx');
         const { container } = render(wrap(<StudyGroups onToast={noop} />));
         await act(async () => {});
         // Click the first group
@@ -301,7 +301,7 @@ describe('StudyGroups — group list and modals', () => {
 
 describe('SearchTab — search interaction', () => {
     it('can type in search box', async () => {
-        const { default: SearchTab } = await import('../renderer/components/SearchTab.jsx');
+        const { default: SearchTab } = await import('../renderer/components/panels/SearchTab.jsx');
         const { container } = render(wrap(<SearchTab onToast={noop} onUploadPdf={noop} onFirstSearch={noop} onSearchComplete={noop} />));
         await act(async () => {});
         // Use type="text" to skip the hidden file input
@@ -315,7 +315,7 @@ describe('SearchTab — search interaction', () => {
     });
 
     it('can submit a search', async () => {
-        const { default: SearchTab } = await import('../renderer/components/SearchTab.jsx');
+        const { default: SearchTab } = await import('../renderer/components/panels/SearchTab.jsx');
         const { container } = render(wrap(<SearchTab onToast={noop} onUploadPdf={noop} onFirstSearch={noop} onSearchComplete={noop} />));
         await act(async () => {});
         // Use type="text" to skip the hidden file input
@@ -335,14 +335,14 @@ describe('SearchTab — search interaction', () => {
 
 describe('NotesTab — interactions', () => {
     it('shows notes after loading', async () => {
-        const { default: NotesTab } = await import('../renderer/components/NotesTab.jsx');
+        const { default: NotesTab } = await import('../renderer/components/panels/NotesTab.jsx');
         render(wrap(<NotesTab onToast={noop} />));
         await act(async () => {});
         expect(document.body).toBeTruthy();
     });
 
     it('can click to open new note UI', async () => {
-        const { default: NotesTab } = await import('../renderer/components/NotesTab.jsx');
+        const { default: NotesTab } = await import('../renderer/components/panels/NotesTab.jsx');
         const { container } = render(wrap(<NotesTab onToast={noop} />));
         await act(async () => {});
         const btn = Array.from(container.querySelectorAll('button')).find(b =>
@@ -359,7 +359,7 @@ describe('NotesTab — interactions', () => {
 
 describe('AcademicHub — tab navigation', () => {
     it('can switch tabs', async () => {
-        const { default: AcademicHub } = await import('../renderer/components/AcademicHub.jsx');
+        const { default: AcademicHub } = await import('../renderer/components/pages/AcademicHub.jsx');
         const { container } = render(wrap(<AcademicHub userStream="cse" onToast={noop} />));
         await act(async () => {});
         // Click the second tab if it exists
@@ -375,14 +375,14 @@ describe('AcademicHub — tab navigation', () => {
 
 describe('Library — interactions', () => {
     it('shows uploaded documents', async () => {
-        const { default: Library } = await import('../renderer/components/Library.jsx');
+        const { default: Library } = await import('../renderer/components/pages/Library.jsx');
         render(wrap(<Library onToast={noop} onUploadPdf={noop} />));
         await act(async () => {});
         expect(document.body).toBeTruthy();
     });
 
     it('can click upload button', async () => {
-        const { default: Library } = await import('../renderer/components/Library.jsx');
+        const { default: Library } = await import('../renderer/components/pages/Library.jsx');
         const { container } = render(wrap(<Library onToast={noop} onUploadPdf={noop} />));
         await act(async () => {});
         const btn = Array.from(container.querySelectorAll('button')).find(b =>
@@ -399,7 +399,7 @@ describe('Library — interactions', () => {
 
 describe('NetworkTab — interactions', () => {
     it('loads after mount', async () => {
-        const { default: NetworkTab } = await import('../renderer/components/NetworkTab.jsx');
+        const { default: NetworkTab } = await import('../renderer/components/panels/NetworkTab.jsx');
         render(wrap(<NetworkTab onToast={noop} />));
         await act(async () => {});
         expect(document.body).toBeTruthy();
@@ -410,7 +410,7 @@ describe('NetworkTab — interactions', () => {
 
 describe('MyContributions — interactions', () => {
     it('can switch date ranges', async () => {
-        const { default: MyContributions } = await import('../renderer/components/MyContributions.jsx');
+        const { default: MyContributions } = await import('../renderer/components/pages/MyContributions.jsx');
         const { container } = render(wrap(<MyContributions onToast={noop} />));
         await act(async () => {});
         const btn = Array.from(container.querySelectorAll('button')).find(b =>
@@ -515,7 +515,7 @@ describe('UploadNoteModal', () => {
 
 describe('PerformanceTab — interactions', () => {
     it('renders with resource data', async () => {
-        const { default: PerformanceTab } = await import('../renderer/components/PerformanceTab.jsx');
+        const { default: PerformanceTab } = await import('../renderer/components/panels/PerformanceTab.jsx');
         render(wrap(<PerformanceTab onToast={noop} />));
         await act(async () => {});
         expect(document.body).toBeTruthy();
@@ -526,7 +526,7 @@ describe('PerformanceTab — interactions', () => {
 
 describe('DocumentStatus — with data', () => {
     it('renders with populated document list', async () => {
-        const { default: DocumentStatus } = await import('../renderer/components/DocumentStatus.jsx');
+        const { default: DocumentStatus } = await import('../renderer/components/panels/DocumentStatus.jsx');
         render(wrap(<DocumentStatus onToast={noop} />));
         await act(async () => {});
         expect(document.body).toBeTruthy();

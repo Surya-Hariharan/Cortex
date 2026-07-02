@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useCore } from '../context/CoreContext';
-import { groups as groupsApi, getUserId } from '../../services/api.js';
+import { useCore } from '../../context/CoreContext';
+import { groups as groupsApi, getUserId } from '../../../services/api.js';
 import {
     Users, Plus, Search, MessageSquare, Crown, ChevronRight,
     Hash, Send, X, Lock, Unlock, Trash2, RefreshCw,

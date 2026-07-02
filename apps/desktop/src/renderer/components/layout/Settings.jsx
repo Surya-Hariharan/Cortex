@@ -5,8 +5,8 @@ import {
     Cpu, Download, Trash2, Archive, Shield, Eye, EyeOff, AlertTriangle, Pencil,
     Activity, Zap
 } from 'lucide-react';
-import DocumentStatus from '../DocumentStatus';
-import PerformanceTab from '../PerformanceTab';
+import DocumentStatus from '../panels/DocumentStatus';
+import PerformanceTab from '../panels/PerformanceTab';
 import { getMeshConsent, setMeshConsent } from '../../../services/offline/offlineIdentity.js';
 import { meshController } from '../../../services/mesh/meshController.js';
 

@@ -3,7 +3,7 @@
 // giving near-100% statement coverage for that file.
 
 import { describe, it, expect } from 'vitest';
-import * as authData from '../renderer/components/pages/authData.js';
+import * as authData from '../renderer/constants/authData.js';
 
 describe('authData', () => {
     it('exports DISTRICTS_TN as a non-empty array of strings', () => {

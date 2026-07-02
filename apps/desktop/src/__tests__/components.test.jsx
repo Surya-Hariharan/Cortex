@@ -116,7 +116,7 @@ beforeEach(() => {
 
 describe('SearchTab', () => {
     it('renders without crashing', async () => {
-        const { default: SearchTab } = await import('../renderer/components/SearchTab.jsx');
+        const { default: SearchTab } = await import('../renderer/components/panels/SearchTab.jsx');
         await act(async () => {
             render(wrap(<SearchTab onToast={noop} onUploadPdf={noop} onFirstSearch={noop} onSearchComplete={noop} />));
         });
@@ -128,7 +128,7 @@ describe('SearchTab', () => {
 
 describe('NotesTab', () => {
     it('renders without crashing', async () => {
-        const { default: NotesTab } = await import('../renderer/components/NotesTab.jsx');
+        const { default: NotesTab } = await import('../renderer/components/panels/NotesTab.jsx');
         await act(async () => {
             render(wrap(<NotesTab onToast={noop} />));
         });
@@ -140,7 +140,7 @@ describe('NotesTab', () => {
 
 describe('Library', () => {
     it('renders without crashing', async () => {
-        const { default: Library } = await import('../renderer/components/Library.jsx');
+        const { default: Library } = await import('../renderer/components/pages/Library.jsx');
         await act(async () => {
             render(wrap(<Library onToast={noop} onUploadPdf={noop} />));
         });
@@ -152,7 +152,7 @@ describe('Library', () => {
 
 describe('StudyGroups', () => {
     it('renders without crashing', async () => {
-        const { default: StudyGroups } = await import('../renderer/components/StudyGroups.jsx');
+        const { default: StudyGroups } = await import('../renderer/components/pages/StudyGroups.jsx');
         await act(async () => {
             render(wrap(<StudyGroups onToast={noop} />));
         });
@@ -164,7 +164,7 @@ describe('StudyGroups', () => {
 
 describe('AcademicHub', () => {
     it('renders without crashing', async () => {
-        const { default: AcademicHub } = await import('../renderer/components/AcademicHub.jsx');
+        const { default: AcademicHub } = await import('../renderer/components/pages/AcademicHub.jsx');
         await act(async () => {
             render(wrap(<AcademicHub userStream="cse" onToast={noop} />));
         });
@@ -176,7 +176,7 @@ describe('AcademicHub', () => {
 
 describe('NetworkTab', () => {
     it('renders without crashing', async () => {
-        const { default: NetworkTab } = await import('../renderer/components/NetworkTab.jsx');
+        const { default: NetworkTab } = await import('../renderer/components/panels/NetworkTab.jsx');
         await act(async () => {
             render(wrap(<NetworkTab onToast={noop} />));
         });
@@ -188,7 +188,7 @@ describe('NetworkTab', () => {
 
 describe('PerformanceTab', () => {
     it('renders without crashing', async () => {
-        const { default: PerformanceTab } = await import('../renderer/components/PerformanceTab.jsx');
+        const { default: PerformanceTab } = await import('../renderer/components/panels/PerformanceTab.jsx');
         await act(async () => {
             render(wrap(<PerformanceTab onToast={noop} />));
         });
@@ -200,7 +200,7 @@ describe('PerformanceTab', () => {
 
 describe('DocumentStatus', () => {
     it('renders without crashing', async () => {
-        const { default: DocumentStatus } = await import('../renderer/components/DocumentStatus.jsx');
+        const { default: DocumentStatus } = await import('../renderer/components/panels/DocumentStatus.jsx');
         await act(async () => {
             render(wrap(<DocumentStatus onToast={noop} />));
         });
@@ -212,7 +212,7 @@ describe('DocumentStatus', () => {
 
 describe('MyContributions', () => {
     it('renders without crashing', async () => {
-        const { default: MyContributions } = await import('../renderer/components/MyContributions.jsx');
+        const { default: MyContributions } = await import('../renderer/components/pages/MyContributions.jsx');
         await act(async () => {
             render(wrap(<MyContributions onToast={noop} />));
         });
@@ -224,7 +224,7 @@ describe('MyContributions', () => {
 
 describe('Notifications', () => {
     it('renders without crashing', async () => {
-        const { default: Notifications } = await import('../renderer/components/Notifications.jsx');
+        const { default: Notifications } = await import('../renderer/components/panels/Notifications.jsx');
         await act(async () => {
             render(wrap(<Notifications onToast={noop} onClose={noop} isOpen />));
         });

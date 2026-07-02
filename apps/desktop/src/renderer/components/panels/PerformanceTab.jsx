@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Zap, Activity, Shield, Cpu, Monitor, Globe, BarChart3, Clock, CheckCircle2, AlertCircle, Play, Square, Terminal, Network, Droplets, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { system as systemApi } from '../../services/api.js';
-import { useCore } from '../context/CoreContext.jsx';
+import { system as systemApi } from '../../../services/api.js';
+import { useCore } from '../../context/CoreContext.jsx';
 const CLOUD_API_MS = 847;
 const CPU_BASELINE_MS = 41;
 

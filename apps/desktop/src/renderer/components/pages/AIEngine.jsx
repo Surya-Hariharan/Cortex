@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Database, Zap } from 'lucide-react';
-import DocumentStatus from '../DocumentStatus';
-import PerformanceTab from '../PerformanceTab';
+import DocumentStatus from '../panels/DocumentStatus';
+import PerformanceTab from '../panels/PerformanceTab';
 
 const SUB_TABS = [
     { id: 'pipeline', label: 'Pipeline', icon: <Database size={16} /> },

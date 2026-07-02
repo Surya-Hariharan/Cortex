@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Share2 } from 'lucide-react';
-import { notes as notesApi, mesh, getUserId } from '../../services/api.js';
+import { notes as notesApi, mesh, getUserId } from '../../../services/api.js';
 
 // Encode/decode note type and due_date as tags on the backend
 function encodeNoteTags(type, dueDate, extraTags = []) {

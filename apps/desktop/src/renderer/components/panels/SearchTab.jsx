@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowUpRight, Plus, Zap, X, Check, Paperclip } from 'lucide-react';
-import ResultCard from './shared/ResultCard';
-import { search as searchApi, chat as chatApi, documents as docsApi, getUserId } from '../../services/api.js';
-import { useCore } from '../context/CoreContext.jsx';
+import ResultCard from '../shared/ResultCard';
+import { search as searchApi, chat as chatApi, documents as docsApi, getUserId } from '../../../services/api.js';
+import { useCore } from '../../context/CoreContext.jsx';
 
 const SEARCH_STAGES = [
     'Tokenizing query…',

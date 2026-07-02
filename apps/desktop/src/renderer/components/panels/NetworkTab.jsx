@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Share, Shield, Globe, Cpu, Zap, Activity, Monitor, ChevronRight, MoreHorizontal, FileText, Code, File, Search } from 'lucide-react';
-import { mesh, activity as activityApi } from '../../services/api.js';
+import { mesh, activity as activityApi } from '../../../services/api.js';
 
 const FILE_TYPE_CONFIG = {
     pdf: { icon: <FileText size={18} />, color: 'accent-pdf', label: 'PDF' },

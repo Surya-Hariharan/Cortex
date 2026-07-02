@@ -18,8 +18,8 @@ import {
     User,
     Plus
 } from 'lucide-react';
-import { notes as notesApi, getUserId } from '../../services/api.js';
-import UploadNoteModal from './shared/UploadNoteModal';
+import { notes as notesApi, getUserId } from '../../../services/api.js';
+import UploadNoteModal from '../shared/UploadNoteModal';
 
 const MOCK_NOTES = [];
 

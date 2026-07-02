@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { documents as docsApi, system as systemApi, getUserId } from '../../services/api.js';
-import { useCore } from '../context/CoreContext';
+import { documents as docsApi, system as systemApi, getUserId } from '../../../services/api.js';
+import { useCore } from '../../context/CoreContext';
 import {
     Database,
     Zap,

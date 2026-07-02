@@ -19,7 +19,7 @@
 - **Semantic Search** — Vector search over uploaded PDFs and notes using BGE
   embeddings (ONNX, runs fully locally)
 - **RAG Answers** — AI-synthesized answers from your documents via a local LLM
-  (Phi-3 / Ollama), with an optional Gemini fallback when online
+  (Phi-3 / Ollama)
 - **Notes & Deadlines** — Note-taking with task, deadline, and idea categories
   stored in local SQLite
 - **Local Auth** — Signup/login handled entirely on-device with bcrypt; your data
@@ -31,8 +31,7 @@
 - **Robust Cloud Infrastructure** — Optional but fully featured cloud sync backed by **Supabase** (managed PostgreSQL & Auth) and **MailerLite** (transactional emails).
 
 Cortex is **local-first**: the core experience works with zero internet and no
-external services. Connectivity only unlocks optional enhancements (e.g. the Gemini
-AI fallback).
+external services. Connectivity only unlocks optional enhancements.
 
 ---
 
@@ -189,10 +188,7 @@ Download and place these directories under `apps/desktop/models/` (or Electron's
 | `bge-small-en-v1.5/` | ~126 MB | Embeddings (semantic search) |
 | `phi-3-mini/` | ~2.4 GB | LLM text generation (RAG answers) |
 
-### Option C — Gemini API fallback (online only)
 
-Set `GEMINI_API_KEY` in the root `.env`. Cortex falls back to the Gemini API if no
-local model is found and the machine is online.
 
 ---
 
@@ -218,7 +214,7 @@ All variables are **optional** and read by the Electron main process from the ro
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `production` disables dev tooling |
 | `CORTEX_OPEN_DEVTOOLS` | — | Set to `1` to open DevTools on launch |
-| `GEMINI_API_KEY` | — | Enables the online Gemini AI fallback |
+
 | `CORTEX_MESH_EXPERIMENTAL` | — | Set to `1` to enable experimental LAN peer discovery |
 | `CORTEX_CLOUD_API_URL` | — | Base URL of a running `apps/server` instance — enables the optional Cloud & Sync account features. See [Optional Cloud Backend](#optional-cloud-backend) |
 

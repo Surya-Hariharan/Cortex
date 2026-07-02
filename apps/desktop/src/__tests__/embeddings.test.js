@@ -36,7 +36,6 @@ describe('EmbeddingsEngine (local-fallback — no model file)', () => {
     let engine;
 
     beforeEach(async () => {
-        delete process.env.GEMINI_API_KEY;
         engine = new EmbeddingsEngine(MISSING_MODEL_DIR);
         await engine.initialize();
     });
@@ -157,72 +156,7 @@ describe('EmbeddingsEngine.getPerfStats()', () => {
     });
 });
 
-// ── Gemini API path ───────────────────────────────────────────────────────
 
-describe('EmbeddingsEngine (Gemini API path)', () => {
-    let originalFetch;
-
-    beforeEach(() => {
-        process.env.GEMINI_API_KEY = 'test-api-key';
-        originalFetch = global.fetch;
-    });
-
-    afterEach(() => {
-        delete process.env.GEMINI_API_KEY;
-        global.fetch = originalFetch;
-    });
-
-    it('sets activeProvider to gemini-api when GEMINI_API_KEY is set', async () => {
-        const engine = new EmbeddingsEngine(MISSING_MODEL_DIR);
-        await engine.initialize();
-        expect(engine.activeProvider).toBe('gemini-api');
-        expect(engine.useApi).toBe(true);
-    });
-
-    it('embed() calls fetch with Gemini API URL', async () => {
-        const rawEmbedding = new Array(400).fill(0).map((_, i) => i / 400);
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            json: async () => ({ embedding: { values: rawEmbedding } }),
-        });
-
-        const engine = new EmbeddingsEngine(MISSING_MODEL_DIR);
-        await engine.initialize();
-        const vec = await engine.embed('test text');
-
-        expect(global.fetch).toHaveBeenCalled();
-        const [url, opts] = global.fetch.mock.calls[0];
-        expect(url).toContain('generativelanguage.googleapis.com');
-        expect(opts.method).toBe('POST');
-        expect(vec).toHaveLength(384);
-    });
-
-    it('embed() normalizes the Gemini response', async () => {
-        // Response with all 1s → after L2 normalization each element = 1/sqrt(384)
-        const rawEmbedding = new Array(400).fill(1);
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            json: async () => ({ embedding: { values: rawEmbedding } }),
-        });
-
-        const engine = new EmbeddingsEngine(MISSING_MODEL_DIR);
-        await engine.initialize();
-        const vec = await engine.embed('normalization test');
-        const l2 = Math.sqrt(vec.reduce((s, v) => s + v * v, 0));
-        expect(l2).toBeCloseTo(1.0, 2);
-    });
-
-    it('embed() throws when Gemini API returns non-ok status', async () => {
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            statusText: 'Unauthorized',
-        });
-
-        const engine = new EmbeddingsEngine(MISSING_MODEL_DIR);
-        await engine.initialize();
-        await expect(engine.embed('fail')).rejects.toThrow('Gemini API Error');
-    });
-});
 
 // Note: ONNX path tests (with real model files) require vi.spyOn on fs.existsSync,
 // which is not configurable in ESM node environment. Those paths are covered by the

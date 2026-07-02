@@ -8,6 +8,8 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green)
+![Database](https://img.shields.io/badge/database-Supabase-success)
+![Email](https://img.shields.io/badge/email-MailerLite-brightgreen)
 ![Status](https://img.shields.io/badge/status-beta-orange)
 
 ---
@@ -26,6 +28,7 @@
   discovery) — experimental
 - **Native Desktop App** — Built with Electron; installs and runs like VS Code or
   Notion
+- **Robust Cloud Infrastructure** — Optional but fully featured cloud sync backed by **Supabase** (managed PostgreSQL & Auth) and **MailerLite** (transactional emails).
 
 Cortex is **local-first**: the core experience works with zero internet and no
 external services. Connectivity only unlocks optional enhancements (e.g. the Gemini
@@ -223,10 +226,11 @@ All variables are **optional** and read by the Electron main process from the ro
 
 ## Contributing
 
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit: `git commit -m 'feat: add X'`
-4. Push and open a Pull Request
+We welcome contributions from the community! Please read our [Contributing Guidelines](./CONTRIBUTING.md) to get started.
+
+Please note that this project is released with a [Contributor Code of Conduct](./CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+
+To see what has changed recently in Cortex, please review the [Changelog](./CHANGELOG.md).
 
 ---
 

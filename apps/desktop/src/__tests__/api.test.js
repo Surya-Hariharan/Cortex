@@ -1,14 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 
-// api.js imports getAccessToken from tokenStore at module load; mock it so the
-// real store (which touches electron APIs) is never pulled in during tests.
-vi.mock('../services/storage/tokenStore.js', () => ({
-    saveTokens: vi.fn(),
-    getAccessToken: vi.fn().mockResolvedValue('mock-access-token'),
-    getRefreshToken: vi.fn().mockResolvedValue(null),
-    clearTokens: vi.fn(),
-}));
-
 import {
     getUserId,
     backendStatus,

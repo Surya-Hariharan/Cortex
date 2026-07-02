@@ -67,13 +67,6 @@ vi.mock('../renderer/hooks/useMeshDiscovery.js', () => ({
     useMeshDiscovery: () => ({ nearbyPeers: 0, isMeshAvailable: false }),
 }));
 
-vi.mock('../services/storage/tokenStore.js', () => ({
-    saveTokens: vi.fn(),
-    getAccessToken: vi.fn().mockResolvedValue('token'),
-    getRefreshToken: vi.fn().mockResolvedValue(null),
-    clearTokens: vi.fn(),
-}));
-
 vi.mock('../services/system/deviceCapability.js', () => ({
     ensureDeviceProfile: vi.fn().mockResolvedValue({ cpuCores: 4, ramGB: 8 }),
     getDeviceCapability: vi.fn().mockResolvedValue({ cpuCores: 4, ramGB: 8 }),
@@ -96,10 +89,6 @@ beforeEach(() => {
         getPeers: vi.fn().mockResolvedValue([]),
         meshStart: vi.fn(),
         meshStop: vi.fn(),
-        tokenSave: vi.fn(),
-        tokenGetAccess: vi.fn().mockResolvedValue('token'),
-        tokenGetRefresh: vi.fn().mockResolvedValue(null),
-        tokenClear: vi.fn(),
         windowMinimize: vi.fn(),
         windowMaximize: vi.fn(),
         windowClose: vi.fn(),

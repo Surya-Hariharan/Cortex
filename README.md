@@ -2,7 +2,8 @@
 
 > A private AI second-brain for students. Semantic search over your own documents,
 > structured notes, and local peer sharing — all running on your device. **No cloud,
-> no backend, no account server required.**
+> no backend, no account server required** — an optional cloud backend exists for
+> cross-device sync and collaboration, but the app is fully functional without it.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
@@ -37,17 +38,23 @@ AI fallback).
 ```text
 Cortex/
 ├── apps/
-│   └── desktop/                # Electron desktop app (the whole application)
-│       ├── config/             # webpack, tailwind, postcss configs
-│       ├── src/
-│       │   ├── main/           # Electron main process + preload (IPC)
-│       │   ├── renderer/       # React UI
-│       │   │   ├── components/ # pages/ · panels/ · layout/ · shared/ · editor/
-│       │   │   ├── constants/  # static data
-│       │   │   ├── context/    # React context providers
-│       │   │   └── hooks/      # custom hooks
-│       │   ├── services/       # ai/ · storage/ · network/ · mesh/ · offline/ · system/
-│       │   └── __tests__/      # Vitest suites
+│   ├── desktop/                # Electron desktop app (the whole application)
+│   │   ├── config/             # webpack, tailwind, postcss configs
+│   │   ├── src/
+│   │   │   ├── main/           # Electron main process + preload (IPC)
+│   │   │   ├── renderer/       # React UI
+│   │   │   │   ├── components/ # pages/ · panels/ · layout/ · shared/ · editor/
+│   │   │   │   ├── constants/  # static data
+│   │   │   │   ├── context/    # React context providers
+│   │   │   │   └── hooks/      # custom hooks
+│   │   │   ├── services/       # ai/ · storage/ · network/ · mesh/ · offline/ · cloud/ · system/
+│   │   │   └── __tests__/      # Vitest suites
+│   │   └── package.json
+│   └── server/                 # Optional cloud backend (Supabase auth/db, MailerLite email,
+│       │                       #   sync, backup, collaboration)
+│       ├── src/                # routes → controllers → services → repositories → db/config
+│       ├── tests/
+│       ├── docs/                # ARCHITECTURE, API, DATABASE, SECURITY, TESTING
 │       └── package.json
 ├── docs/ARCHITECTURE.md        # Design rationale, IPC + data-flow diagrams
 ├── .github/workflows/ci.yml    # CI (test + build)
@@ -55,6 +62,31 @@ Cortex/
 ```
 
 See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the full design rationale.
+
+---
+
+## Optional Cloud Backend
+
+Cortex works fully offline with zero setup — the section above is the whole story for
+most users. `apps/server` is a separate, opt-in service, backed by **Supabase** (managed
+Postgres + Auth) and **MailerLite** (transactional email), that adds:
+
+- Account-based auth via Supabase (sessions, password hashing, refresh-token rotation),
+  email verification, password reset, device management, sign-out-everywhere, account deletion
+- Cross-device sync (the server stores **encrypted blobs only** — it cannot read your notes)
+- Encrypted cloud backup with manual/automatic snapshots and restore
+- Collaboration: friend requests, shared workspaces, invitations, organizations
+- Every account/collaboration/product email sent via MailerLite (retried, logged, never
+  blocking — a MailerLite outage can't fail registration or login)
+
+The desktop app never depends on it: it doesn't probe for it at startup, doesn't block on
+it, and local login/signup (the default) is a completely separate code path. It only
+activates if you set `CORTEX_CLOUD_API_URL` and explicitly connect a cloud account from the
+**Cloud & Sync** tab in Settings. See [`apps/server/README.md`](apps/server/README.md) to run
+it, [`apps/server/docs/ARCHITECTURE.md`](apps/server/docs/ARCHITECTURE.md) for the full design
+(schema, RLS policies, API, security model, sequence diagrams), and
+[`apps/server/docs/TESTING.md`](apps/server/docs/TESTING.md) for the test report and manual
+verification checklist.
 
 ---
 
@@ -166,6 +198,10 @@ local model is found and the machine is online.
 ```bash
 cd apps/desktop
 npm test               # Vitest, with coverage
+
+# Optional cloud backend
+cd apps/server
+npm test               # Vitest — mocked, no live Supabase/MailerLite required
 ```
 
 ---
@@ -177,11 +213,11 @@ All variables are **optional** and read by the Electron main process from the ro
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NODE_ENV` | `development` | `production` disables dev tooling and requires `CORTEX_STORE_KEY` |
-| `CORTEX_STORE_KEY` | dev fallback | Encrypts the electron-store token/session file (required in production) |
+| `NODE_ENV` | `development` | `production` disables dev tooling |
 | `CORTEX_OPEN_DEVTOOLS` | — | Set to `1` to open DevTools on launch |
 | `GEMINI_API_KEY` | — | Enables the online Gemini AI fallback |
 | `CORTEX_MESH_EXPERIMENTAL` | — | Set to `1` to enable experimental LAN peer discovery |
+| `CORTEX_CLOUD_API_URL` | — | Base URL of a running `apps/server` instance — enables the optional Cloud & Sync account features. See [Optional Cloud Backend](#optional-cloud-backend) |
 
 ---
 

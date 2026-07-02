@@ -50,3 +50,22 @@ jobs:
 
       - name: Verify bundle exists
         run: test -f apps/desktop/dist/renderer/index.html
+
+  server-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/server/package-lock.json
+
+      - name: Install server dependencies
+        working-directory: apps/server
+        run: npm ci
+
+      - name: Run tests
+        working-directory: apps/server
+        run: npm test

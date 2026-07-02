@@ -3,7 +3,7 @@ import {
     Settings as SettingsIcon, Bell, Palette, Database, ShieldCheck, User,
     LogOut, X, ChevronRight, ChevronDown, Check, Sun, Moon, Monitor as MonitorIcon,
     Cpu, Download, Trash2, Archive, Shield, Eye, EyeOff, AlertTriangle, Pencil,
-    Activity, Zap
+    Activity, Zap, Cloud, RefreshCw, Smartphone
 } from 'lucide-react';
 import DocumentStatus from '../panels/DocumentStatus';
 import PerformanceTab from '../panels/PerformanceTab';
@@ -748,6 +748,283 @@ function SystemPanel() {
     );
 }
 
+function CloudPanel({ onToast }) {
+    const [status, setStatus] = useState(null); // null while loading; then { configured, connected, user, enrolled, syncing, lastResult }
+    const [devices, setDevices] = useState([]);
+    const [backups, setBackups] = useState([]);
+    const [mode, setMode] = useState('signin'); // signin | register
+    const [form, setForm] = useState({ email: '', password: '', full_name: '' });
+    const [busy, setBusy] = useState(false);
+    const [showSignOutAllConfirm, setShowSignOutAllConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteInput, setDeleteInput] = useState('');
+    const DELETE_PHRASE = 'delete my cloud account';
+
+    const refreshStatus = async () => {
+        const s = await window.electronAPI?.cloudSyncStatus?.();
+        setStatus(s || { configured: false });
+        if (s?.connected) {
+            const d = await window.electronAPI?.cloudDevicesList?.();
+            if (d?.success) setDevices(d.data?.devices || []);
+            const b = await window.electronAPI?.cloudBackupList?.();
+            if (b?.success) setBackups(b.data?.backups || []);
+        }
+    };
+
+    useEffect(() => { refreshStatus(); }, []);
+
+    // A stable per-device identifier, same convention AuthPortal.jsx uses
+    // for local device fingerprinting.
+    const buildDevice = () => {
+        let fingerprint = localStorage.getItem('cortex-device-fingerprint');
+        if (!fingerprint) {
+            fingerprint = `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+            localStorage.setItem('cortex-device-fingerprint', fingerprint);
+        }
+        return { fingerprint, name: 'This device' };
+    };
+
+    const handleAuth = async () => {
+        if (!form.email || !form.password || (mode === 'register' && !form.full_name)) {
+            onToast('Fill in all fields', 'error');
+            return;
+        }
+        setBusy(true);
+        try {
+            const device = buildDevice();
+            const result = mode === 'register'
+                ? await window.electronAPI.cloudAuthRegister({ email: form.email, password: form.password, full_name: form.full_name, device })
+                : await window.electronAPI.cloudAuthLogin({ email: form.email, password: form.password, device });
+            if (result?.success) {
+                onToast(mode === 'register' ? 'Cloud account created — check your email to verify' : 'Connected to cloud account', 'success');
+                setForm({ email: '', password: '', full_name: '' });
+                await refreshStatus();
+            } else if (result?.notConfigured) {
+                onToast('Cloud sync is not configured', 'error');
+            } else {
+                onToast(result?.error || 'Could not connect', 'error');
+            }
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const handleSignOut = async () => {
+        await window.electronAPI?.cloudAuthLogout?.();
+        onToast('Disconnected cloud account', 'success');
+        await refreshStatus();
+    };
+
+    const handleSignOutAll = async () => {
+        const result = await window.electronAPI?.cloudAuthLogoutAll?.();
+        setShowSignOutAllConfirm(false);
+        if (result?.success) { onToast('Signed out of all devices', 'success'); await refreshStatus(); }
+        else onToast(result?.error || 'Could not sign out everywhere', 'error');
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteInput.toLowerCase() !== DELETE_PHRASE) {
+            onToast('Type the confirmation phrase exactly', 'error');
+            return;
+        }
+        const result = await window.electronAPI?.cloudAccountDelete?.();
+        setShowDeleteConfirm(false);
+        setDeleteInput('');
+        if (result?.success) { onToast('Cloud account deleted', 'success'); await refreshStatus(); }
+        else onToast(result?.error || 'Could not delete cloud account', 'error');
+    };
+
+    const handleSyncNow = async () => {
+        setBusy(true);
+        try {
+            const result = await window.electronAPI?.cloudSyncNow?.();
+            if (result?.skipped) onToast(`Sync skipped (${result.reason})`, 'error');
+            else if (result?.ok) onToast(`Synced — ${result.pushed} pushed, ${result.pulled} pulled${result.conflicts ? `, ${result.conflicts} conflicts need review` : ''}`, 'success');
+            else onToast(result?.error || 'Sync failed', 'error');
+            await refreshStatus();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const handleBackupNow = async () => {
+        setBusy(true);
+        try {
+            const result = await window.electronAPI?.cloudBackupNow?.({});
+            if (result?.success) { onToast('Backup created', 'success'); await refreshStatus(); }
+            else onToast(result?.error || 'Backup failed', 'error');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const handleRevokeDevice = async (deviceId) => {
+        const result = await window.electronAPI?.cloudDevicesRevoke?.(deviceId);
+        if (result?.success) { onToast('Device revoked', 'success'); await refreshStatus(); }
+        else onToast(result?.error || 'Could not revoke device', 'error');
+    };
+
+    if (!status) return null; // brief loading flash while refreshStatus() resolves
+
+    if (!status.configured) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center px-8">
+                <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-dark-900/40 border border-slate-200 dark:border-dark-800 flex items-center justify-center mb-5">
+                    <Cloud size={26} className="text-slate-400 dark:text-dark-500" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-dark-50 mb-2">Cloud sync isn't configured</h2>
+                <p className="text-sm text-slate-500 dark:text-dark-400 max-w-xs leading-relaxed">
+                    Cortex works fully offline — your notes and documents stay on this device either way.
+                    Cross-device sync, backup, and collaboration are optional extras an administrator can enable.
+                </p>
+            </div>
+        );
+    }
+
+    if (!status.connected) {
+        return (
+            <div className="p-7 space-y-0">
+                <div className="mb-5">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-1">Cloud account</h3>
+                    <p className="text-xs text-slate-400 dark:text-dark-500 mb-4 leading-relaxed">
+                        Optional — your local data stays on this device either way. Connect to enable cross-device
+                        sync, encrypted backup, and collaboration.
+                    </p>
+                    <Divider />
+                </div>
+                <div className="max-w-sm space-y-3 pt-4">
+                    <div className="flex gap-2 mb-2">
+                        <button onClick={() => setMode('signin')} className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all ${mode === 'signin' ? 'bg-synapse-600 text-white' : 'bg-slate-100 dark:bg-dark-800 text-slate-500'}`}>Sign in</button>
+                        <button onClick={() => setMode('register')} className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all ${mode === 'register' ? 'bg-synapse-600 text-white' : 'bg-slate-100 dark:bg-dark-800 text-slate-500'}`}>Create account</button>
+                    </div>
+                    {mode === 'register' && (
+                        <input
+                            type="text" placeholder="Full name" value={form.full_name}
+                            onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-synapse-500/30 text-slate-800 dark:text-dark-50"
+                        />
+                    )}
+                    <input
+                        type="email" placeholder="Email" value={form.email}
+                        onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                        className="w-full px-3 py-2 text-sm bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-synapse-500/30 text-slate-800 dark:text-dark-50"
+                    />
+                    <input
+                        type="password" placeholder="Password" value={form.password}
+                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') handleAuth(); }}
+                        className="w-full px-3 py-2 text-sm bg-white dark:bg-dark-950 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-synapse-500/30 text-slate-800 dark:text-dark-50"
+                    />
+                    <button
+                        onClick={handleAuth}
+                        disabled={busy}
+                        className="w-full py-2 bg-synapse-600 hover:bg-synapse-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                    >
+                        {busy ? 'Please wait…' : mode === 'register' ? 'Create cloud account' : 'Connect'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <ConfirmDialog
+                open={showSignOutAllConfirm}
+                title="Sign out of all devices?"
+                message="Every device signed into this cloud account will be signed out immediately."
+                confirmText="Sign out all"
+                danger
+                onConfirm={handleSignOutAll}
+                onCancel={() => setShowSignOutAllConfirm(false)}
+            />
+            <ConfirmDialog
+                open={showDeleteConfirm}
+                title="Delete your cloud account?"
+                message={`This permanently deletes your cloud profile, sync history, backups, and collaboration memberships. Local notes and documents on this device are not affected. Type "${DELETE_PHRASE}" to confirm.`}
+                confirmText="Delete cloud account"
+                danger
+                onConfirm={handleDeleteAccount}
+                onCancel={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}
+            >
+                <input
+                    type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder={DELETE_PHRASE}
+                    className="w-full mt-1 mb-4 px-3 py-2 text-sm bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-red-400 text-slate-800 dark:text-dark-50 transition-all"
+                />
+            </ConfirmDialog>
+
+            <div className="p-7 space-y-0">
+                <div className="mb-5">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-dark-50 mb-4">Cloud account</h3>
+                    <Divider />
+                </div>
+
+                <Row label="Connected as" desc={status.user?.email}>
+                    <Btn onClick={handleSignOut}>Disconnect</Btn>
+                </Row>
+
+                <Row
+                    label="Sync"
+                    desc={status.lastResult?.ok
+                        ? `Last synced ${new Date(status.lastResult.at).toLocaleString()} — ${status.lastResult.pushed} pushed, ${status.lastResult.pulled} pulled`
+                        : 'Not synced yet — runs automatically every minute while online, or trigger it now'}
+                >
+                    <Btn onClick={handleSyncNow} className={busy ? 'opacity-50 pointer-events-none' : ''}>
+                        <span className="flex items-center gap-1.5"><RefreshCw size={12} />Sync now</span>
+                    </Btn>
+                </Row>
+
+                <Row
+                    label="Backup"
+                    desc={backups[0] ? `Last backup ${new Date(backups[0].created_at).toLocaleString()} (${backups[0].kind})` : 'No backups yet'}
+                >
+                    <Btn onClick={handleBackupNow} className={busy ? 'opacity-50 pointer-events-none' : ''}>Back up now</Btn>
+                </Row>
+
+                <div className="py-3">
+                    <p className="text-sm font-medium text-slate-800 dark:text-dark-100 mb-2">Devices</p>
+                    <div className="space-y-1.5">
+                        {devices.length === 0 && <p className="text-xs text-slate-400 dark:text-dark-500">No devices registered.</p>}
+                        {devices.map(d => (
+                            <div key={d.id} className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-800 rounded-xl">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <Smartphone size={14} className="text-slate-400 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-semibold text-slate-700 dark:text-dark-200 truncate">
+                                            {d.name || 'Unnamed device'}{d.revoked_at ? ' (revoked)' : ''}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400 dark:text-dark-500">Last seen {new Date(d.last_seen_at).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                {!d.revoked_at && (
+                                    <button onClick={() => handleRevokeDevice(d.id)} className="text-xs font-semibold text-red-500 hover:underline flex-shrink-0">Revoke</button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <Divider />
+
+                <div className="flex items-start justify-between gap-6 py-3">
+                    <div>
+                        <p className="text-sm font-medium text-slate-800 dark:text-dark-100">Sign out of all devices</p>
+                        <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">End every active cloud session, not just this one</p>
+                    </div>
+                    <Btn variant="danger" onClick={() => setShowSignOutAllConfirm(true)}>Sign out all</Btn>
+                </div>
+
+                <div className="flex items-start justify-between gap-6 py-3">
+                    <div>
+                        <p className="text-sm font-medium text-red-500">Delete cloud account</p>
+                        <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5">Permanently deletes your cloud profile — local data is unaffected</p>
+                    </div>
+                    <Btn variant="danger" onClick={() => setShowDeleteConfirm(true)}>Delete</Btn>
+                </div>
+            </div>
+        </>
+    );
+}
+
 /* ─────────────────────────────────────────────────────────────
    Main Settings Modal
 ───────────────────────────────────────────────────────────── */
@@ -760,6 +1037,7 @@ const NAV_ITEMS = [
     { id: 'data-controls', label: 'Data controls', Icon: Database },
     { id: 'security', label: 'Security', Icon: ShieldCheck },
     { id: 'account', label: 'Account', Icon: User },
+    { id: 'cloud', label: 'Cloud & Sync', Icon: Cloud },
 ];
 
 export default function Settings({
@@ -838,6 +1116,7 @@ export default function Settings({
                     {tab === 'data-controls' && <DataControlsPanel onToast={onToast} />}
                     {tab === 'security' && <SecurityPanel onToast={onToast} onLogout={onLogout} />}
                     {tab === 'account' && <AccountPanel username={username} setUsername={setUsername} userStream={userStream} onToast={onToast} onClose={onClose} onLogout={onLogout} />}
+                    {tab === 'cloud' && <CloudPanel onToast={onToast} />}
                 </div>
             </div>
         </div>

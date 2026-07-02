@@ -1,5 +1,3 @@
-import { getAccessToken } from './storage/tokenStore.js';
-
 export function getUserId() {
     try {
         const raw = localStorage.getItem('cortex-auth-profile');

@@ -11,22 +11,23 @@ everything runs in the Electron process on the user's device.
 
 ## Table of Contents
 
-1. [Why local-first (no backend)](#why-local-first-no-backend)
+1. [Why local-first (no backend required)](#why-local-first-no-backend-required)
 2. [Why Electron and not a web app](#why-electron-and-not-a-web-app)
 3. [Why SQLite for local data](#why-sqlite-for-local-data)
 4. [Offline-first design philosophy](#offline-first-design-philosophy)
 5. [IPC architecture](#ipc-architecture)
 6. [Authentication architecture](#authentication-architecture)
-7. [Data flow summary](#data-flow-summary)
-8. [Project structure](#project-structure)
+7. [Optional cloud backend](#optional-cloud-backend)
+8. [Data flow summary](#data-flow-summary)
+9. [Project structure](#project-structure)
 
 ---
 
-## Why local-first (no backend)
+## Why local-first (no backend required)
 
 Cortex previously shipped with an Express/Postgres backend for authentication and
-reference data. That backend has been **removed**. The application now runs entirely
-in the Electron main process:
+reference data. That backend was removed so the application could run entirely in the
+Electron main process:
 
 - **Auth** is handled locally with `bcrypt` against a `users` table in the local
   SQLite database (see [Authentication architecture](#authentication-architecture)).
@@ -42,11 +43,18 @@ in the Electron main process:
   lives in one language and one dependency graph — no fragile Python/Express
   subprocess lifecycle to manage.
 
-**Trade-off accepted:** features that inherently need a server — cross-device sync
-and email-based password reset — are not available in local-first mode. The auth IPC
-handlers return an explicit "not available" response for password reset rather than
-pretending to support it. Cross-device sync is a candidate for a future, optional
-add-on that would not compromise the offline core.
+**Cross-device sync, backup, collaboration, and email-based account features are now
+available, optionally, via Supabase and MailerLite.** An `apps/server` backend has been
+reintroduced — physically separate from the desktop app, with its own `package.json`, and
+structurally unable to become a hard dependency (the desktop app never blocks on it, probes
+for it at startup, or falls back to it for core functionality). It uses Supabase for managed
+Postgres + Auth (identity, sessions, password hashing) and MailerLite for every transactional
+email (verification, password reset, login/device alerts, invitations, product
+announcements). See [Optional cloud backend](#optional-cloud-backend) below and
+[`apps/server/docs/ARCHITECTURE.md`](../apps/server/docs/ARCHITECTURE.md) for the full
+design, including why this is safe for the local-first philosophy: the server only ever
+sees encrypted note content, never plaintext, and neither Supabase nor MailerLite being
+unreachable can prevent the desktop app from launching or working offline.
 
 ---
 
@@ -60,8 +68,8 @@ Cortex's core value proposition is offline-first, local AI. That requires:
    are native C++ modules that do not run in a browser sandbox.
 3. **LAN discovery without a server** — mDNS peer discovery uses UDP multicast,
    which browsers cannot send.
-4. **Encrypted local storage** — `electron-store` with an encryption key keeps auth
-   state off disk in plaintext; `localStorage` is not encrypted.
+4. **Encrypted local storage** — a device-local AES key (`keyStore.js`) encrypts
+   notes and documents at rest; `localStorage` alone is not encrypted.
 5. **No phone-home requirement** — offline mode must work with zero internet, which
    means shipping the runtime with the app rather than depending on a cloud host.
 
@@ -105,8 +113,8 @@ Cortex treats internet connectivity as an enhancement, not a requirement.
 | Auth (login / signup) | Yes (local bcrypt + SQLite) | Yes |
 | Peer LAN sharing | Yes (mDNS, no internet) | Yes |
 | AI answers (RAG) | Yes (local Phi-3 / Ollama) | Yes + optional Gemini fallback |
-| Password reset | Not available in local-first mode | — |
-| Cross-device sync | Not available in local-first mode | — |
+| Password reset (local account) | Not available in local-first mode | — |
+| Cloud account: sign-up/login, password reset, cross-device sync, backup, collaboration | — | Optional, via `apps/server` + Supabase + MailerLite (see below) |
 
 **How offline detection works:** the Electron main process probes three public
 endpoints (`1.1.1.1`, `cloudflare.com`, `google.com`) via HTTP HEAD on an interval.
@@ -179,7 +187,9 @@ via IPC — there is no other channel out of the renderer.
 
 ## Authentication architecture
 
-All authentication is local. There are no JWTs, no Postgres, and no SMTP.
+The default, always-available auth path is entirely local — no JWTs, no Postgres, no
+SMTP. This is unaffected by whether `apps/server` exists, is running, or is configured;
+it is a structurally separate code path (see [Optional cloud backend](#optional-cloud-backend)).
 
 ```text
 Signup / Login flow (fully local)
@@ -201,14 +211,76 @@ Renderer ← response
 
 Password reset
 ──────────────
-Not supported in local-first mode. The 'auth-forgot-password' and
-'auth-reset-password' IPC handlers return an explicit
-{ status: 400, detail: '... not available in local-first mode' }.
+Not supported for local accounts — there is no email/SMTP path on-device by
+design. The 'auth-forgot-password' and 'auth-reset-password' IPC handlers return
+an explicit { status: 400, detail: '... not available in local-first mode' }.
+Email-based password reset IS available for cloud accounts — see below.
 ```
 
-Because the user database lives on-device and is never exposed over a network, there
-is no external attack surface for the auth layer — the threat model is limited to
+Because the local user database lives on-device and is never exposed over a network,
+there is no external attack surface for local auth — the threat model is limited to
 someone with physical/filesystem access to the machine.
+
+---
+
+## Optional cloud backend
+
+`apps/server` is a separate Node/Express service (own `package.json`) backed by **Supabase**
+(managed Postgres + Auth) that adds account-based auth, cross-device sync, encrypted backup,
+and collaboration, and uses **MailerLite** for every transactional email — entirely opt-in,
+and never on the path to launching the app or using it offline. Full design in
+[`apps/server/docs/ARCHITECTURE.md`](../apps/server/docs/ARCHITECTURE.md); API reference in
+[`apps/server/docs/API.md`](../apps/server/docs/API.md); schema + RLS policies in
+[`apps/server/docs/DATABASE.md`](../apps/server/docs/DATABASE.md); threat model in
+[`apps/server/docs/SECURITY.md`](../apps/server/docs/SECURITY.md); manual + automated test
+report in [`apps/server/docs/TESTING.md`](../apps/server/docs/TESTING.md).
+
+```text
+┌────────────────────────────┐         ┌───────────────────────────────┐
+│   Desktop app (Electron)    │  HTTPS  │        apps/server (opt-in)     │
+│                             │◄───────►│                                 │
+│  services/cloud/            │ (only if │  auth (Supabase), sync,        │
+│    cloudClient.js           │CORTEX_   │  backup, collaboration,        │
+│    deviceKeys.js            │CLOUD_API │  notifications                 │
+│    contentKey.js            │_URL set) │                                 │
+│    syncEngine.js            │         │  → Supabase (Postgres + Auth)   │
+│  services/storage/          │         │  → MailerLite (email)           │
+│    cloudTokenStore.js       │         │                                 │
+│  renderer: Settings → Cloud │         │  never sees plaintext notes     │
+│    & Sync tab               │         │                                 │
+└────────────────────────────┘         └───────────────────────────────┘
+```
+
+Note the Electron app never talks to Supabase or MailerLite directly — it only ever calls
+`apps/server`'s own HTTP API, so neither Supabase's nor MailerLite's SDKs/credentials ship in
+the desktop binary at all.
+
+Key separation properties:
+
+- **Config-gated, not code-path-gated.** `cloudClient.js` checks
+  `process.env.CORTEX_CLOUD_API_URL` on every call and throws a `notConfigured` error
+  instead of making a request when it's unset — there's no scenario where the app
+  silently blocks waiting on the server. `syncEngine.js`'s background loop
+  (`main.js`'s `startCloudSyncLoop`) additionally requires an active cloud session and an
+  established content key before it does anything.
+- **Separate token storage.** Cloud session tokens live in `cortex-cloud-session.json`
+  (via `cloudTokenStore.js`), encrypted with the same on-device key as local notes
+  (`keyStore.js`), but in a file completely separate from the local offline session
+  (`cortex-session.json` in `main.js`). Logging out of the cloud account cannot affect
+  local login, and vice versa.
+- **Separate IPC handlers.** Every cloud-facing action is its own `cloud-*` IPC handler in
+  `main.js` (`cloud-auth-register/login/logout/logout-all`, `cloud-sync-now/status`,
+  `cloud-backup-now/list/restore`, `cloud-friends-*`/`cloud-workspaces-*`/etc.), independent
+  of `auth-register` / `auth-login`. Nothing in the existing local-auth flow
+  (`AuthPortal.jsx`, the local `auth-*` handlers) calls into the cloud path. The renderer
+  surface for all of this is a single "Cloud & Sync" tab in the Settings modal
+  (`renderer/components/layout/Settings.jsx`) — connect/disconnect, device list, manual
+  sync/backup, sign-out-everywhere, account deletion.
+- **Zero-knowledge by construction.** Whatever syncs through this path is encrypted
+  client-side first with a per-user content key (`contentKey.js`) that's distributed
+  across a user's own devices by RSA-OAEP wrapping (`deviceKeys.js`), never given to the
+  server in usable form; the server's job is auth, metadata, and coordination, not reading
+  notes. See `apps/server/docs/SECURITY.md`.
 
 ---
 
@@ -248,7 +320,7 @@ Renderer → electronAPI.addNote({ title, content, type, dueDate })
 ```text
 Cortex/
 ├── apps/
-│   └── desktop/                 # The Electron application
+│   ├── desktop/                 # The Electron application
 │       ├── config/              # webpack / tailwind / postcss configs
 │       ├── src/
 │       │   ├── main/            # Electron main process + preload
@@ -264,13 +336,23 @@ Cortex/
 │       │   │   └── hooks/       # Custom React hooks
 │       │   ├── services/        # Non-UI logic
 │       │   │   ├── ai/          # embeddings, vectorSearch, ragPipeline
-│       │   │   ├── storage/     # database, encryption, keyStore, tokenStore, pdfHandler
+│       │   │   ├── storage/     # database, encryption, keyStore, cloudTokenStore, pdfHandler
 │       │   │   ├── network/     # peerDiscovery (mDNS)
 │       │   │   ├── mesh/        # meshController
 │       │   │   ├── offline/     # offline identity
+│       │   │   ├── cloud/       # optional cloud client: cloudClient, cloudSession,
+│       │   │   │                #   deviceKeys, contentKey, syncEngine
 │       │   │   ├── system/      # device capability
 │       │   │   └── api.js       # renderer-facing facade over IPC
 │       │   └── __tests__/       # Vitest suites
+│       └── package.json
+│   └── server/                  # Optional cloud backend — see apps/server/docs/
+│       ├── src/                 # routes → controllers → services → repositories → db/config
+│       │   ├── config/          # env config + config/supabase.js (Supabase Auth clients)
+│       │   ├── templates/       # MailerLite email templates (shared layout + per-email)
+│       │   └── ...              # auth, users, sync, backup, collaboration, notifications
+│       ├── tests/
+│       ├── docs/                # ARCHITECTURE, API, DATABASE, SECURITY, TESTING
 │       └── package.json
 ├── docs/                        # This document
 ├── .github/workflows/           # CI

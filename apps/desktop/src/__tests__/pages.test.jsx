@@ -65,13 +65,6 @@ vi.mock('../renderer/hooks/useMeshDiscovery.js', () => ({
     useMeshDiscovery: () => ({ nearbyPeers: 0, isMeshAvailable: false }),
 }));
 
-vi.mock('../services/storage/tokenStore.js', () => ({
-    saveTokens: vi.fn(),
-    getAccessToken: vi.fn().mockResolvedValue('token'),
-    getRefreshToken: vi.fn().mockResolvedValue(null),
-    clearTokens: vi.fn(),
-}));
-
 import { CoreProvider } from '../renderer/context/CoreContext.jsx';
 
 function wrap(ui) {
@@ -96,10 +89,6 @@ beforeEach(() => {
         getPeers: vi.fn().mockResolvedValue([]),
         meshStart: vi.fn(),
         meshStop: vi.fn(),
-        tokenSave: vi.fn(),
-        tokenGetAccess: vi.fn().mockResolvedValue('token'),
-        tokenGetRefresh: vi.fn().mockResolvedValue(null),
-        tokenClear: vi.fn(),
     };
     vi.clearAllMocks();
 });

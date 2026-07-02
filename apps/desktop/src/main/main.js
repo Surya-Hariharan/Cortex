@@ -12,18 +12,6 @@ const fs = require('fs');
 const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '../../../../.env') });
 
-// ── Encrypted token store (electron-store) ────────────────────────────────────
-const Store = require('electron-store');
-const _tokenStore = new Store({
-  name: 'cortex-tokens',
-  // In production CORTEX_STORE_KEY must be set; the fallback is development-only.
-  encryptionKey: process.env.CORTEX_STORE_KEY || (
-    process.env.NODE_ENV === 'production'
-      ? (() => { throw new Error('CORTEX_STORE_KEY is required in production'); })()
-      : 'cortex-dev-store-key'
-  ),
-});
-
 // ── Local Auth Utilities ────────────────────────────────────────────────────────
 const bcrypt = require('bcrypt');
 
@@ -76,6 +64,12 @@ async function updateInternetStatus() {
         isInternetOnline = newStatus;
         console.log(`[CORTEX-CONNECTIVITY] status changed: ${isInternetOnline ? 'ONLINE' : 'OFFLINE'}`);
         mainWindow?.webContents.send('internet-status', { online: isInternetOnline });
+        // Coming back online is exactly when queued offline changes need to
+        // go out — retry immediately rather than waiting for the next
+        // interval tick (see startCloudSyncLoop below).
+        if (isInternetOnline && syncEngine.isEnabled()) {
+            syncEngine.runSync({ trigger: 'reconnect' }).catch(() => { });
+        }
     }
 }
 
@@ -83,6 +77,41 @@ function startInternetChecks() {
     // Run immediately, then every 10 seconds
     updateInternetStatus();
     internetCheckInterval = setInterval(updateInternetStatus, 10000);
+}
+
+// ── Cloud sync / backup background loop ──────────────────────────────────
+// A single interval drives both: automatic sync every tick, and an
+// automatic backup once per calendar day. Both are strictly additive to the
+// local-first app — gated on isInternetOnline + syncEngine.isEnabled()
+// (which itself requires cloudClient.isConfigured(), an active cloud
+// session, and an established content key), so this is entirely inert
+// unless the user opted into cloud sync.
+let cloudSyncInterval = null;
+const CLOUD_SYNC_INTERVAL_MS = 60 * 1000;
+let _lastAutoBackupDate = null; // 'YYYY-MM-DD', in-memory only — worst case one extra automatic backup after a restart
+
+async function maybeRunAutoBackup() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (_lastAutoBackupDate === today) return;
+    const session = getCloudSession();
+    if (!session) return;
+    try {
+        await withValidAccessToken((accessToken) =>
+            cloudClient.createBackup(accessToken, { deviceId: session.device?.id, kind: 'automatic' })
+        );
+        _lastAutoBackupDate = today;
+    } catch (_) {
+        // Best-effort — retried on the next interval tick.
+    }
+}
+
+function startCloudSyncLoop() {
+    if (cloudSyncInterval) return;
+    cloudSyncInterval = setInterval(async () => {
+        if (!isInternetOnline || !syncEngine.isEnabled()) return;
+        await syncEngine.runSync({ trigger: 'interval' }).catch(() => { });
+        await maybeRunAutoBackup();
+    }, CLOUD_SYNC_INTERVAL_MS);
 }
 
 // Session file stored in Electron's userData folder — survives app restarts
@@ -112,6 +141,15 @@ const { EmbeddingsEngine } = require('../services/ai/embeddings');
 const { extractPdfText } = require('../services/storage/pdfHandler');
 const { ragSearch } = require('../services/ai/ragPipeline');
 const { PeerDiscovery } = require('../services/network/peerDiscovery');
+
+// Optional cloud backend (apps/server) — never required for the app to run.
+// See docs/ARCHITECTURE.md "Optional Cloud Backend".
+const cloudClient = require('../services/cloud/cloudClient');
+const { initCloudTokenStore, saveCloudSession, getCloudSession, clearCloudSession } = require('../services/storage/cloudTokenStore');
+const deviceKeys = require('../services/cloud/deviceKeys');
+const contentKey = require('../services/cloud/contentKey');
+const syncEngine = require('../services/cloud/syncEngine');
+const { withValidAccessToken } = require('../services/cloud/cloudSession');
 
 let mainWindow;
 let embeddingsEngine;
@@ -205,6 +243,12 @@ async function initializeServices() {
         // Key store must be initialised before database (encryption depends on it)
         initKeyStore(app.getPath('userData'));
         console.log('[Cortex] Key store initialised');
+
+        // Cloud token store / device keypair / content key all reuse the same
+        // device master key for at-rest encryption — must come after initKeyStore.
+        initCloudTokenStore(app.getPath('userData'));
+        deviceKeys.initDeviceKeys(app.getPath('userData'));
+        contentKey.initContentKey(app.getPath('userData'));
 
         const dbPath = path.join(app.getPath('userData'), 'cortex.db');
         initializeDatabase(dbPath);
@@ -340,6 +384,191 @@ function registerIpcHandlers() {
     ipcMain.handle('auth-reset-password', async () => {
         return { status: 400, data: { detail: 'Password reset is not available.' } };
     });
+
+    // ── Optional Cloud Account (apps/server, backed by Supabase) ─────────────────
+    // Entirely separate from local auth above: local login/signup never call
+    // these, and these never touch the local session file. Opt-in only, and a
+    // no-op when CORTEX_CLOUD_API_URL isn't set (cloudClient.isConfigured()).
+    //
+    // Two thin wrappers standardize the { success, data, error } response
+    // shape: authedCloudHandler injects the current session's access token
+    // (refreshing it transparently on expiry via withValidAccessToken) and
+    // publicCloudHandler is for the handful of calls that don't need one
+    // (e.g. forgot-password, before the caller is signed in).
+    function authedCloudHandler(fn) {
+        return async (_e, ...args) => {
+            if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+            try {
+                const data = await withValidAccessToken((accessToken, session) => fn(accessToken, session, ...args));
+                return { success: true, data };
+            } catch (error) {
+                return { success: false, error: error.data?.detail || error.message };
+            }
+        };
+    }
+    function publicCloudHandler(fn) {
+        return async (_e, ...args) => {
+            if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+            try {
+                return { success: true, data: await fn(...args) };
+            } catch (error) {
+                return { success: false, error: error.data?.detail || error.message };
+            }
+        };
+    }
+
+    // Wipes the local device keypair + content key — called after account
+    // deletion, since both are meaningless once the account is gone. A
+    // fresh keypair/content key is generated automatically next time cloud
+    // sync is enabled again.
+    function clearCloudCryptoState() {
+        deviceKeys.clearDeviceKeys();
+        contentKey.clearContentKey();
+    }
+
+    // register/login augment the device payload with this device's public
+    // key (deviceKeys is main-process-only Node crypto, unreachable from the
+    // renderer) and, on success, establish this device's copy of the cloud
+    // content key (syncEngine.ensureDeviceEnrolled) so sync can run.
+    ipcMain.handle('cloud-auth-register', async (_e, { email, password, full_name, device }) => {
+        if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+        try {
+            const result = await cloudClient.register({ email, password, full_name, device: { ...device, publicKey: deviceKeys.getPublicKey() } });
+            saveCloudSession(result);
+            await syncEngine.ensureDeviceEnrolled(result.device);
+            return { success: true, user: result.user };
+        } catch (error) {
+            return { success: false, error: error.data?.detail || error.message };
+        }
+    });
+
+    ipcMain.handle('cloud-auth-login', async (_e, { email, password, device }) => {
+        if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+        try {
+            const result = await cloudClient.login({ email, password, device: { ...device, publicKey: deviceKeys.getPublicKey() } });
+            saveCloudSession(result);
+            await syncEngine.ensureDeviceEnrolled(result.device);
+            return { success: true, user: result.user };
+        } catch (error) {
+            return { success: false, error: error.data?.detail || error.message };
+        }
+    });
+
+    ipcMain.handle('cloud-auth-logout', async () => {
+        const session = getCloudSession();
+        if (session?.accessToken && cloudClient.isConfigured()) {
+            try { await cloudClient.logout(session.accessToken); } catch (_) { /* best-effort */ }
+        }
+        clearCloudSession();
+        return { success: true };
+    });
+
+    // "Sign out from all devices" — revokes every session server-side, not
+    // just this one.
+    ipcMain.handle('cloud-auth-logout-all', async () => {
+        if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+        try {
+            await withValidAccessToken((accessToken) => cloudClient.logoutAllDevices(accessToken));
+            clearCloudSession();
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.data?.detail || error.message };
+        }
+    });
+
+    ipcMain.handle('cloud-account-delete', async () => {
+        if (!cloudClient.isConfigured()) return { success: false, notConfigured: true, error: 'Cloud sync is not configured.' };
+        try {
+            await withValidAccessToken((accessToken) => cloudClient.deleteAccount(accessToken));
+            clearCloudSession();
+            clearCloudCryptoState();
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.data?.detail || error.message };
+        }
+    });
+
+    ipcMain.handle('cloud-verify-email-request', authedCloudHandler((accessToken) => cloudClient.requestEmailVerification(accessToken)));
+    ipcMain.handle('cloud-verify-email-confirm', authedCloudHandler((accessToken, _session, token) => cloudClient.confirmEmailVerification(accessToken, token)));
+
+    ipcMain.handle('cloud-forgot-password', publicCloudHandler((email) => cloudClient.forgotPassword(email)));
+    ipcMain.handle('cloud-reset-password', publicCloudHandler((payload) => cloudClient.resetPassword(payload)));
+
+    ipcMain.handle('cloud-devices-list', authedCloudHandler((accessToken) => cloudClient.listDevices(accessToken)));
+    ipcMain.handle('cloud-devices-revoke', authedCloudHandler((accessToken, _session, deviceId) => cloudClient.revokeDevice(accessToken, deviceId)));
+
+    ipcMain.handle('cloud-profile-get', authedCloudHandler((accessToken) => cloudClient.getMe(accessToken)));
+    ipcMain.handle('cloud-profile-update', authedCloudHandler((accessToken, _session, patch) => cloudClient.updateMe(accessToken, patch)));
+    ipcMain.handle('cloud-preferences-get', authedCloudHandler((accessToken) => cloudClient.getPreferences(accessToken)));
+    ipcMain.handle('cloud-preferences-set', authedCloudHandler((accessToken, _session, preferences) => cloudClient.setPreferences(accessToken, preferences)));
+    ipcMain.handle('cloud-subscription-get', authedCloudHandler((accessToken) => cloudClient.getSubscription(accessToken)));
+
+    // ── Sync ──────────────────────────────────────────────────────────────
+    ipcMain.handle('cloud-sync-now', async () => syncEngine.runSync({ trigger: 'manual' }));
+    ipcMain.handle('cloud-sync-status', async () => {
+        const session = getCloudSession();
+        return {
+            configured: cloudClient.isConfigured(),
+            connected: !!session,
+            user: session?.user ?? null,
+            enrolled: contentKey.hasContentKey(),
+            syncing: syncEngine.isSyncing(),
+            lastResult: syncEngine.getLastResult(),
+        };
+    });
+
+    // ── Backup ────────────────────────────────────────────────────────────
+    ipcMain.handle('cloud-backup-now', authedCloudHandler((accessToken, session, opts) =>
+        cloudClient.createBackup(accessToken, { deviceId: session.device?.id, kind: 'manual', ...opts })
+    ));
+    ipcMain.handle('cloud-backup-list', authedCloudHandler((accessToken) => cloudClient.listBackups(accessToken)));
+    ipcMain.handle('cloud-backup-restore', authedCloudHandler(async (accessToken, _session, backupId) => {
+        const result = await cloudClient.restoreBackup(accessToken, backupId);
+        const db = getDatabase();
+        if (db) {
+            for (const blob of result.blobs) {
+                db.setSyncVersion(blob.resourceType, blob.resourceId, blob.version);
+                if (blob.deleted) { db.applyRemoteDelete(blob.resourceType, blob.resourceId); continue; }
+                const value = contentKey.decryptResource(blob);
+                if (blob.resourceType === 'note') db.upsertNoteFromCloud({ syncId: blob.resourceId, ...value });
+                else if (blob.resourceType === 'page') db.upsertPageFromCloud({ id: blob.resourceId, ...value });
+            }
+        }
+        return { backup: result.backup, restoredResources: result.blobs.length };
+    }));
+
+    // ── Collaboration ─────────────────────────────────────────────────────
+    ipcMain.handle('cloud-friends-send-request', authedCloudHandler((accessToken, _s, addresseeEmail) => cloudClient.sendFriendRequest(accessToken, addresseeEmail)));
+    ipcMain.handle('cloud-friends-list-requests', authedCloudHandler((accessToken) => cloudClient.listFriendRequests(accessToken)));
+    ipcMain.handle('cloud-friends-respond', authedCloudHandler((accessToken, _s, requestId, accept) => cloudClient.respondToFriendRequest(accessToken, requestId, accept)));
+    ipcMain.handle('cloud-friends-list', authedCloudHandler((accessToken) => cloudClient.listFriends(accessToken)));
+
+    ipcMain.handle('cloud-workspaces-create', authedCloudHandler((accessToken, _s, payload) => cloudClient.createWorkspace(accessToken, payload)));
+    ipcMain.handle('cloud-workspaces-list', authedCloudHandler((accessToken) => cloudClient.listWorkspaces(accessToken)));
+    ipcMain.handle('cloud-workspaces-get', authedCloudHandler((accessToken, _s, workspaceId) => cloudClient.getWorkspace(accessToken, workspaceId)));
+    ipcMain.handle('cloud-workspaces-update', authedCloudHandler((accessToken, _s, workspaceId, patch) => cloudClient.updateWorkspace(accessToken, workspaceId, patch)));
+    ipcMain.handle('cloud-workspaces-delete', authedCloudHandler((accessToken, _s, workspaceId) => cloudClient.deleteWorkspace(accessToken, workspaceId)));
+    ipcMain.handle('cloud-workspaces-members', authedCloudHandler((accessToken, _s, workspaceId) => cloudClient.listWorkspaceMembers(accessToken, workspaceId)));
+    ipcMain.handle('cloud-workspaces-update-member', authedCloudHandler((accessToken, _s, workspaceId, userId, role) => cloudClient.updateMemberRole(accessToken, workspaceId, userId, role)));
+    ipcMain.handle('cloud-workspaces-remove-member', authedCloudHandler((accessToken, _s, workspaceId, userId) => cloudClient.removeMember(accessToken, workspaceId, userId)));
+
+    ipcMain.handle('cloud-invitations-create', authedCloudHandler((accessToken, _s, workspaceId, payload) => cloudClient.createInvitation(accessToken, workspaceId, payload)));
+    ipcMain.handle('cloud-invitations-list', authedCloudHandler((accessToken, _s, workspaceId) => cloudClient.listInvitations(accessToken, workspaceId)));
+    // NOTE: workspace-level content-key wrapping (so an accepted invite can
+    // actually decrypt the notebook's shared content) isn't implemented in
+    // this pass — only the personal per-user cloud content key (contentKey.js)
+    // is. wrappedContentKey is sent as null until that handshake is built.
+    ipcMain.handle('cloud-invitations-accept', authedCloudHandler((accessToken, _s, token) => cloudClient.acceptInvitation(accessToken, token, null)));
+    ipcMain.handle('cloud-invitations-decline', authedCloudHandler((accessToken, _s, token) => cloudClient.declineInvitation(accessToken, token)));
+
+    ipcMain.handle('cloud-organizations-create', authedCloudHandler((accessToken, _s, name) => cloudClient.createOrganization(accessToken, name)));
+    ipcMain.handle('cloud-organizations-add-member', authedCloudHandler((accessToken, _s, orgId, userId, role) => cloudClient.addOrganizationMember(accessToken, orgId, userId, role)));
+    ipcMain.handle('cloud-organizations-remove-member', authedCloudHandler((accessToken, _s, orgId, userId) => cloudClient.removeOrganizationMember(accessToken, orgId, userId)));
+
+    // ── Notifications ─────────────────────────────────────────────────────
+    ipcMain.handle('cloud-notifications-list', authedCloudHandler((accessToken, _s, unreadOnly) => cloudClient.listNotifications(accessToken, unreadOnly)));
+    ipcMain.handle('cloud-notifications-mark-read', authedCloudHandler((accessToken, _s, id) => cloudClient.markNotificationRead(accessToken, id)));
+    ipcMain.handle('cloud-notifications-mark-all-read', authedCloudHandler((accessToken) => cloudClient.markAllNotificationsRead(accessToken)));
 
     ipcMain.on('zoom-in', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.min(+(c + ZOOM_STEP).toFixed(1), ZOOM_MAX)); });
     ipcMain.on('zoom-out', () => { if (!mainWindow) return; const c = mainWindow.webContents.getZoomFactor(); broadcastZoom(Math.max(+(c - ZOOM_STEP).toFixed(1), ZOOM_MIN)); });
@@ -516,6 +745,8 @@ app.whenReady().then(async () => {
 
     // Start 10-second internet connectivity checks
     startInternetChecks();
+    // Optional cloud sync/backup loop — inert unless cloud sync is enabled.
+    startCloudSyncLoop();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -524,5 +755,6 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
     if (internetCheckInterval) clearInterval(internetCheckInterval);
+    if (cloudSyncInterval) clearInterval(cloudSyncInterval);
     if (process.platform !== 'darwin') app.quit();
 });

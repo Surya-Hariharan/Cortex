@@ -407,3 +407,223 @@ describe('DatabaseWrapper.insertBatch', () => {
         expect(Array.isArray(embCalls)).toBe(true);
     });
 });
+
+// ── Cloud sync helpers (dirty-tracking, tombstones, sync_id, versions) ────
+// These methods issue several distinct db.prepare() calls per invocation
+// (e.g. getDirtyNotes → SELECT dirty rows, then ensureNoteSyncId's own
+// SELECT/UPDATE per row), so route the fake db's prepare() by matching on
+// the SQL text rather than assuming a fixed call order.
+
+function makeRoutedDb(routes) {
+    return {
+        pragma: vi.fn(),
+        exec: vi.fn(),
+        prepare: vi.fn((sql) => {
+            const hit = routes.find(([pattern]) => sql.includes(pattern));
+            return hit ? hit[1] : makeStmt();
+        }),
+        transaction: vi.fn((fn) => fn),
+        close: vi.fn(),
+    };
+}
+
+describe('DatabaseWrapper.ensureNoteSyncId', () => {
+    it('returns the existing sync_id without writing when already set', () => {
+        const selectStmt = makeStmt({ sync_id: 'existing-uuid' });
+        const updateStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT sync_id FROM notes', selectStmt],
+            ['UPDATE notes SET sync_id', updateStmt],
+        ]);
+        const w = new DatabaseWrapper(db);
+        expect(w.ensureNoteSyncId(1)).toBe('existing-uuid');
+        expect(updateStmt.run).not.toHaveBeenCalled();
+    });
+
+    it('mints and persists a new sync_id when none exists yet', () => {
+        const selectStmt = makeStmt(null);
+        const updateStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT sync_id FROM notes', selectStmt],
+            ['UPDATE notes SET sync_id', updateStmt],
+        ]);
+        const w = new DatabaseWrapper(db);
+        const syncId = w.ensureNoteSyncId(1);
+        expect(syncId).toMatch(/^[0-9a-f-]{36}$/);
+        expect(updateStmt.run).toHaveBeenCalledWith(syncId, 1);
+    });
+});
+
+describe('DatabaseWrapper.getDirtyNotes / markNoteSynced', () => {
+    it('returns dirty notes with a resolved sync_id, and clears the dirty flag on markNoteSynced', () => {
+        const listStmt = makeStmt(null, [
+            { id: 1, title: 'A', content: 'plaintext-a', type: 'note', due_date: null, completed: 0 },
+        ]);
+        const syncIdSelectStmt = makeStmt({ sync_id: 'note-uuid-1' });
+        const markStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT * FROM notes WHERE dirty = 1', listStmt],
+            ['SELECT sync_id FROM notes', syncIdSelectStmt],
+            ['UPDATE notes SET dirty = 0', markStmt],
+        ]);
+        const w = new DatabaseWrapper(db);
+
+        const dirty = w.getDirtyNotes();
+        expect(dirty).toHaveLength(1);
+        expect(dirty[0]).toMatchObject({ id: 1, syncId: 'note-uuid-1', title: 'A' });
+
+        w.markNoteSynced(1);
+        expect(markStmt.run).toHaveBeenCalledWith(1);
+    });
+});
+
+describe('DatabaseWrapper.upsertNoteFromCloud', () => {
+    it('inserts a new local row when no note has this sync_id yet', () => {
+        const findStmt = makeStmt(null); // no existing row
+        const insertStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT id FROM notes WHERE sync_id', findStmt],
+            ['INSERT INTO notes', insertStmt],
+        ]);
+        const w = new DatabaseWrapper(db);
+        w.upsertNoteFromCloud({ syncId: 'note-uuid-2', title: 'From cloud', content: 'body', type: 'note', dueDate: null, completed: false });
+        expect(insertStmt.run).toHaveBeenCalled();
+        const args = insertStmt.run.mock.calls[0];
+        expect(args[args.length - 1]).toBe('note-uuid-2'); // sync_id is the last bound param
+    });
+
+    it('updates the matching local row in place when the sync_id is already known', () => {
+        const findStmt = makeStmt({ id: 7 });
+        const updateStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT id FROM notes WHERE sync_id', findStmt],
+            ['UPDATE notes SET title', updateStmt],
+        ]);
+        const w = new DatabaseWrapper(db);
+        w.upsertNoteFromCloud({ syncId: 'note-uuid-2', title: 'Updated', content: 'body', type: 'note', dueDate: null, completed: true });
+        expect(updateStmt.run).toHaveBeenCalled();
+        const args = updateStmt.run.mock.calls[0];
+        expect(args[args.length - 1]).toBe(7); // WHERE id = ? is the last bound param
+    });
+});
+
+describe('DatabaseWrapper.getDirtyPages / markPageSynced / upsertPageFromCloud', () => {
+    it('returns dirty pages decrypted, and clears the flag on markPageSynced', () => {
+        const listStmt = makeStmt(null, [{ id: 'page-1', title: 'P', content: 'body', parent_id: null }]);
+        const markStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT * FROM workspace_pages WHERE dirty = 1', listStmt],
+            ['UPDATE workspace_pages SET dirty = 0', markStmt],
+        ]);
+        const w = new DatabaseWrapper(db);
+        const dirty = w.getDirtyPages();
+        expect(dirty).toEqual([{ id: 'page-1', title: 'P', content: 'body', parentId: null }]);
+        w.markPageSynced('page-1');
+        expect(markStmt.run).toHaveBeenCalledWith('page-1');
+    });
+
+    it('upsertPageFromCloud inserts when unseen, updates when the id already exists locally', () => {
+        const findMissing = makeStmt(null);
+        const insertStmt = makeStmt();
+        const dbInsert = makeRoutedDb([
+            ['SELECT id FROM workspace_pages WHERE id', findMissing],
+            ['INSERT INTO workspace_pages', insertStmt],
+        ]);
+        new DatabaseWrapper(dbInsert).upsertPageFromCloud({ id: 'page-2', title: 'New', content: 'c', parentId: null });
+        expect(insertStmt.run).toHaveBeenCalled();
+
+        const findExisting = makeStmt({ id: 'page-2' });
+        const updateStmt = makeStmt();
+        const dbUpdate = makeRoutedDb([
+            ['SELECT id FROM workspace_pages WHERE id', findExisting],
+            ['UPDATE workspace_pages SET title', updateStmt],
+        ]);
+        new DatabaseWrapper(dbUpdate).upsertPageFromCloud({ id: 'page-2', title: 'Changed', content: 'c2', parentId: null });
+        expect(updateStmt.run).toHaveBeenCalled();
+    });
+});
+
+describe('DatabaseWrapper tombstones (deleteNote / deletePage / applyRemoteDelete)', () => {
+    it('deleteNote records a tombstone keyed by sync_id only if the note had one', () => {
+        const withSyncId = makeStmt({ sync_id: 'note-uuid-3' });
+        const deleteStmt = makeStmt();
+        const tombstoneStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT sync_id FROM notes WHERE id', withSyncId],
+            ['DELETE FROM notes', deleteStmt],
+            ['INSERT OR REPLACE INTO cortex_sync_tombstones', tombstoneStmt],
+        ]);
+        new DatabaseWrapper(db).deleteNote(1);
+        expect(deleteStmt.run).toHaveBeenCalledWith(1);
+        expect(tombstoneStmt.run).toHaveBeenCalledWith('note', 'note-uuid-3');
+    });
+
+    it('deleteNote skips the tombstone when the note was never synced', () => {
+        const withoutSyncId = makeStmt(null);
+        const deleteStmt = makeStmt();
+        const tombstoneStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT sync_id FROM notes WHERE id', withoutSyncId],
+            ['DELETE FROM notes', deleteStmt],
+            ['INSERT OR REPLACE INTO cortex_sync_tombstones', tombstoneStmt],
+        ]);
+        new DatabaseWrapper(db).deleteNote(1);
+        expect(tombstoneStmt.run).not.toHaveBeenCalled();
+    });
+
+    it('deletePage tombstones both the page and its children', () => {
+        const childrenStmt = makeStmt(null, [{ id: 'child-1' }, { id: 'child-2' }]);
+        const deleteStmt = makeStmt();
+        const tombstoneStmt = makeStmt();
+        const db = makeRoutedDb([
+            ['SELECT id FROM workspace_pages WHERE parent_id', childrenStmt],
+            ['DELETE FROM workspace_pages', deleteStmt],
+            ['INSERT OR REPLACE INTO cortex_sync_tombstones', tombstoneStmt],
+        ]);
+        new DatabaseWrapper(db).deletePage('parent-1');
+        expect(tombstoneStmt.run).toHaveBeenCalledWith('page', 'parent-1');
+        expect(tombstoneStmt.run).toHaveBeenCalledWith('page', 'child-1');
+        expect(tombstoneStmt.run).toHaveBeenCalledWith('page', 'child-2');
+    });
+
+    it('applyRemoteDelete routes notes by sync_id and pages by id', () => {
+        const noteDelete = makeStmt();
+        const pageDelete = makeStmt();
+        const db = makeRoutedDb([
+            ['DELETE FROM notes WHERE sync_id', noteDelete],
+            ['DELETE FROM workspace_pages WHERE id', pageDelete],
+        ]);
+        const w = new DatabaseWrapper(db);
+        w.applyRemoteDelete('note', 'note-uuid-9');
+        w.applyRemoteDelete('page', 'page-9');
+        expect(noteDelete.run).toHaveBeenCalledWith('note-uuid-9');
+        expect(pageDelete.run).toHaveBeenCalledWith('page-9');
+    });
+});
+
+describe('DatabaseWrapper sync bookkeeping (versions + generic state)', () => {
+    it('getSyncVersion defaults to 0 when no row exists', () => {
+        const db = makeDb(makeStmt(null));
+        expect(new DatabaseWrapper(db).getSyncVersion('note', 'x')).toBe(0);
+    });
+
+    it('getSyncVersion returns the stored version', () => {
+        const db = makeDb(makeStmt({ server_version: 4 }));
+        expect(new DatabaseWrapper(db).getSyncVersion('note', 'x')).toBe(4);
+    });
+
+    it('setSyncVersion upserts', () => {
+        const stmt = makeStmt();
+        const db = makeDb(stmt);
+        new DatabaseWrapper(db).setSyncVersion('note', 'x', 5);
+        expect(stmt.run).toHaveBeenCalledWith('note', 'x', 5);
+    });
+
+    it('getSyncState returns null when unset, and the stored value otherwise', () => {
+        const dbUnset = makeDb(makeStmt(undefined));
+        expect(new DatabaseWrapper(dbUnset).getSyncState('pull_cursor')).toBeNull();
+
+        const dbSet = makeDb(makeStmt({ value: '2026-01-01T00:00:00.000Z' }));
+        expect(new DatabaseWrapper(dbSet).getSyncState('pull_cursor')).toBe('2026-01-01T00:00:00.000Z');
+    });
+});

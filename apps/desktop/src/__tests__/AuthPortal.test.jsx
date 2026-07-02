@@ -20,13 +20,6 @@ vi.mock('../services/api.js', () => ({
     isBackendReady: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('../services/storage/tokenStore.js', () => ({
-    saveTokens: vi.fn(),
-    getAccessToken: vi.fn().mockReturnValue(null),
-    getRefreshToken: vi.fn().mockReturnValue(null),
-    clearTokens: vi.fn(),
-}));
-
 vi.mock('../offline/offlineIdentity.js', () => ({
     hasLocalIdentity: vi.fn().mockResolvedValue(false),
     getValidatedLocalIdentity: vi.fn().mockResolvedValue(null),
@@ -63,7 +56,6 @@ vi.mock('lucide-react', () => {
 
 import AuthPortal from '../renderer/components/pages/AuthPortal';
 import { auth as authApi } from '../services/api.js';
-import { saveTokens } from '../services/storage/tokenStore.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -155,32 +147,6 @@ describe('AuthPortal — password not stored in localStorage', () => {
         expect(storedProfile.id).toBe('user-001');
         expect(storedProfile.password).toBeUndefined();
         expect(storedProfile.password_hash).toBeUndefined();
-    });
-
-    it('calls saveTokens with access and refresh tokens (not password)', async () => {
-        authApi.login.mockResolvedValueOnce({
-            accessToken: 'tok-a',
-            refreshToken: 'tok-r',
-            user: FAKE_USER,
-        });
-
-        renderPortal();
-
-        fireEvent.change(screen.getByPlaceholderText('yourname@gmail.com'), {
-            target: { value: 'student@college.edu' },
-        });
-        fireEvent.change(screen.getByPlaceholderText('Enter password'), {
-            target: { value: PLAINTEXT_PASSWORD },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /login/i }));
-
-        await waitFor(() => expect(saveTokens).toHaveBeenCalledTimes(1));
-
-        const [accessArg, refreshArg] = saveTokens.mock.calls[0];
-        expect(accessArg).toBe('tok-a');
-        expect(refreshArg).toBe('tok-r');
-        expect(accessArg).not.toBe(PLAINTEXT_PASSWORD);
-        expect(refreshArg).not.toBe(PLAINTEXT_PASSWORD);
     });
 
     it('shows error message on login failure without exposing the password', async () => {

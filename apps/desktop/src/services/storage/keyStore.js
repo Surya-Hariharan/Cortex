@@ -1,11 +1,11 @@
 /**
  * Cortex — Device Master Key Store
  *
- * Manages a randomly-generated 256-bit AES key stored in electron-store.
+ * Manages a randomly-generated 256-bit AES key stored in a local file.
  * Replaces the hostname-derived key which was predictable and lost on OS reinstall.
  *
- * The key is generated once, stored encrypted by electron-store, and reused on
- * every subsequent launch.  A legacy-key factory is accepted so that data
+ * The key is generated once, persisted to disk, and reused on every subsequent
+ * launch.  A legacy-key factory is accepted so that data
  * encrypted with the old hostname-based key can still be decrypted transparently.
  */
 

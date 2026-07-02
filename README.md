@@ -4,6 +4,8 @@
 > structured notes, and local peer sharing — all running on your device. **No cloud,
 > no backend, no account server required** — an optional cloud backend exists for
 > cross-device sync and collaboration, but the app is fully functional without it.
+>
+> 📖 Read the full [Hybrid Offline + Online Architecture](./docs/architecture.md) specification.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
@@ -31,7 +33,10 @@
 - **Robust Cloud Infrastructure** — Optional but fully featured cloud sync backed by **Supabase** (managed PostgreSQL & Auth) and **MailerLite** (transactional emails).
 
 Cortex is **local-first**: the core experience works with zero internet and no
-external services. Connectivity only unlocks optional enhancements.
+external services. Connectivity only unlocks optional enhancements. It operates on a **Three-Tier Data Ownership Model**:
+1. **Tier 1 (Local Only)**: Drafts and caches never leave your device.
+2. **Tier 2 (Synced)**: End-to-end encrypted and synced via Supabase.
+3. **Tier 3 (Shared)**: Encrypted via symmetric keys and shared directly via LAN (Mesh) or Cloud.
 
 ---
 
@@ -63,7 +68,7 @@ Cortex/
 └── .env.example                # Optional environment variables
 ```
 
-See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the full design rationale.
+See [`docs/architecture.md`](./docs/architecture.md) for the full Hybrid Offline + Online Architecture blueprint.
 
 ---
 

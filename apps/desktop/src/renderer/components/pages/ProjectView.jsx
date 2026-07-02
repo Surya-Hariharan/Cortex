@@ -141,46 +141,55 @@ export default function ProjectView({ project, onNewChat, onToast, onDeleteProje
                     </div>
 
                     {/* ── New chat input bar ─────────────────────────────── */}
-                    <div className="flex items-center gap-3 bg-slate-50 dark:bg-dark-800/80 border border-slate-200 dark:border-dark-700 rounded-2xl px-4 py-3 mb-8 hover:border-slate-300 dark:hover:border-dark-600 focus-within:border-synapse-300 dark:focus-within:border-synapse-700 focus-within:shadow-sm transition-all">
-                        <Plus size={15} className="text-slate-400 dark:text-dark-500 flex-shrink-0" />
+                    <div className="flex items-center gap-3 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-[24px] px-5 py-3.5 mb-8 shadow-sm hover:shadow-md focus-within:shadow-lg focus-within:border-slate-300 dark:focus-within:border-dark-600 transition-all duration-300">
+                        <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-1.5 rounded-full text-slate-400 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors flex-shrink-0"
+                        >
+                            <Plus size={18} />
+                        </button>
                         <input
                             type="text"
                             value={newChatText}
                             onChange={e => setNewChatText(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleNewChat()}
                             placeholder={`Ask anything about ${project.title}`}
-                            className="flex-1 bg-transparent text-sm text-slate-700 dark:text-dark-200 placeholder-slate-400 dark:placeholder-dark-500 outline-none"
+                            className="flex-1 bg-transparent text-[15px] font-medium text-slate-800 dark:text-dark-100 placeholder-slate-400 dark:placeholder-dark-500 outline-none"
                         />
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button className="p-1.5 rounded-lg text-slate-400 dark:text-dark-500 hover:text-slate-600 dark:hover:text-dark-300 hover:bg-slate-200 dark:hover:bg-dark-700 transition-colors">
-                                <Mic size={15} />
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button className="p-2 rounded-full text-slate-400 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors">
+                                <Mic size={18} />
                             </button>
                             <button
                                 onClick={handleNewChat}
-                                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                                disabled={!newChatText.trim()}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                                     newChatText.trim()
-                                        ? 'bg-slate-900 dark:bg-white hover:bg-slate-700 dark:hover:bg-slate-100 shadow-sm'
-                                        : 'bg-slate-200 dark:bg-dark-700 cursor-default'
+                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-dark-900 hover:scale-105 shadow-sm hover:shadow-md'
+                                        : 'bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-dark-600 cursor-not-allowed'
                                 }`}
                             >
-                                <ArrowUp size={14} className={newChatText.trim() ? 'text-white dark:text-dark-900' : 'text-slate-400 dark:text-dark-500'} />
+                                <ArrowUp size={16} strokeWidth={2.5} />
                             </button>
                         </div>
                     </div>
 
                     {/* ── Tabs ──────────────────────────────────────────── */}
-                    <div className="flex items-center gap-0 mb-6 border-b border-slate-100 dark:border-dark-800">
+                    <div className="flex items-center gap-4 mb-6 border-b border-slate-100 dark:border-dark-800 px-2">
                         {[{ id: 'chats', label: 'Chats' }, { id: 'files', label: 'Files' }].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`px-4 py-2.5 text-sm font-semibold transition-all relative -mb-px ${
+                                className={`py-3 text-sm font-bold transition-all relative -mb-px px-1 ${
                                     activeTab === tab.id
-                                        ? 'text-slate-900 dark:text-dark-50 border-b-2 border-slate-800 dark:border-dark-50'
+                                        ? 'text-slate-900 dark:text-dark-50'
                                         : 'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-dark-200'
                                 }`}
                             >
                                 {tab.label}
+                                {activeTab === tab.id && (
+                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 dark:bg-dark-50 rounded-t-full" />
+                                )}
                             </button>
                         ))}
                     </div>
@@ -189,31 +198,31 @@ export default function ProjectView({ project, onNewChat, onToast, onDeleteProje
                     {activeTab === 'chats' && (
                         <div className="animate-fade-in">
                             {sortedChats.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-24 text-center">
-                                    <div className={`w-16 h-16 rounded-2xl ${color.bg} flex items-center justify-center mb-5`}>
-                                        <Folder size={28} className={`${color.icon} opacity-60`} />
+                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className={`w-16 h-16 rounded-3xl ${color.bg} flex items-center justify-center mb-6 shadow-sm border border-slate-100/50 dark:border-dark-800/50`}>
+                                        <Folder size={28} className={color.icon} />
                                     </div>
-                                    <p className="text-base font-semibold text-slate-700 dark:text-dark-200 mb-1">No chats yet</p>
-                                    <p className="text-sm text-slate-400 dark:text-dark-500">
-                                        Ask anything about {project.title} to get started
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-dark-100 mb-2">No chats yet</h3>
+                                    <p className="text-sm font-medium text-slate-500 dark:text-dark-400">
+                                        Ask anything about {project.title} to get started.
                                     </p>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-slate-100 dark:divide-dark-800 rounded-xl border border-slate-100 dark:border-dark-800 overflow-hidden bg-white dark:bg-dark-900">
+                                <div className="divide-y divide-slate-100 dark:divide-dark-800/60 rounded-[20px] overflow-hidden bg-white dark:bg-dark-900 border border-slate-100 dark:border-dark-800 shadow-sm shadow-slate-100/50 dark:shadow-none">
                                     {sortedChats.map(chat => (
                                         <button
                                             key={chat.id}
-                                            className="w-full flex items-start gap-3 px-4 py-4 hover:bg-slate-50 dark:hover:bg-dark-800/60 transition-colors text-left group"
+                                            className="w-full flex items-start gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-dark-800/40 transition-colors text-left group"
                                         >
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-slate-800 dark:text-dark-100 truncate">{chat.title}</p>
+                                                <p className="text-[15px] font-semibold text-slate-800 dark:text-dark-100 truncate mb-0.5">{chat.title}</p>
                                                 {chat.preview && (
-                                                    <p className="text-xs text-slate-400 dark:text-dark-500 mt-0.5 truncate">{chat.preview}</p>
+                                                    <p className="text-sm text-slate-500 dark:text-dark-400 truncate">{chat.preview}</p>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
-                                                {chat.date && <span className="text-xs text-slate-400 dark:text-dark-500">{chat.date}</span>}
-                                                <MoreHorizontal size={14} className="text-slate-300 dark:text-dark-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+                                                {chat.date && <span className="text-xs font-medium text-slate-400 dark:text-dark-500">{chat.date}</span>}
+                                                <MoreHorizontal size={16} className="text-slate-300 dark:text-dark-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </div>
                                         </button>
                                     ))}
@@ -298,7 +307,7 @@ export default function ProjectView({ project, onNewChat, onToast, onDeleteProje
                             ) : (
                                 /* Empty state */
                                 <div
-                                    className="border-2 border-dashed border-slate-200 dark:border-dark-700 rounded-2xl flex flex-col items-center justify-center py-20 px-8 text-center cursor-pointer hover:border-synapse-300 dark:hover:border-synapse-700 hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-all"
+                                    className="border-2 border-dashed border-slate-200 dark:border-dark-800 rounded-[24px] flex flex-col items-center justify-center py-20 px-8 text-center cursor-pointer hover:border-synapse-300 dark:hover:border-synapse-700 hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-all group"
                                     onClick={() => fileInputRef.current?.click()}
                                     onDragOver={e => e.preventDefault()}
                                     onDrop={e => {
@@ -310,18 +319,18 @@ export default function ProjectView({ project, onNewChat, onToast, onDeleteProje
                                         }
                                     }}
                                 >
-                                    <div className="flex items-center gap-3 mb-5">
+                                    <div className="flex items-center gap-3 mb-6">
                                         {[Upload, FileText, Bookmark].map((Icon, i) => (
-                                            <div key={i} className="w-11 h-11 rounded-full bg-slate-100 dark:bg-dark-800 flex items-center justify-center border border-slate-200 dark:border-dark-700">
-                                                <Icon size={18} className="text-slate-400 dark:text-dark-500" />
+                                            <div key={i} className="w-12 h-12 rounded-2xl bg-white dark:bg-dark-900 flex items-center justify-center shadow-sm border border-slate-100 dark:border-dark-800 group-hover:scale-105 transition-transform duration-300" style={{ transitionDelay: `${i * 50}ms` }}>
+                                                <Icon size={20} className="text-slate-400 dark:text-dark-500 group-hover:text-synapse-500 transition-colors" />
                                             </div>
                                         ))}
                                     </div>
-                                    <p className="text-sm font-semibold text-slate-700 dark:text-dark-200 mb-1.5">Give Cortex more context</p>
-                                    <p className="text-xs text-slate-400 dark:text-dark-500 max-w-xs leading-relaxed mb-5">
+                                    <p className="text-lg font-bold text-slate-800 dark:text-dark-100 mb-2">Give Cortex more context</p>
+                                    <p className="text-sm font-medium text-slate-500 dark:text-dark-400 max-w-sm leading-relaxed mb-6">
                                         Upload PDFs, notes, or saved pages to give Cortex deeper context. Files stay until you remove them.
                                     </p>
-                                    <button className="px-5 py-2 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-dark-200 text-sm font-semibold rounded-full hover:bg-slate-50 dark:hover:bg-dark-700 transition-colors shadow-sm">
+                                    <button className="px-6 py-2.5 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-dark-200 text-sm font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-dark-700 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm hover:shadow-md">
                                         Add files
                                     </button>
                                 </div>

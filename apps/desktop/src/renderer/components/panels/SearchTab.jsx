@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUpRight, Plus, Zap, X, Check, Paperclip } from 'lucide-react';
+import { ArrowUpRight, Plus, Zap, X, Check, Paperclip, FolderPlus, Cloud, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
 import ResultCard from '../shared/ResultCard';
 import { search as searchApi, chat as chatApi, documents as docsApi, getUserId } from '../../../services/api.js';
 import { useCore } from '../../context/CoreContext.jsx';
@@ -33,6 +33,7 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
     const [searchStage, setSearchStage] = useState(-1);
     const [selectedModel, setSelectedModel] = useState(null);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const [dropdownView, setDropdownView] = useState('main'); // 'main' or 'models'
     const [attachedFile, setAttachedFile] = useState(null); // { name, status: 'uploading'|'ready'|'error' }
 
     const inputRef = useRef(null);
@@ -56,8 +57,10 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
     // Close dropdown on outside click
     useEffect(() => {
         const handle = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target))
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setShowModelDropdown(false);
+                setTimeout(() => setDropdownView('main'), 200); // Reset view after animation
+            }
         };
         window.addEventListener('mousedown', handle);
         return () => window.removeEventListener('mousedown', handle);
@@ -204,11 +207,11 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
                     /* Idle hero */
                     <div className="h-full flex flex-col items-center justify-center px-6 pb-8">
                         <div className="text-center mb-10 animate-fade-in max-w-xl">
-                            <h1 className="text-5xl font-black mb-4 text-dark-800 dark:text-dark-50 tracking-tight leading-tight">
+                            <h1 className="text-3xl font-black mb-3 text-dark-800 dark:text-dark-50 tracking-tight leading-tight">
                                 Search your{' '}
                                 <span className="text-synapse-600 dark:text-synapse-500">knowledge</span>
                             </h1>
-                            <p className="text-dark-500 dark:text-dark-400 text-base font-medium leading-relaxed">
+                            <p className="text-dark-500 dark:text-dark-400 text-sm font-medium leading-relaxed">
                                 Ask anything — Cortex searches your entire library using on-device semantic understanding.
                             </p>
                         </div>
@@ -298,7 +301,7 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
 
             {/* ── Input — pinned to bottom ──────────────────────────────────── */}
             <div className="flex-shrink-0 px-6 pb-5 pt-3 bg-white dark:bg-dark-950 border-t border-slate-100 dark:border-dark-800/60">
-                <div className="max-w-[760px] mx-auto space-y-2">
+                <div className="max-w-[640px] mx-auto space-y-2">
 
                     {/* Active model badge + attached file badge */}
                     {(selectedModel || attachedFile) && (
@@ -343,61 +346,108 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
 
                     {/* Input form */}
                     <form onSubmit={handleSearch} className="relative group">
-                        <div className={`bg-white dark:bg-dark-900 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.24)] flex items-center gap-2.5 pl-2 pr-2 py-2 rounded-[24px] transition-all duration-300 border ${isSearching ? 'border-synapse-400 dark:border-synapse-500/50' : 'border-slate-200 dark:border-dark-800 group-hover:border-synapse-300 dark:group-hover:border-dark-700'}`}>
+                        <div className={`bg-white dark:bg-dark-900 shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.24)] flex items-center gap-2.5 pl-2 pr-2 py-1.5 rounded-full transition-all duration-300 border ${isSearching ? 'border-synapse-400 dark:border-synapse-500/50' : 'border-slate-200 dark:border-dark-800 group-hover:border-synapse-300 dark:group-hover:border-dark-700'}`}>
 
                             {/* Plus → upload + model dropdown */}
                             <div className="relative flex-shrink-0" ref={dropdownRef}>
                                 <button
                                     type="button"
-                                    onClick={() => setShowModelDropdown(prev => !prev)}
-                                    className={`rounded-xl w-10 h-10 flex items-center justify-center transition-colors ${showModelDropdown ? 'bg-synapse-100 dark:bg-synapse-900/30 text-synapse-600' : 'bg-slate-50 dark:bg-dark-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 hover:text-slate-600 dark:hover:text-dark-200'}`}
+                                    onClick={() => {
+                                        setShowModelDropdown(prev => {
+                                            if (!prev) setDropdownView('main');
+                                            return !prev;
+                                        });
+                                    }}
+                                    className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${showModelDropdown ? 'bg-synapse-100 dark:bg-synapse-900/30 text-synapse-600' : 'bg-slate-50 dark:bg-dark-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 hover:text-slate-600 dark:hover:text-dark-200'}`}
                                     title="Attach file or select model"
                                 >
-                                    <Plus size={18} />
+                                    <Plus size={16} className={`transition-transform duration-300 ${showModelDropdown ? 'rotate-45' : 'rotate-0'}`} />
                                 </button>
 
                                 {showModelDropdown && (
-                                    <div className="absolute bottom-[50px] left-0 z-50 w-60 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
-
-                                        {/* ── Attach section ── */}
-                                        <div className="px-4 py-2.5 border-b border-slate-100 dark:border-dark-800">
-                                            <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest">Attach</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => { setShowModelDropdown(false); fileInputRef.current?.click(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
-                                        >
-                                            <Paperclip size={15} className="text-slate-400 flex-shrink-0" />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[13px] font-bold text-slate-700 dark:text-dark-200">Upload File</p>
-                                                <p className="text-[11px] text-slate-400 dark:text-dark-500">PDF, DOCX, TXT…</p>
+                                    <div className="absolute bottom-[44px] left-0 z-50 w-48 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl shadow-xl overflow-hidden animate-scale-in">
+                                        
+                                        {dropdownView === 'main' ? (
+                                            <div className="p-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setShowModelDropdown(false); fileInputRef.current?.click(); }}
+                                                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+                                                >
+                                                    <Paperclip size={14} className="text-slate-500 dark:text-dark-400 flex-shrink-0" />
+                                                    <span className="flex-1 text-xs font-semibold text-slate-700 dark:text-dark-200">Upload File</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setShowModelDropdown(false); onToast?.('Folder upload coming soon', 'info'); }}
+                                                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+                                                >
+                                                    <FolderPlus size={14} className="text-slate-500 dark:text-dark-400 flex-shrink-0" />
+                                                    <span className="flex-1 text-xs font-semibold text-slate-700 dark:text-dark-200">Upload Folder</span>
+                                                </button>
+                                                
+                                                <div className="h-px bg-slate-100 dark:bg-dark-800 my-1 mx-2" />
+                                                
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setShowModelDropdown(false); onToast?.('Google Drive integration coming soon', 'info'); }}
+                                                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+                                                >
+                                                    <Cloud size={14} className="text-blue-500 flex-shrink-0" />
+                                                    <span className="flex-1 text-xs font-semibold text-slate-700 dark:text-dark-200">Connect Drive</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setShowModelDropdown(false); onToast?.('Campus Hub integration coming soon', 'info'); }}
+                                                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+                                                >
+                                                    <GraduationCap size={14} className="text-emerald-500 flex-shrink-0" />
+                                                    <span className="flex-1 text-xs font-semibold text-slate-700 dark:text-dark-200">Connect Hub</span>
+                                                </button>
+                                                
+                                                <div className="h-px bg-slate-100 dark:bg-dark-800 my-1 mx-2" />
+                                                
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDropdownView('models')}
+                                                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors group"
+                                                >
+                                                    <Zap size={14} className="text-synapse-500 flex-shrink-0" />
+                                                    <span className="flex-1 text-xs font-semibold text-slate-700 dark:text-dark-200">Select Model</span>
+                                                    <ChevronRight size={14} className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-dark-200 transition-colors" />
+                                                </button>
                                             </div>
-                                        </button>
-
-                                        {/* ── Models section ── */}
-                                        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-dark-800">
-                                            <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest">
-                                                {isInternetOnline ? 'Cloud Models' : 'Local Stream Models'}
-                                            </p>
-                                        </div>
-                                        {models.map(model => (
-                                            <button
-                                                key={model.id}
-                                                type="button"
-                                                onClick={() => { setSelectedModel(model.id); setShowModelDropdown(false); }}
-                                                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${selectedModel === model.id ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-dark-800'}`}
-                                            >
-                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedModel === model.id ? 'bg-blue-500' : 'bg-slate-200 dark:bg-dark-700'}`} />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`text-[13px] font-bold truncate ${selectedModel === model.id ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-dark-200'}`}>
-                                                        {model.label}
-                                                    </p>
-                                                    <p className="text-[11px] text-slate-400 dark:text-dark-500 truncate">{model.description}</p>
+                                        ) : (
+                                            <div className="flex flex-col max-h-[240px]">
+                                                <div className="flex items-center gap-2 px-2 py-2 border-b border-slate-100 dark:border-dark-800 bg-white dark:bg-dark-900 sticky top-0 z-10">
+                                                    <button 
+                                                        onClick={() => setDropdownView('main')}
+                                                        className="p-1 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-md transition-colors text-slate-500"
+                                                    >
+                                                        <ArrowLeft size={12} />
+                                                    </button>
+                                                    <span className="text-[10px] font-bold text-slate-500 dark:text-dark-400 uppercase tracking-wider">Models</span>
                                                 </div>
-                                                {selectedModel === model.id && <Check size={14} className="text-blue-500 flex-shrink-0" />}
-                                            </button>
-                                        ))}
+                                                <div className="overflow-y-auto custom-scrollbar p-1">
+                                                    {models.map(model => (
+                                                        <button
+                                                            key={model.id}
+                                                            type="button"
+                                                            onClick={() => { setSelectedModel(model.id); setShowModelDropdown(false); setTimeout(() => setDropdownView('main'), 200); }}
+                                                            className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors ${selectedModel === model.id ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-slate-50 dark:hover:bg-dark-800'}`}
+                                                        >
+                                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedModel === model.id ? 'bg-blue-500' : 'bg-slate-300 dark:bg-dark-700'}`} />
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className={`text-xs font-semibold truncate ${selectedModel === model.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-dark-200'}`}>
+                                                                    {model.label}
+                                                                </p>
+                                                            </div>
+                                                            {selectedModel === model.id && <Check size={12} className="text-blue-500 flex-shrink-0" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -417,19 +467,19 @@ export default function SearchTab({ onToast, savedState, onFirstSearch, onSearch
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 placeholder="Ask anything about your study materials…"
-                                className="flex-1 bg-transparent text-slate-800 dark:text-dark-50 placeholder-slate-400 dark:placeholder-dark-500 text-[15px] font-semibold outline-none px-1.5"
+                                className="flex-1 bg-transparent text-slate-800 dark:text-dark-50 placeholder-slate-400 dark:placeholder-dark-500 text-sm font-semibold outline-none px-1.5"
                                 disabled={isSearching}
                             />
 
                             <button
                                 type="submit"
                                 disabled={!query.trim() || isSearching}
-                                className={`w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${query.trim() && !isSearching ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-md shadow-synapse-200/40' : 'bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-dark-600 cursor-not-allowed'}`}
+                                className={`w-8 h-8 flex flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 ${query.trim() && !isSearching ? 'bg-synapse-600 hover:bg-synapse-700 text-white shadow-md shadow-synapse-200/40' : 'bg-slate-100 dark:bg-dark-800 text-slate-400 dark:text-dark-600 cursor-not-allowed'}`}
                             >
                                 {isSearching ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
-                                    <ArrowUpRight size={20} />
+                                    <ArrowUpRight size={16} />
                                 )}
                             </button>
                         </div>

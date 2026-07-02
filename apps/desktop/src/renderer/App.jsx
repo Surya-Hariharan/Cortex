@@ -415,9 +415,11 @@ export default function App() {
                                             className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
                                             title={isSidebarCollapsed ? tab.label : ''}
                                         >
-                                            <div className="sidebar-accent-container">
-                                                {!isSidebarCollapsed && <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />}
-                                            </div>
+                                            {!isSidebarCollapsed && (
+                                                <div className="sidebar-accent-container">
+                                                    <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                                </div>
+                                            )}
                                             <div className="sidebar-icon-container">
                                                 <span className={`${isActive ? 'text-synapse-600 dark:text-synapse-400' : 'text-slate-400 dark:text-dark-500'}`}>
                                                     {tab.icon}
@@ -546,9 +548,11 @@ export default function App() {
                                             className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : 'text-slate-600 dark:text-dark-400'} ${isSidebarCollapsed ? 'justify-center' : ''} group`}
                                             title={isSidebarCollapsed ? chat.title : ''}
                                         >
-                                            <div className="sidebar-accent-container">
-                                                {!isSidebarCollapsed && <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />}
-                                            </div>
+                                            {!isSidebarCollapsed && (
+                                                <div className="sidebar-accent-container">
+                                                    <div className={`sidebar-active-accent ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                                </div>
+                                            )}
                                             {isSidebarCollapsed ? (
                                                 <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-synapse-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-300 dark:bg-dark-700'}`} />
                                             ) : (

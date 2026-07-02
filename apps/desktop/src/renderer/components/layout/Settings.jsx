@@ -1068,16 +1068,18 @@ export default function Settings({
                 className="bg-white dark:bg-dark-900 rounded-2xl w-full max-w-[906px] h-[710px] shadow-2xl overflow-hidden border border-slate-200/60 dark:border-dark-700/60 flex animate-scale-in relative"
                 onClick={e => e.stopPropagation()}
             >
+                {/* ── Close Button (Absolute Top Right) ── */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:text-dark-500 dark:hover:text-dark-200 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors focus:outline-none"
+                >
+                    <X size={18} />
+                </button>
+
                 {/* ── Left nav ── */}
                 <div className="w-52 flex-shrink-0 bg-slate-50 dark:bg-dark-950/70 border-r border-slate-100 dark:border-dark-800 flex flex-col p-3">
-                    <div className="flex items-center justify-between px-2 py-2 mb-3">
+                    <div className="flex items-center px-2 py-2 mb-3">
                         <h2 className="text-base font-bold text-slate-800 dark:text-dark-50">Settings</h2>
-                        <button
-                            onClick={onClose}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:text-dark-500 dark:hover:text-dark-200 hover:bg-slate-200 dark:hover:bg-dark-800 transition-colors"
-                        >
-                            <X size={16} />
-                        </button>
                     </div>
 
                     <nav className="flex flex-col gap-0.5 flex-1">

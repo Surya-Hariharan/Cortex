@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Plus, MoreVertical, Trash2, Clock, Hash } from 'lucide-react';
 import { workspacePages } from '../../../services/api.js';
 import CortexEditor from '../editor/CortexEditor';
-import { v4 as uuidv4 } from 'uuid'; // need to install uuid if not present, but I'll generate a simple id instead to avoid extra deps
 
 function generateId() {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

@@ -140,7 +140,7 @@ export default function Library({ onUploadPdf, onToast }) {
     const indexedCount = files.filter(f => f.status === 'indexed').length;
 
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in overflow-y-auto custom-scrollbar">
+        <div className="h-full flex flex-col bg-white dark:bg-dark-950 animate-fade-in overflow-hidden">
             {/* Header */}
             <header className="flex-shrink-0 px-8 pt-8 pb-4">
                 <div className="max-w-[1240px] mx-auto">
@@ -164,17 +164,17 @@ export default function Library({ onUploadPdf, onToast }) {
                             </button>
                             <button
                                 onClick={onUploadPdf}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-synapse-200/40 dark:shadow-none"
+                                className="flex items-center gap-2 px-4 py-1.5 bg-synapse-600 hover:bg-synapse-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-synapse-200/40 dark:shadow-none"
                             >
-                                <Plus size={18} /> Upload File
+                                <Plus size={16} /> Upload File
                             </button>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <div className="flex-1 px-8 pb-12">
-                <div className="max-w-[1240px] mx-auto space-y-6">
+            <div className="flex-1 flex flex-col min-h-0 px-8 pb-8">
+                <div className="max-w-[1240px] w-full mx-auto flex flex-col min-h-0 space-y-6 h-full">
 
                     {/* Storage Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -250,10 +250,10 @@ export default function Library({ onUploadPdf, onToast }) {
                             <span className="text-sm font-medium">Loading library…</span>
                         </div>
                     ) : viewMode === 'list' ? (
-                        <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50/50 dark:bg-dark-950/30 border-b border-slate-100 dark:border-dark-800">
+                        <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 rounded-3xl overflow-hidden flex flex-col flex-1 min-h-0">
+                            <div className="overflow-auto flex-1 custom-scrollbar">
+                                <table className="w-full text-left relative">
+                                    <thead className="bg-slate-50/50 dark:bg-dark-950/30 border-b border-slate-100 dark:border-dark-800 sticky top-0 z-10 backdrop-blur-md">
                                         <tr>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-dark-500 tracking-widest">File</th>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-dark-500 tracking-widest">Subject</th>
@@ -265,57 +265,84 @@ export default function Library({ onUploadPdf, onToast }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-                                        {filteredFiles.map(file => {
-                                            const typeConfig = TYPE_ICONS[file.type] || TYPE_ICONS.default;
-                                            const statusConfig = STATUS_CONFIG[file.status];
-                                            const StatusIcon = statusConfig.icon;
-                                            return (
-                                                <tr key={file.id} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-9 h-9 rounded-lg ${typeConfig.color} flex items-center justify-center flex-shrink-0`}>
-                                                                <typeConfig.icon size={18} />
+                                        {filteredFiles.length > 0 ? (
+                                            filteredFiles.map(file => {
+                                                const typeConfig = TYPE_ICONS[file.type] || TYPE_ICONS.default;
+                                                const statusConfig = STATUS_CONFIG[file.status];
+                                                const StatusIcon = statusConfig.icon;
+                                                return (
+                                                    <tr key={file.id} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-9 h-9 rounded-lg ${typeConfig.color} flex items-center justify-center flex-shrink-0`}>
+                                                                    <typeConfig.icon size={18} />
+                                                                </div>
+                                                                <span className="text-sm font-bold text-slate-800 dark:text-dark-100 truncate max-w-[240px]">{file.name}</span>
                                                             </div>
-                                                            <span className="text-sm font-bold text-slate-800 dark:text-dark-100 truncate max-w-[240px]">{file.name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-xs font-bold text-slate-500 dark:text-dark-400">{file.subject}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusConfig.color}`}>
-                                                            <StatusIcon size={11} /> {statusConfig.label}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className="text-sm font-bold text-slate-700 dark:text-dark-200">{file.chunks || '—'}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-xs font-medium text-slate-500 dark:text-dark-400">{file.size}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2 text-slate-500 dark:text-dark-400 text-[11px] font-medium">
-                                                            <Clock size={12} /> {file.date}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            {file.status === 'failed' && (
-                                                                <button onClick={() => handleReindex(file.id)} className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-amber-400 hover:text-amber-600 opacity-0 group-hover:opacity-100" title="Reindex">
-                                                                    <RefreshCw size={14} />
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="text-xs font-bold text-slate-500 dark:text-dark-400">{file.subject}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusConfig.color}`}>
+                                                                <StatusIcon size={11} /> {statusConfig.label}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-dark-200">{file.chunks || '—'}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="text-xs font-medium text-slate-500 dark:text-dark-400">{file.size}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-2 text-slate-500 dark:text-dark-400 text-[11px] font-medium">
+                                                                <Clock size={12} /> {file.date}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                {file.status === 'failed' && (
+                                                                    <button onClick={() => handleReindex(file.id)} className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-amber-400 hover:text-amber-600 opacity-0 group-hover:opacity-100" title="Reindex">
+                                                                        <RefreshCw size={14} />
+                                                                    </button>
+                                                                )}
+                                                                <button onClick={() => handleDelete(file.id)} className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                                                                    <Trash2 size={14} />
                                                                 </button>
-                                                            )}
-                                                            <button onClick={() => handleDelete(file.id)} className="p-2 hover:bg-white dark:hover:bg-dark-700 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-dark-600 transition-all text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
-                                                                <Trash2 size={14} />
+                                                                <button className="p-2 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-lg transition-all text-slate-400">
+                                                                    <MoreHorizontal size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={7} className="px-6 py-20 text-center">
+                                                    {files.length === 0 ? (
+                                                        <>
+                                                            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-dark-600">
+                                                                <BookOpen size={32} />
+                                                            </div>
+                                                            <h3 className="text-lg font-black text-slate-800 dark:text-dark-50 mb-2">No data available</h3>
+                                                            <p className="text-sm text-slate-500 dark:text-dark-400 mb-4">Upload your first document to build your knowledge base.</p>
+                                                            <button onClick={onUploadPdf} className="inline-flex items-center gap-2 px-4 py-1.5 bg-synapse-600 hover:bg-synapse-700 text-white text-xs font-bold rounded-xl transition-all">
+                                                                <Plus size={14} /> Upload File
                                                             </button>
-                                                            <button className="p-2 hover:bg-slate-100 dark:hover:bg-dark-800 rounded-lg transition-all text-slate-400">
-                                                                <MoreHorizontal size={14} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-dark-600">
+                                                                <Search size={32} />
+                                                            </div>
+                                                            <h3 className="text-lg font-black text-slate-800 dark:text-dark-50 mb-2">No files found</h3>
+                                                            <p className="text-sm text-slate-500 dark:text-dark-400">Try adjusting your search or filters.</p>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -355,21 +382,21 @@ export default function Library({ onUploadPdf, onToast }) {
                         </div>
                     )}
 
-                    {!loading && files.length === 0 && (
-                        <div className="text-center py-20">
+                    {viewMode === 'grid' && !loading && files.length === 0 && (
+                        <div className="text-center py-20 flex-1">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-dark-600">
                                 <BookOpen size={32} />
                             </div>
                             <h3 className="text-lg font-black text-slate-800 dark:text-dark-50 mb-2">No data available</h3>
                             <p className="text-sm text-slate-500 dark:text-dark-400 mb-4">Upload your first document to build your knowledge base.</p>
-                            <button onClick={onUploadPdf} className="inline-flex items-center gap-2 px-5 py-2.5 bg-synapse-600 hover:bg-synapse-700 text-white text-sm font-bold rounded-xl transition-all">
-                                <Plus size={16} /> Upload File
+                            <button onClick={onUploadPdf} className="inline-flex items-center gap-2 px-4 py-1.5 bg-synapse-600 hover:bg-synapse-700 text-white text-xs font-bold rounded-xl transition-all">
+                                <Plus size={14} /> Upload File
                             </button>
                         </div>
                     )}
 
-                    {!loading && files.length > 0 && filteredFiles.length === 0 && (
-                        <div className="text-center py-20">
+                    {viewMode === 'grid' && !loading && files.length > 0 && filteredFiles.length === 0 && (
+                        <div className="text-center py-20 flex-1">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-dark-600">
                                 <Search size={32} />
                             </div>

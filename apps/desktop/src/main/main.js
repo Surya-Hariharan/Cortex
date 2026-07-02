@@ -13,7 +13,7 @@ const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '../../../../.env') });
 
 // ── Local Auth Utilities ────────────────────────────────────────────────────────
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Backend API connectivity has been intentionally removed.
 

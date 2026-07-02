@@ -46,16 +46,8 @@ async function request(path, { method = 'GET', body, accessToken, query } = {}) 
 
 // ── Auth ─────────────────────────────────────────────────────────────────
 
-function register({ email, password, full_name, device }) {
-    return request('/api/v1/auth/register', { method: 'POST', body: { email, password, full_name, device } });
-}
-
-function login({ email, password, device }) {
-    return request('/api/v1/auth/login', { method: 'POST', body: { email, password, device } });
-}
-
-function refresh(refreshToken, deviceId) {
-    return request('/api/v1/auth/refresh', { method: 'POST', body: { refreshToken, deviceId } });
+function initSession(device, token) {
+    return request('/api/v1/session/init', { method: 'POST', body: { device }, accessToken: token });
 }
 
 // Identifies the session via the bearer token itself — see
@@ -254,9 +246,7 @@ function markAllNotificationsRead(accessToken) {
 
 module.exports = {
     isConfigured,
-    register,
-    login,
-    refresh,
+    initSession,
     logout,
     logoutAllDevices,
     requestEmailVerification,

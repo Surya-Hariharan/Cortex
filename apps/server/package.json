@@ -15,7 +15,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
+    "@clerk/clerk-sdk-node": "^4.13.23",
+    "@clerk/express": "^2.1.35",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.21.2",
@@ -26,8 +27,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.9",
     "supertest": "^7.1.0",
-    "vitest": "^4.1.9",
-    "@vitest/coverage-v8": "^4.1.9"
+    "vitest": "^4.1.9"
   }
 }

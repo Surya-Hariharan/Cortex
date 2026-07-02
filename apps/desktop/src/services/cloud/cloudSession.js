@@ -13,20 +13,14 @@ const { getCloudSession, saveCloudSession } = require('../storage/cloudTokenStor
 
 async function withValidAccessToken(fn) {
     const session = getCloudSession();
-    if (!session) throw Object.assign(new Error('No cloud session.'), { notConfigured: true });
+    if (!session || !session.accessToken) throw Object.assign(new Error('No cloud session.'), { notConfigured: true });
     try {
         return await fn(session.accessToken, session);
     } catch (err) {
-        if (err.status !== 401) throw err;
-        const refreshed = await cloudClient.refresh(session.refreshToken, session.device?.id);
-        const nextSession = {
-            ...session,
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken ?? session.refreshToken,
-            user: refreshed.user ?? session.user,
-        };
-        saveCloudSession(nextSession);
-        return fn(refreshed.accessToken, nextSession);
+        // Clerk handles token refreshes from the renderer process.
+        // If we get a 401, it means the main process hasn't received the updated token yet.
+        // We throw the error and let the background task retry later.
+        throw err;
     }
 }
 

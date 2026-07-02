@@ -69,8 +69,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     authResetPassword: (data) => ipcRenderer.invoke('auth-reset-password', data),
     // ── Optional cloud account (apps/server, backed by Supabase) ────────────────
     // Entirely separate from the local auth* calls above.
-    cloudAuthRegister: (data) => ipcRenderer.invoke('cloud-auth-register', data),
-    cloudAuthLogin: (data) => ipcRenderer.invoke('cloud-auth-login', data),
+    cloudAuthInitSession: (data, token) => ipcRenderer.invoke('cloud-auth-init-session', data, token),
     cloudAuthLogout: () => ipcRenderer.invoke('cloud-auth-logout'),
     cloudAuthLogoutAll: () => ipcRenderer.invoke('cloud-auth-logout-all'),
     cloudAccountDelete: () => ipcRenderer.invoke('cloud-account-delete'),
@@ -116,4 +115,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     cloudNotificationsList: (unreadOnly) => ipcRenderer.invoke('cloud-notifications-list', unreadOnly),
     cloudNotificationsMarkRead: (id) => ipcRenderer.invoke('cloud-notifications-mark-read', id),
     cloudNotificationsMarkAllRead: () => ipcRenderer.invoke('cloud-notifications-mark-all-read'),
+    // Auth token sync
+    cloudUpdateToken: (token) => ipcRenderer.send('cloud-update-token', token),
 });

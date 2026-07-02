@@ -1,6 +1,8 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -59,6 +61,9 @@ module.exports = {
     }),
     new MiniCssExtractPlugin({
       filename: isProd ? '[name].[contenthash:8].css' : '[name].css',
+    }),
+    new webpack.DefinePlugin({
+      'process.env.CLERK_PUBLISHABLE_KEY': JSON.stringify(process.env.CLERK_PUBLISHABLE_KEY || ''),
     }),
   ],
   optimization: {
